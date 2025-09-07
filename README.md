@@ -1,81 +1,50 @@
 # SmartFolio - AI Frontend
 
-**SmartFolio Frontend** is a modern, responsive web application built with **Next.js 15.5.2**, **TypeScript**, and **Tailwind CSS**. This repository contains the frontend for the SmartFolio project, including reusable components and page layouts.  
+An AI-powered career counselling platform frontend built with Next.js, TypeScript, and Tailwind CSS.
 
----
+## 🚀 Tech Stack
 
-## Table of Contents
+- **Framework**: Next.js 15.5.2 TypeScript
+- **Styling**: Tailwind CSS 4.1.13
+- **UI Components**: shadcn/ui
 
-- [Features](#features)  
-- [Folder Structure](#folder-structure)  
-- [Getting Started](#getting-started)  
-- [Available Scripts](#available-scripts)  
-- [Tech Stack](#tech-stack)  
-- [Contributing](#contributing)  
+## 📁 Project Structure
 
----
-
-## Features
-
-- **Next.js 15.5.2 App Router** for modern routing  
-- **TypeScript** for type safety  
-- **Tailwind CSS** for utility-first styling  
-- Reusable components (Button, Background, etc.)  
-- Persistent layout with **Header** and **Footer**  
-- Ready-to-use pages: Home, Login, Signup  
-
----
-
-## Folder Structure
-
-src/
-
-├─ app/
-
-│ ├─ layout.tsx <-- Root layout wrapping all pages
-
-│ ├─ pages.tsx <-- All other pages 
-
-├─ components/ <-- Reusable UI components
-
-├─ styles/
-
-│ └─ globals.css <-- Tailwind and global CSS
-
-
-
-Other files:  
-- `package.json` → Project dependencies and scripts  
-- `tsconfig.json` → TypeScript configuration  
-- `.gitignore` → Ignored files (`node_modules/`, `.next/`)  
-
----
-
-## Getting Started
-
-1. **Clone the repository**
-
-```bash
-git clone https://github.com/YOUR_USERNAME/frontend-repo.git
-cd frontend-repo
 ```
-```bash
-npm install
+/src
+├── /app              # Page components
+│   └── /layout.tsx   # Root layout wrapping all pages 
+│   └── /pages.tsx    # Other pages
+├── /components       # Reusable components
+├── /styles           
+│   └── /global.css   # Tailwind and global CSS
+├── /package.json     # Project dependencies and scripts  
+├── /tsconfig.json    # TypeScript configuration  
+└── /.gitignore       # Ignored files 
 ```
-```bash
-npm run dev
-```
-Open http://localhost:3000 to view the app.
+## 🛠️ Development
 
-Available Scripts
+### Prerequisites
 
-npm run dev → Start the development server
+- Node.js 18+
+- npm (comes with Node.js) or Yarn
+- Git (for cloning the repository)
+- Code editor (VS Code recommended) with ESLint, Prettier, and Tailwind CSS IntelliSense extensions
 
-npm run build → Build the project for production
+### Getting Started
 
-npm run start → Start the production server
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/hajrahrehan/smartfolio-frontent.git
+   cd smartfolio-frontend
+   ```
+ 2. **Install dependencies**:
+   ```bash
+   npm install
+   ```
 
-npm run lint → Run ESLint for code checks
+   
+
 
 
 
