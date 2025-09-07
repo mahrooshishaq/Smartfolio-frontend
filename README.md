@@ -29,11 +29,17 @@
 ## Folder Structure
 
 src/
+
 ├─ app/
+
 │ ├─ layout.tsx <-- Root layout wrapping all pages
+
 │ ├─ pages.tsx <-- All other pages 
+
 ├─ components/ <-- Reusable UI components
+
 ├─ styles/
+
 │ └─ globals.css <-- Tailwind and global CSS
 
 
