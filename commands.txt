@@ -1,0 +1,2 @@
+PORT NUMBER: 8000
+1. To run server, on VS code Terminal run this command: npm run dev.
