@@ -43,6 +43,7 @@ src/
 │ └─ globals.css <-- Tailwind and global CSS
 
 
+
 Other files:  
 - `package.json` → Project dependencies and scripts  
 - `tsconfig.json` → TypeScript configuration  
@@ -57,10 +58,13 @@ Other files:
 ```bash
 git clone https://github.com/YOUR_USERNAME/frontend-repo.git
 cd frontend-repo
-
+```
+```bash
 npm install
-
+```
+```bash
 npm run dev
+```
 
 
 
