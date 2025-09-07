@@ -65,6 +65,17 @@ npm install
 ```bash
 npm run dev
 ```
+Open http://localhost:3000 to view the app.
+
+Available Scripts
+
+npm run dev → Start the development server
+
+npm run build → Build the project for production
+
+npm run start → Start the production server
+
+npm run lint → Run ESLint for code checks
 
 
 
