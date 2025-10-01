@@ -1,22 +1,20 @@
 // src/app/layout.tsx
-import '../styles/globals.css'; // Tailwind imported once here
+import '../styles/globals.css';
 import React from 'react';
 
 export const metadata = {
-  title: 'SmartFolio',
-  description: 'Next.js + Tailwind + TypeScript Starter',
-};
+  title: 'SmartFolio AI',
+  description: 'AI-powered portfolio management',
+}
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: React.ReactNode
 }) {
   return (
     <html lang="en">
-      <body className="bg-gray-100 text-gray-800">
-        {children}
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

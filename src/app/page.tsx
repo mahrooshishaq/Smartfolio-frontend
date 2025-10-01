@@ -1,18 +1,13 @@
-// src/app/page.tsx
-import React from "react";
-
-export default function HomePage() {
+﻿export default function HomePage() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-gray-100 p-8">
-      <h1 className="text-4xl font-bold text-blue-600 mb-4">
-        Tailwind + Next.js Test Page 🎉
-      </h1>
-      <p className="text-lg text-gray-700 mb-6">
-        If you can see this styled with Tailwind, your setup works!
-      </p>
-      <button className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">
-        Click Me
-      </button>
-    </main>
+    <div className="min-h-screen bg-gradient-to-br from-blue-100 to-orange-100 flex items-center justify-center">
+      <div className="text-center">
+        <h1 className="text-4xl font-bold mb-4">SmartFolio AI</h1>
+        <div className="space-x-4">
+          <a href="/login" className="px-6 py-3 bg-blue-500 text-white rounded">Login</a>
+          <a href="/signup" className="px-6 py-3 bg-green-500 text-white rounded">Sign Up</a>
+        </div>
+      </div>
+    </div>
   );
 }
