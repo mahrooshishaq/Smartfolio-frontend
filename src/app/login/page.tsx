@@ -1,6 +1,6 @@
 // src/app/login/page.tsx
 'use client';
-
+import axios from "axios";    //Backend  package
 import { useState } from 'react';
 import { FaGoogle, FaEye, FaEyeSlash } from 'react-icons/fa';
 
@@ -10,6 +10,8 @@ export default function LoginPage() {
     password: ''
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState<string | null>(null); //Backend error message
+  const [successMessage, setSuccessMessage] = useState<string | null>(null); //Backend success message
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -22,11 +24,42 @@ export default function LoginPage() {
     setShowPassword(!showPassword);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  //Backend integration starts here
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle login logic here
+  setError(null); // clear previous errors
+    setSuccessMessage(null); // clear previous success messages
+
+    try {
+      console.log('Submitting login:', formData);
+      const res = await axios.post('http://localhost:3000/auth/login', formData);
+
+      console.log('Backend success message:', res.data.message);
+      setSuccessMessage(res.data.message);
+      const { user, accessToken, refreshToken } = res.data;
+      console.log('User:', user);
+      console.log('Access Token:', accessToken);
+      console.log('Refresh Token:', refreshToken);
+      localStorage.setItem('accessToken', accessToken);
+      localStorage.setItem('refreshToken', refreshToken);
+
+
+      // You can also redirect on success, e.g.:
+      // window.location.href = "/dashboard";
+    } catch (err: any) {
+      const backendMessage = err.response?.data?.message;
+
+      if (Array.isArray(backendMessage)) {
+        console.log('Backend validation errors:', backendMessage);
+        setError(backendMessage.join(', ')); // join array for UI
+      } else {
+        console.log('Backend error:', backendMessage);
+        setError(backendMessage || 'Login failed');
+      }
+    }
     console.log('Login data:', formData);
   };
+  //Backend integration ends here
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-orange-50 flex items-center justify-center p-4">
@@ -49,6 +82,7 @@ export default function LoginPage() {
           <button
             type="button"
             className="w-full py-2 px-4 border border-gray-300 rounded-full flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors duration-200"
+            onClick={() => { window.location.href = 'http://localhost:3000/auth/google';}} // Backend redirection to google auth
           >
             <FaGoogle className="text-red-500" />
             Log in with Google

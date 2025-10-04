@@ -1,6 +1,6 @@
 // src/app/signup/page.tsx
 'use client';
-
+import axios from "axios"; //Backend  package
 import { useState } from 'react';
 import { FaGoogle } from 'react-icons/fa';
 
@@ -12,19 +12,53 @@ export default function SignupPage() {
     password: '',
     confirmPassword: ''
   });
-
+  const [error, setError] = useState<string | null>(null); //Backend error message
+  const [successMessage, setSuccessMessage] = useState<string | null>(null); //Backend success message
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
   };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  
+  //Backend integration starts here
+ const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle signup logic here
-    console.log('Signup data:', formData);
-  };
+    setError(null); // Clear previous errors
+    setSuccessMessage(null); // Clear previous success messages
+    if (formData.password !== formData.confirmPassword) {
+      setError("Passwords do not match!");
+      console.log("Passwords do not match!");
+      return;
+    }
+
+    try {
+      console.log('Submitting:', formData);
+      const res = await axios.post("http://localhost:3000/auth/signup", {
+        name: `${formData.firstName} ${formData.lastName}`,
+        email: formData.email,
+        password: formData.password,
+      });
+
+    console.log('Backend success message:', res.data.message);
+    setSuccessMessage(res.data.message); // show success message on UI
+    // Optionally redirect: window.location.href = "/login";
+  } catch (err: any) {
+    const backendMessage = err.response?.data?.message;
+
+    if (Array.isArray(backendMessage)) {
+      // Multiple validation errors from class-validator
+      console.log('Backend validation errors:', backendMessage);
+      setError(backendMessage.join(', ')); // join array into string for UI
+    } else {
+      // Single error message (string) or unknown
+      console.log('Backend error:', backendMessage);
+      setError(backendMessage || "Signup failed");
+    }
+  }
+};
+//Backend integration ends here
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-orange-50 flex items-center justify-center p-4">
