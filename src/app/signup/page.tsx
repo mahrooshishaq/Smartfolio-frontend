@@ -1,10 +1,15 @@
 // src/app/signup/page.tsx
 'use client';
-import axios from "axios"; //Backend  package
+import axios from "axios";
 import { useState } from 'react';
-import { FaGoogle } from 'react-icons/fa';
+import { FaGoogle, FaEye, FaEyeSlash } from 'react-icons/fa'; // Added Eye icons for password visibility
+import { ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import AnimatedBackground from '@/components/AnimatedBackground';
 
 export default function SignupPage() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -12,23 +17,28 @@ export default function SignupPage() {
     password: '',
     confirmPassword: ''
   });
-  const [error, setError] = useState<string | null>(null); //Backend error message
-  const [successMessage, setSuccessMessage] = useState<string | null>(null); //Backend success message
+  
+  // State for toggling password visibility
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
   };
-  
-  //Backend integration starts here
- const handleSubmit = async (e: React.FormEvent) => {
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null); // Clear previous errors
-    setSuccessMessage(null); // Clear previous success messages
+    setError(null);
+    setSuccessMessage(null);
+
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match!");
-      console.log("Passwords do not match!");
       return;
     }
 
@@ -40,120 +50,185 @@ export default function SignupPage() {
         password: formData.password,
       });
 
-    console.log('Backend success message:', res.data.message);
-    setSuccessMessage(res.data.message); // show success message on UI
-    // Optionally redirect: window.location.href = "/login";
-  } catch (err: any) {
-    const backendMessage = err.response?.data?.message;
+      console.log('Backend success message:', res.data.message);
+      setSuccessMessage(res.data.message);
+      
+      // Redirect to OTP verification page
+      setTimeout(() => {
+        router.push('/verify-otp');
+      }, 1500);
+    } catch (err: any) {
+      const backendMessage = err.response?.data?.message;
 
-    if (Array.isArray(backendMessage)) {
-      // Multiple validation errors from class-validator
-      console.log('Backend validation errors:', backendMessage);
-      setError(backendMessage.join(', ')); // join array into string for UI
-    } else {
-      // Single error message (string) or unknown
-      console.log('Backend error:', backendMessage);
-      setError(backendMessage || "Signup failed");
+      if (Array.isArray(backendMessage)) {
+        console.log('Backend validation errors:', backendMessage);
+        setError(backendMessage.join(', '));
+      } else {
+        console.log('Backend error:', backendMessage);
+        setError(backendMessage || "Signup failed");
+      }
     }
-  }
-};
-//Backend integration ends here
-
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-orange-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-md">
-        <div className="flex items-center mb-6">
-          <div className="w-8 h-8 bg-gray-300 rounded-full mr-3"></div>
-          <h1 className="text-xl font-semibold">Create an account</h1>
-        </div>
+    <div className="relative min-h-screen flex items-center justify-center p-4 overflow-hidden font-raleway">
+      <AnimatedBackground />
+      
+      {/* Main Card Container */}
+      <div className="bg-white rounded-[2rem] shadow-2xl p-8 md:p-12 w-full max-w-[500px] z-10 relative">
         
-        <p className="text-sm text-gray-600 mb-6">
-          Already have an account? <a href="/login" className="text-blue-600 hover:underline">Log in</a>
-        </p>
+        {/* Header: Back Arrow and Close Button */}
+        <div className="flex justify-between items-center mb-8 text-gray-400">
+           <Link href="/" className="hover:text-gray-600 transition-colors">
+             <ArrowLeft size={24} />
+           </Link>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Title and Subtitle */}
+        <div className="mb-8">
+            <h1 className="text-3xl font-normal text-gray-800 mb-2">Create Account</h1>
+            <p className="text-sm text-gray-500">
+             Already have an account? <a href="/login" className="text-gray-800 underline hover:text-black">Log in</a>
+            </p>
+        </div>
+
+        {/* Google Signup Button (Moved to top to match Login style) */}
+        <div className="mb-8">
+          <button
+            type="button"
+            className="w-full py-4 px-4 border border-gray-300 rounded-full flex items-center justify-center gap-3 text-gray-600 hover:bg-gray-200 hover:border-gray-400 active:bg-gray-800 active:text-white active:border-gray-800 transition-all duration-200"
+            onClick={() => { /* Add Google Auth logic if needed */ }}
+          >
+            <FaGoogle className="text-xl" />
+            <span className="text-lg font-medium">Sign up with Google</span>
+          </button>
+        </div>
+
+        {/* OR Divider */}
+        <div className="my-8 flex items-center gap-4">
+          <div className="flex-1 border-t border-gray-300"></div>
+          <span className="text-gray-400 text-sm">OR</span>
+          <div className="flex-1 border-t border-gray-300"></div>
+        </div>
+
+        {/* Error/Success Messages */}
+        {error && <div className="mb-6 p-3 bg-red-50 text-red-500 text-sm rounded-lg text-center">{error}</div>}
+        {successMessage && <div className="mb-6 p-3 bg-green-50 text-green-500 text-sm rounded-lg text-center">{successMessage}</div>}
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          
+          {/* Row: First Name & Last Name */}
           <div className="flex gap-4">
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
-              <input
-                type="text"
-                name="firstName"
-                value={formData.firstName}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border-b border-gray-300 focus:border-blue-500 focus:outline-none transition-colors duration-200 hover:border-gray-400"
-                required
-              />
+            {/* First Name */}
+            <div className="relative w-full">
+                <input
+                    type="text"
+                    id="firstName"
+                    name="firstName"
+                    value={formData.firstName}
+                    onChange={handleChange}
+                    required
+                    className="peer w-full border-b border-gray-300 bg-transparent py-2 text-gray-800 focus:outline-none placeholder-transparent"
+                    placeholder="First Name"
+                />
+                <label htmlFor="firstName" className="absolute left-0 -top-3.5 text-xs text-gray-400 transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400 peer-placeholder-shown:top-2 peer-focus:-top-3.5 peer-focus:text-xs peer-focus:text-gray-400">
+                    First Name
+                </label>
+                <div className="absolute bottom-0 left-0 h-[1px] w-full origin-center scale-x-0 bg-gray-800 transition-transform duration-300 peer-focus:scale-x-100"></div>
             </div>
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
-              <input
-                type="text"
-                name="lastName"
-                value={formData.lastName}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border-b border-gray-300 focus:border-blue-500 focus:outline-none transition-colors duration-200 hover:border-gray-400"
-                required
-              />
+
+            {/* Last Name */}
+            <div className="relative w-full">
+                <input
+                    type="text"
+                    id="lastName"
+                    name="lastName"
+                    value={formData.lastName}
+                    onChange={handleChange}
+                    required
+                    className="peer w-full border-b border-gray-300 bg-transparent py-2 text-gray-800 focus:outline-none placeholder-transparent"
+                    placeholder="Last Name"
+                />
+                <label htmlFor="lastName" className="absolute left-0 -top-3.5 text-xs text-gray-400 transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400 peer-placeholder-shown:top-2 peer-focus:-top-3.5 peer-focus:text-xs peer-focus:text-gray-400">
+                    Last Name
+                </label>
+                <div className="absolute bottom-0 left-0 h-[1px] w-full origin-center scale-x-0 bg-gray-800 transition-transform duration-300 peer-focus:scale-x-100"></div>
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+          {/* Email */}
+          <div className="relative w-full">
             <input
               type="email"
+              id="email"
               name="email"
               value={formData.email}
               onChange={handleChange}
-              className="w-full px-3 py-2 border-b border-gray-300 focus:border-blue-500 focus:outline-none transition-colors duration-200 hover:border-gray-400"
               required
+              className="peer w-full border-b border-gray-300 bg-transparent py-2 text-gray-800 focus:outline-none placeholder-transparent"
+              placeholder="Email Address"
             />
+            <label htmlFor="email" className="absolute left-0 -top-3.5 text-xs text-gray-400 transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400 peer-placeholder-shown:top-2 peer-focus:-top-3.5 peer-focus:text-xs peer-focus:text-gray-400">
+              Email Address
+            </label>
+            <div className="absolute bottom-0 left-0 h-[1px] w-full origin-center scale-x-0 bg-gray-800 transition-transform duration-300 peer-focus:scale-x-100"></div>
           </div>
 
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-              <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border-b border-gray-300 focus:border-blue-500 focus:outline-none transition-colors duration-200 hover:border-gray-400"
-                required
-              />
-            </div>
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
-              <input
-                type="password"
-                name="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border-b border-gray-300 focus:border-blue-500 focus:outline-none transition-colors duration-200 hover:border-gray-400"
-                required
-              />
-            </div>
+          {/* Password */}
+          <div className="relative w-full">
+            <input
+              type={showPassword ? "text" : "password"}
+              id="password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              required
+              className="peer w-full border-b border-gray-300 bg-transparent py-2 pr-10 text-gray-800 focus:outline-none placeholder-transparent"
+              placeholder="Password"
+            />
+            <label htmlFor="password" className="absolute left-0 -top-3.5 text-xs text-gray-400 transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400 peer-placeholder-shown:top-2 peer-focus:-top-3.5 peer-focus:text-xs peer-focus:text-gray-400">
+              Password
+            </label>
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-0 top-2 text-gray-400 hover:text-gray-600"
+            >
+              {showPassword ? <FaEyeSlash /> : <FaEye />}
+            </button>
+            <div className="absolute bottom-0 left-0 h-[1px] w-full origin-center scale-x-0 bg-gray-800 transition-transform duration-300 peer-focus:scale-x-100"></div>
+          </div>
+
+          {/* Confirm Password */}
+          <div className="relative w-full">
+            <input
+              type={showConfirmPassword ? "text" : "password"}
+              id="confirmPassword"
+              name="confirmPassword"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              required
+              className="peer w-full border-b border-gray-300 bg-transparent py-2 pr-10 text-gray-800 focus:outline-none placeholder-transparent"
+              placeholder="Confirm Password"
+            />
+            <label htmlFor="confirmPassword" className="absolute left-0 -top-3.5 text-xs text-gray-400 transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400 peer-placeholder-shown:top-2 peer-focus:-top-3.5 peer-focus:text-xs peer-focus:text-gray-400">
+              Confirm Password
+            </label>
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              className="absolute right-0 top-2 text-gray-400 hover:text-gray-600"
+            >
+              {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
+            </button>
+            <div className="absolute bottom-0 left-0 h-[1px] w-full origin-center scale-x-0 bg-gray-800 transition-transform duration-300 peer-focus:scale-x-100"></div>
           </div>
 
           <button
             type="submit"
-            className="w-full py-2 px-4 bg-gray-400 text-white rounded-full font-medium hover:bg-gray-500 transition-colors duration-200 mt-6"
+            className="w-full py-4 px-4 bg-[#C4C4C4] hover:bg-gray-700 active:bg-gray-800 text-gray-800 hover:text-white active:text-white text-lg font-medium rounded-full transition-all duration-200 mt-8"
           >
-            Create an account
-          </button>
-
-          <div className="my-6 flex items-center">
-            <div className="flex-1 border-t border-gray-300"></div>
-            <span className="px-3 text-sm text-gray-500">OR</span>
-            <div className="flex-1 border-t border-gray-300"></div>
-          </div>
-
-          <button
-            type="button"
-            className="w-full py-2 px-4 border border-gray-300 rounded-full flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors duration-200"
-          >
-            <FaGoogle className="text-red-500" />
-            Continue with Google
+            Create Account
           </button>
         </form>
       </div>

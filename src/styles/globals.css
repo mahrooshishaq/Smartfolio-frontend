@@ -1,1 +1,51 @@
 @import "tailwindcss";
+
+/* Keyframe Animations for Floating Ellipses */
+@keyframes float-1 {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(30%, 20%) scale(1.1);
+  }
+  66% {
+    transform: translate(-20%, 30%) scale(0.9);
+  }
+}
+
+@keyframes float-2 {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(-25%, -20%) scale(1.2);
+  }
+  66% {
+    transform: translate(15%, 25%) scale(0.8);
+  }
+}
+
+@keyframes float-3 {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(20%, -30%) scale(1.15);
+  }
+  66% {
+    transform: translate(-30%, 10%) scale(0.95);
+  }
+}
+
+/* Font Assignments */
+.font-raleway {
+  font-family: var(--font-raleway), sans-serif;
+}
+
+.font-baloo {
+  font-family: var(--font-baloo), cursive;
+}
+
+.font-century {
+  font-family: var(--font-century), sans-serif;
+}

@@ -1,8 +1,11 @@
 // src/app/login/page.tsx
 'use client';
-import axios from "axios";    //Backend  package
+import axios from "axios";
 import { useState } from 'react';
 import { FaGoogle, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
+import AnimatedBackground from '@/components/AnimatedBackground';
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({
@@ -10,8 +13,8 @@ export default function LoginPage() {
     password: ''
   });
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState<string | null>(null); //Backend error message
-  const [successMessage, setSuccessMessage] = useState<string | null>(null); //Backend success message
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -24,11 +27,10 @@ export default function LoginPage() {
     setShowPassword(!showPassword);
   };
 
-  //Backend integration starts here
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-  setError(null); // clear previous errors
-    setSuccessMessage(null); // clear previous success messages
+    setError(null);
+    setSuccessMessage(null);
 
     try {
       console.log('Submitting login:', formData);
@@ -37,104 +39,139 @@ export default function LoginPage() {
       console.log('Backend success message:', res.data.message);
       setSuccessMessage(res.data.message);
       const { user, accessToken, refreshToken } = res.data;
-      console.log('User:', user);
-      console.log('Access Token:', accessToken);
-      console.log('Refresh Token:', refreshToken);
+      
       localStorage.setItem('accessToken', accessToken);
       localStorage.setItem('refreshToken', refreshToken);
 
-
-      // You can also redirect on success, e.g.:
       // window.location.href = "/dashboard";
     } catch (err: any) {
       const backendMessage = err.response?.data?.message;
-
       if (Array.isArray(backendMessage)) {
-        console.log('Backend validation errors:', backendMessage);
-        setError(backendMessage.join(', ')); // join array for UI
+        setError(backendMessage.join(', '));
       } else {
-        console.log('Backend error:', backendMessage);
         setError(backendMessage || 'Login failed');
       }
     }
-    console.log('Login data:', formData);
   };
-  //Backend integration ends here
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-orange-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-md">
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center">
-            <div className="w-8 h-8 bg-gray-300 rounded-full mr-3"></div>
-            <h1 className="text-xl font-semibold">Log In</h1>
-          </div>
-          <button className="text-gray-500 hover:text-gray-700">
-            ×
-          </button>
-        </div>
+    <div className="relative min-h-screen flex items-center justify-center p-4 overflow-hidden font-raleway">
+      <AnimatedBackground />
+      
+      {/* Main Card Container - Matches the rounded, clean look of your image */}
+      <div className="bg-white rounded-[2rem] shadow-2xl p-8 md:p-12 w-full max-w-[500px] z-10 relative">
         
-        <p className="text-sm text-gray-600 mb-6">
-          Don't have an account? <a href="/signup" className="text-blue-600 hover:underline">Sign up</a>
-        </p>
+        {/* Header: Back Arrow and Close Button */}
+        <div className="flex justify-between items-center mb-10 text-gray-400">
+           <Link href="/" className="hover:text-gray-600 transition-colors">
+             <ArrowLeft size={24} />
+           </Link>
+        </div>
 
-        <div className="mb-6">
+        {/* Title and Subtitle */}
+        <div className="mb-8">
+            <h1 className="text-3xl font-normal text-gray-800 mb-2">Log In</h1>
+            <p className="text-sm text-gray-500">
+            Don't have an account? <a href="/signup" className="text-gray-800 underline hover:text-black">Sign up</a>
+            </p>
+        </div>
+
+        {/* Google Login Button */}
+        <div className="mb-8">
           <button
             type="button"
-            className="w-full py-2 px-4 border border-gray-300 rounded-full flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors duration-200"
-            onClick={() => { window.location.href = 'http://localhost:3000/auth/google';}} // Backend redirection to google auth
+            className="w-full py-3 px-4 border border-gray-300 rounded-full flex items-center justify-center gap-3 text-gray-600 hover:bg-gray-200 hover:border-gray-400 active:bg-gray-800 active:text-white active:border-gray-800 transition-all duration-200"
+            onClick={() => { window.location.href = 'http://localhost:3000/auth/google';}}
           >
-            <FaGoogle className="text-red-500" />
-            Log in with Google
+            <FaGoogle className="text-xl" /> {/* Google colors usually handled by icon, or keep generic */}
+            <span className="text-lg font-medium">Log in with Google</span>
           </button>
         </div>
 
-        <div className="my-6 flex items-center">
+        {/* OR Divider */}
+        <div className="my-8 flex items-center gap-4">
           <div className="flex-1 border-t border-gray-300"></div>
-          <span className="px-3 text-sm text-gray-500">OR</span>
+          <span className="text-gray-400 text-sm">OR</span>
           <div className="flex-1 border-t border-gray-300"></div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+        {/* Error/Success Messages */}
+        {error && <div className="mb-6 p-3 bg-red-50 text-red-500 text-sm rounded-lg text-center">{error}</div>}
+        {successMessage && <div className="mb-6 p-3 bg-green-50 text-green-500 text-sm rounded-lg text-center">{successMessage}</div>}
+
+        <form onSubmit={handleSubmit} className="space-y-8">
+          
+          {/* --- ANIMATED EMAIL INPUT --- */}
+          {/* The 'group' wrapper helps organize, but the magic is in 'peer' */}
+          <div className="relative w-full">
             <input
               type="email"
+              id="email"
               name="email"
               value={formData.email}
               onChange={handleChange}
-              className="w-full px-3 py-2 border-b border-gray-300 focus:border-blue-500 focus:outline-none transition-colors duration-200 hover:border-gray-400"
               required
+              className="peer w-full border-b border-gray-300 bg-transparent py-2 text-gray-800 focus:outline-none placeholder-transparent"
+              placeholder="Email Address" /* Required for the peer-placeholder-shown trick */
             />
+            {/* The Label */}
+            <label
+              htmlFor="email"
+              className="absolute left-0 -top-3.5 text-xs text-gray-400 transition-all 
+                         peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400 peer-placeholder-shown:top-2 
+                         peer-focus:-top-3.5 peer-focus:text-xs peer-focus:text-gray-400"
+            >
+              Email Address
+            </label>
+            {/* The Animated Underline */}
+            <div className="absolute bottom-0 left-0 h-[1px] w-full origin-center scale-x-0 bg-gray-800 transition-transform duration-300 peer-focus:scale-x-100"></div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-            <div className="relative">
-              <input
-                type={showPassword ? "text" : "password"}
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border-b border-gray-300 focus:border-blue-500 focus:outline-none transition-colors duration-200 hover:border-gray-400 pr-10"
-                required
-              />
-              <button
-                type="button"
-                onClick={togglePasswordVisibility}
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-              >
-                {showPassword ? <FaEyeSlash /> : <FaEye />}
-              </button>
-            </div>
-            <div className="mt-1 text-right">
-              <a href="#" className="text-xs text-gray-600 hover:text-gray-800">Forget your password</a>
-            </div>
+          {/* --- ANIMATED PASSWORD INPUT --- */}
+          <div className="relative w-full">
+            <input
+              type={showPassword ? "text" : "password"}
+              id="password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              required
+              className="peer w-full border-b border-gray-300 bg-transparent py-2 pr-20 text-gray-800 focus:outline-none placeholder-transparent"
+              placeholder="Password"
+            />
+            {/* The Label */}
+            <label
+              htmlFor="password"
+              className="absolute left-0 -top-3.5 text-xs text-gray-400 transition-all 
+                         peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400 peer-placeholder-shown:top-2 
+                         peer-focus:-top-3.5 peer-focus:text-xs peer-focus:text-gray-400"
+            >
+              Password
+            </label>
+
+            {/* Password Toggle (Text + Icon style to match design) */}
+            <button
+              type="button"
+              onClick={togglePasswordVisibility}
+              className="absolute right-0 top-2 text-gray-400 hover:text-gray-600 flex items-center gap-1 text-sm"
+            >
+              {showPassword ? <FaEyeSlash /> : <FaEye />} 
+              <span className="text-xs">{showPassword ? 'Hide' : 'Show'}</span>
+            </button>
+
+            {/* The Animated Underline */}
+            <div className="absolute bottom-0 left-0 h-[1px] w-full origin-center scale-x-0 bg-gray-800 transition-transform duration-300 peer-focus:scale-x-100"></div>
+          </div>
+            
+          <div className="flex justify-end mt-1">
+             <a href="#" className="text-sm text-gray-500 hover:text-gray-800 underline decoration-gray-400 underline-offset-2">
+                Forget your password
+             </a>
           </div>
 
           <button
             type="submit"
-            className="w-full py-2 px-4 bg-gray-400 text-white rounded-full font-medium hover:bg-gray-500 transition-colors duration-200 mt-6"
+            className="w-full py-3 px-4 bg-[#C4C4C4] hover:bg-gray-700 active:bg-gray-800 text-gray-800 hover:text-white active:text-white text-lg font-medium rounded-full transition-all duration-200 mt-8"
           >
             Log In
           </button>
