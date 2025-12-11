@@ -9,14 +9,28 @@ export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Here you would typically make an API call to send the reset email
-    // For now, we'll just show the success message
-    
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  try {
+    const response = await fetch("http://localhost:3000/auth/forgot-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      alert(data.message || "Something went wrong");
+      return;
+    }
+
     setIsSubmitted(true);
-  };
+  } catch (err) {
+    console.error(err);
+    alert("Error sending reset email");
+  }
+}
 
   return (
     <div className="relative min-h-screen flex items-center justify-center p-4 overflow-hidden font-raleway">

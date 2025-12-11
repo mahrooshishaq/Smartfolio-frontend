@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import AnimatedBackground from '@/components/AnimatedBackground';
+
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -17,6 +18,9 @@ export default function ResetPasswordPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
+   const searchParams = useSearchParams();  // call the hook
+  const token = searchParams.get('token') || '';
+  const email = searchParams.get('email') || '';
 
   useEffect(() => {
     if (isSuccess) {
@@ -41,23 +45,37 @@ export default function ResetPasswordPage() {
     e.preventDefault();
     setError(null);
 
-    // Validate passwords match
     if (formData.newPassword !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;
     }
 
-    // Validate password length
     if (formData.newPassword.length < 8) {
       setError('Password must be at least 8 characters long');
       return;
     }
 
-    // Here you would typically make an API call to reset the password
-    // For now, we'll just show the success message
-    
-    setIsSuccess(true);
+    try {
+      const response = await fetch('http://localhost:3000/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, email, newPassword: formData.newPassword })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.message || 'Something went wrong');
+        return;
+      }
+
+      setIsSuccess(true);
+    } catch (err) {
+      console.error(err);
+      setError('Error resetting password');
+    }
   };
+
 
   return (
     <div className="relative min-h-screen flex items-center justify-center p-4 overflow-hidden font-raleway">
