@@ -100,6 +100,8 @@ export default function LoginPage() {
         {successMessage && <div className="mb-6 p-3 bg-green-50 text-green-500 text-sm rounded-lg text-center">{successMessage}</div>}
 
         <form onSubmit={handleSubmit} className="space-y-8">
+          <input type="email" name="email" autoComplete="email" style={{ display: 'none' }} />
+          <input type="password" name="password" autoComplete="new-password" style={{ display: 'none' }} />
           
           {/* --- ANIMATED EMAIL INPUT --- */}
           {/* The 'group' wrapper helps organize, but the magic is in 'peer' */}
@@ -113,6 +115,7 @@ export default function LoginPage() {
               required
               className="peer w-full border-b border-gray-300 bg-transparent py-2 text-gray-800 focus:outline-none placeholder-transparent"
               placeholder="Email Address" /* Required for the peer-placeholder-shown trick */
+              autoComplete="email"
             />
             {/* The Label */}
             <label
@@ -138,6 +141,7 @@ export default function LoginPage() {
               required
               className="peer w-full border-b border-gray-300 bg-transparent py-2 pr-20 text-gray-800 focus:outline-none placeholder-transparent"
               placeholder="Password"
+              autoComplete="new-password"
             />
             {/* The Label */}
             <label

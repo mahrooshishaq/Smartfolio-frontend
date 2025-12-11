@@ -5,13 +5,17 @@ import { useState, useRef, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import AnimatedBackground from '@/components/AnimatedBackground';
+import { useSearchParams } from 'next/navigation';
+
 
 export default function VerifyOtpPage() {
   const [otp, setOtp] = useState(['', '', '', '']);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isResending, setIsResending] = useState(false);
-  
+  const searchParams = useSearchParams();
+  const email = searchParams.get('email') || '';
+
   // Create refs for each input
   const inputRefs = [
     useRef<HTMLInputElement>(null),
@@ -81,16 +85,16 @@ export default function VerifyOtpPage() {
       console.log('Verifying OTP:', otpCode);
       const res = await axios.post('http://localhost:3000/auth/verify-otp', {
         otp: otpCode,
-        // You may need to pass email or token here depending on your backend
+        email: email,
       });
 
       console.log('Backend success message:', res.data.message);
       setSuccessMessage(res.data.message);
       
-      // Redirect to login or dashboard after successful verification
-      // setTimeout(() => {
-      //   window.location.href = "/login";
-      // }, 2000);
+      //Redirect to login or dashboard after successful verification
+      setTimeout(() => {
+        window.location.href = "/login";
+      }, 2000);
     } catch (err: any) {
       const backendMessage = err.response?.data?.message;
       setError(backendMessage || 'OTP verification failed');
@@ -105,7 +109,7 @@ export default function VerifyOtpPage() {
     try {
       console.log('Resending OTP');
       const res = await axios.post('http://localhost:3000/auth/resend-otp', {
-        // Pass email or other identifier
+        email: email,
       });
 
       setSuccessMessage('OTP has been resent to your email');

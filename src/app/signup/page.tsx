@@ -55,7 +55,7 @@ export default function SignupPage() {
       
       // Redirect to OTP verification page
       setTimeout(() => {
-        router.push('/verify-otp');
+         router.push(`/verify-otp?email=${formData.email}`);
       }, 1500);
     } catch (err: any) {
       const backendMessage = err.response?.data?.message;
@@ -115,7 +115,9 @@ export default function SignupPage() {
         {error && <div className="mb-6 p-3 bg-red-50 text-red-500 text-sm rounded-lg text-center">{error}</div>}
         {successMessage && <div className="mb-6 p-3 bg-green-50 text-green-500 text-sm rounded-lg text-center">{successMessage}</div>}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6" autoComplete="off">
+          <input type="email" name="email" autoComplete="email" style={{ display: 'none' }} />
+          <input type="password" name="password" autoComplete="new-password" style={{ display: 'none' }} />
           
           {/* Row: First Name & Last Name */}
           <div className="flex gap-4">
@@ -167,6 +169,7 @@ export default function SignupPage() {
               required
               className="peer w-full border-b border-gray-300 bg-transparent py-2 text-gray-800 focus:outline-none placeholder-transparent"
               placeholder="Email Address"
+              autoComplete="email"
             />
             <label htmlFor="email" className="absolute left-0 -top-3.5 text-xs text-gray-400 transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400 peer-placeholder-shown:top-2 peer-focus:-top-3.5 peer-focus:text-xs peer-focus:text-gray-400">
               Email Address
@@ -185,6 +188,7 @@ export default function SignupPage() {
               required
               className="peer w-full border-b border-gray-300 bg-transparent py-2 pr-10 text-gray-800 focus:outline-none placeholder-transparent"
               placeholder="Password"
+              autoComplete="new-password"
             />
             <label htmlFor="password" className="absolute left-0 -top-3.5 text-xs text-gray-400 transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400 peer-placeholder-shown:top-2 peer-focus:-top-3.5 peer-focus:text-xs peer-focus:text-gray-400">
               Password
