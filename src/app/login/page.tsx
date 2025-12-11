@@ -43,7 +43,10 @@ export default function LoginPage() {
       localStorage.setItem('accessToken', accessToken);
       localStorage.setItem('refreshToken', refreshToken);
 
-      // window.location.href = "/dashboard";
+      // Redirect to dashboard
+      setTimeout(() => {
+        window.location.href = "/dashboard";
+      }, 1000);
     } catch (err: any) {
       const backendMessage = err.response?.data?.message;
       if (Array.isArray(backendMessage)) {
