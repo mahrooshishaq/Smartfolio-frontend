@@ -59,28 +59,28 @@ export default function LoginPage() {
       <AnimatedBackground />
       
       {/* Main Card Container - Matches the rounded, clean look of your image */}
-      <div className="bg-white rounded-[2rem] shadow-2xl p-8 md:p-12 w-full max-w-[500px] z-10 relative">
+      <div className="bg-white rounded-[2rem] shadow-2xl p-6 md:p-8 w-full max-w-[480px] z-10 relative">
         
         {/* Header: Back Arrow and Close Button */}
-        <div className="flex justify-between items-center mb-10 text-gray-400">
+        <div className="flex justify-between items-center mb-6 text-gray-400">
            <Link href="/" className="hover:text-gray-600 transition-colors">
              <ArrowLeft size={24} />
            </Link>
         </div>
 
         {/* Title and Subtitle */}
-        <div className="mb-8">
-            <h1 className="text-3xl font-normal text-gray-800 mb-2">Log In</h1>
+        <div className="mb-6">
+            <h1 className="text-2xl font-normal text-gray-800 mb-2">Log In</h1>
             <p className="text-sm text-gray-500">
             Don't have an account? <a href="/signup" className="text-gray-800 underline hover:text-black">Sign up</a>
             </p>
         </div>
 
         {/* Google Login Button */}
-        <div className="mb-8">
+        <div className="mb-6">
           <button
             type="button"
-            className="w-full py-3 px-4 border border-gray-300 rounded-full flex items-center justify-center gap-3 text-gray-600 hover:bg-gray-200 hover:border-gray-400 active:bg-gray-800 active:text-white active:border-gray-800 transition-all duration-200"
+            className="w-full py-2.5 px-4 border border-gray-300 rounded-full flex items-center justify-center gap-3 text-gray-600 hover:bg-gray-200 hover:border-gray-400 active:bg-gray-800 active:text-white active:border-gray-800 transition-all duration-200"
             onClick={() => { window.location.href = 'http://localhost:3000/auth/google';}}
           >
             <FaGoogle className="text-xl" /> {/* Google colors usually handled by icon, or keep generic */}
@@ -89,7 +89,7 @@ export default function LoginPage() {
         </div>
 
         {/* OR Divider */}
-        <div className="my-8 flex items-center gap-4">
+        <div className="my-6 flex items-center gap-4">
           <div className="flex-1 border-t border-gray-300"></div>
           <span className="text-gray-400 text-sm">OR</span>
           <div className="flex-1 border-t border-gray-300"></div>
@@ -99,7 +99,7 @@ export default function LoginPage() {
         {error && <div className="mb-6 p-3 bg-red-50 text-red-500 text-sm rounded-lg text-center">{error}</div>}
         {successMessage && <div className="mb-6 p-3 bg-green-50 text-green-500 text-sm rounded-lg text-center">{successMessage}</div>}
 
-        <form onSubmit={handleSubmit} className="space-y-8">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <input type="email" name="email" autoComplete="email" style={{ display: 'none' }} />
           <input type="password" name="password" autoComplete="new-password" style={{ display: 'none' }} />
           
@@ -168,14 +168,14 @@ export default function LoginPage() {
           </div>
             
           <div className="flex justify-end mt-1">
-             <a href="#" className="text-sm text-gray-500 hover:text-gray-800 underline decoration-gray-400 underline-offset-2">
-                Forget your password
-             </a>
+             <Link href="/forgot-password" className="text-sm text-gray-500 hover:text-gray-800 underline decoration-gray-400 underline-offset-2">
+                Forgot your password?
+             </Link>
           </div>
 
           <button
             type="submit"
-            className="w-full py-3 px-4 bg-[#C4C4C4] hover:bg-gray-700 active:bg-gray-800 text-gray-800 hover:text-white active:text-white text-lg font-medium rounded-full transition-all duration-200 mt-8"
+            className="w-full py-2.5 px-4 bg-[#C4C4C4] hover:bg-gray-700 active:bg-gray-800 text-gray-800 hover:text-white active:text-white text-lg font-medium rounded-full transition-all duration-200 mt-6"
           >
             Log In
           </button>

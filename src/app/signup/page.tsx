@@ -75,28 +75,28 @@ export default function SignupPage() {
       <AnimatedBackground />
       
       {/* Main Card Container */}
-      <div className="bg-white rounded-[2rem] shadow-2xl p-8 md:p-12 w-full max-w-[500px] z-10 relative">
+      <div className="bg-white rounded-[2rem] shadow-2xl p-6 md:p-8 w-full max-w-[480px] z-10 relative">
         
         {/* Header: Back Arrow and Close Button */}
-        <div className="flex justify-between items-center mb-8 text-gray-400">
+        <div className="flex justify-between items-center mb-6 text-gray-400">
            <Link href="/" className="hover:text-gray-600 transition-colors">
              <ArrowLeft size={24} />
            </Link>
         </div>
 
         {/* Title and Subtitle */}
-        <div className="mb-8">
-            <h1 className="text-3xl font-normal text-gray-800 mb-2">Create Account</h1>
+        <div className="mb-6">
+            <h1 className="text-2xl font-normal text-gray-800 mb-2">Create Account</h1>
             <p className="text-sm text-gray-500">
              Already have an account? <a href="/login" className="text-gray-800 underline hover:text-black">Log in</a>
             </p>
         </div>
 
         {/* Google Signup Button (Moved to top to match Login style) */}
-        <div className="mb-8">
+        <div className="mb-6">
           <button
             type="button"
-            className="w-full py-4 px-4 border border-gray-300 rounded-full flex items-center justify-center gap-3 text-gray-600 hover:bg-gray-200 hover:border-gray-400 active:bg-gray-800 active:text-white active:border-gray-800 transition-all duration-200"
+            className="w-full py-2.5 px-4 border border-gray-300 rounded-full flex items-center justify-center gap-3 text-gray-600 hover:bg-gray-200 hover:border-gray-400 active:bg-gray-800 active:text-white active:border-gray-800 transition-all duration-200"
             onClick={() => { /* Add Google Auth logic if needed */ }}
           >
             <FaGoogle className="text-xl" />
@@ -105,7 +105,7 @@ export default function SignupPage() {
         </div>
 
         {/* OR Divider */}
-        <div className="my-8 flex items-center gap-4">
+        <div className="my-6 flex items-center gap-4">
           <div className="flex-1 border-t border-gray-300"></div>
           <span className="text-gray-400 text-sm">OR</span>
           <div className="flex-1 border-t border-gray-300"></div>
@@ -115,7 +115,7 @@ export default function SignupPage() {
         {error && <div className="mb-6 p-3 bg-red-50 text-red-500 text-sm rounded-lg text-center">{error}</div>}
         {successMessage && <div className="mb-6 p-3 bg-green-50 text-green-500 text-sm rounded-lg text-center">{successMessage}</div>}
 
-        <form onSubmit={handleSubmit} className="space-y-6" autoComplete="off">
+        <form onSubmit={handleSubmit} className="space-y-5" autoComplete="off">
           <input type="email" name="email" autoComplete="email" style={{ display: 'none' }} />
           <input type="password" name="password" autoComplete="new-password" style={{ display: 'none' }} />
           
@@ -230,7 +230,7 @@ export default function SignupPage() {
 
           <button
             type="submit"
-            className="w-full py-4 px-4 bg-[#C4C4C4] hover:bg-gray-700 active:bg-gray-800 text-gray-800 hover:text-white active:text-white text-lg font-medium rounded-full transition-all duration-200 mt-8"
+            className="w-full py-2.5 px-4 bg-[#C4C4C4] hover:bg-gray-700 active:bg-gray-800 text-gray-800 hover:text-white active:text-white text-lg font-medium rounded-full transition-all duration-200 mt-6"
           >
             Create Account
           </button>
