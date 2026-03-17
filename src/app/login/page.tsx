@@ -62,7 +62,7 @@ export default function LoginPage() {
       <AnimatedBackground />
       
       {/* Main Card Container - Matches the rounded, clean look of your image */}
-      <div className="bg-white rounded-[2rem] shadow-2xl p-6 md:p-8 w-full max-w-[480px] z-10 relative">
+      <div className="bg-white rounded-2rem shadow-2xl p-6 md:p-8 w-full max-w-[480px] z-10 relative">
         
         {/* Header: Back Arrow and Close Button */}
         <div className="flex justify-between items-center mb-6 text-gray-400">
@@ -130,7 +130,7 @@ export default function LoginPage() {
               Email Address
             </label>
             {/* The Animated Underline */}
-            <div className="absolute bottom-0 left-0 h-[1px] w-full origin-center scale-x-0 bg-gray-800 transition-transform duration-300 peer-focus:scale-x-100"></div>
+            <div className="absolute bottom-0 left-0 h-1px w-full origin-center scale-x-0 bg-gray-800 transition-transform duration-300 peer-focus:scale-x-100"></div>
           </div>
 
           {/* --- ANIMATED PASSWORD INPUT --- */}
@@ -167,7 +167,7 @@ export default function LoginPage() {
             </button>
 
             {/* The Animated Underline */}
-            <div className="absolute bottom-0 left-0 h-[1px] w-full origin-center scale-x-0 bg-gray-800 transition-transform duration-300 peer-focus:scale-x-100"></div>
+            <div className="absolute bottom-0 left-0 h-1px w-full origin-center scale-x-0 bg-gray-800 transition-transform duration-300 peer-focus:scale-x-100"></div>
           </div>
             
           <div className="flex justify-end mt-1">

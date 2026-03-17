@@ -37,7 +37,7 @@ const handleSubmit = async (e: React.FormEvent) => {
       <AnimatedBackground />
       
       {/* Main Card Container */}
-      <div className="bg-white rounded-[2rem] shadow-2xl p-8 md:p-12 w-full max-w-[500px] z-10 relative">
+      <div className="bg-white rounded-2rem shadow-2xl p-8 md:p-12 w-full max-w-[500px] z-10 relative">
         
         {/* Header: Back Arrow */}
         <div className="flex justify-between items-center mb-10 text-gray-400">
@@ -80,7 +80,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                   Email Address
                 </label>
                 {/* The Animated Underline */}
-                <div className="absolute bottom-0 left-0 h-[1px] w-full origin-center scale-x-0 bg-gray-800 transition-transform duration-300 peer-focus:scale-x-100"></div>
+                <div className="absolute bottom-0 left-0 h-1px w-full origin-center scale-x-0 bg-gray-800 transition-transform duration-300 peer-focus:scale-x-100"></div>
               </div>
 
               <button

@@ -75,7 +75,7 @@ export default function SignupPage() {
       <AnimatedBackground />
       
       {/* Main Card Container */}
-      <div className="bg-white rounded-[2rem] shadow-2xl p-6 md:p-8 w-full max-w-[480px] z-10 relative">
+      <div className="bg-white rounded-2rem shadow-2xl p-6 md:p-8 w-full max-w-[480px] z-10 relative">
         
         {/* Header: Back Arrow and Close Button */}
         <div className="flex justify-between items-center mb-6 text-gray-400">
@@ -136,7 +136,7 @@ export default function SignupPage() {
                 <label htmlFor="firstName" className="absolute left-0 -top-3.5 text-xs text-gray-400 transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400 peer-placeholder-shown:top-2 peer-focus:-top-3.5 peer-focus:text-xs peer-focus:text-gray-400">
                     First Name
                 </label>
-                <div className="absolute bottom-0 left-0 h-[1px] w-full origin-center scale-x-0 bg-gray-800 transition-transform duration-300 peer-focus:scale-x-100"></div>
+                <div className="absolute bottom-0 left-0 h-1px w-full origin-center scale-x-0 bg-gray-800 transition-transform duration-300 peer-focus:scale-x-100"></div>
             </div>
 
             {/* Last Name */}
@@ -154,7 +154,7 @@ export default function SignupPage() {
                 <label htmlFor="lastName" className="absolute left-0 -top-3.5 text-xs text-gray-400 transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400 peer-placeholder-shown:top-2 peer-focus:-top-3.5 peer-focus:text-xs peer-focus:text-gray-400">
                     Last Name
                 </label>
-                <div className="absolute bottom-0 left-0 h-[1px] w-full origin-center scale-x-0 bg-gray-800 transition-transform duration-300 peer-focus:scale-x-100"></div>
+                <div className="absolute bottom-0 left-0 h-1px w-full origin-center scale-x-0 bg-gray-800 transition-transform duration-300 peer-focus:scale-x-100"></div>
             </div>
           </div>
 
@@ -174,7 +174,7 @@ export default function SignupPage() {
             <label htmlFor="email" className="absolute left-0 -top-3.5 text-xs text-gray-400 transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400 peer-placeholder-shown:top-2 peer-focus:-top-3.5 peer-focus:text-xs peer-focus:text-gray-400">
               Email Address
             </label>
-            <div className="absolute bottom-0 left-0 h-[1px] w-full origin-center scale-x-0 bg-gray-800 transition-transform duration-300 peer-focus:scale-x-100"></div>
+            <div className="absolute bottom-0 left-0 h-1px w-full origin-center scale-x-0 bg-gray-800 transition-transform duration-300 peer-focus:scale-x-100"></div>
           </div>
 
           {/* Password */}
@@ -200,7 +200,7 @@ export default function SignupPage() {
             >
               {showPassword ? <FaEyeSlash /> : <FaEye />}
             </button>
-            <div className="absolute bottom-0 left-0 h-[1px] w-full origin-center scale-x-0 bg-gray-800 transition-transform duration-300 peer-focus:scale-x-100"></div>
+            <div className="absolute bottom-0 left-0 h-1px w-full origin-center scale-x-0 bg-gray-800 transition-transform duration-300 peer-focus:scale-x-100"></div>
           </div>
 
           {/* Confirm Password */}
@@ -225,7 +225,7 @@ export default function SignupPage() {
             >
               {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
             </button>
-            <div className="absolute bottom-0 left-0 h-[1px] w-full origin-center scale-x-0 bg-gray-800 transition-transform duration-300 peer-focus:scale-x-100"></div>
+            <div className="absolute bottom-0 left-0 h-1px w-full origin-center scale-x-0 bg-gray-800 transition-transform duration-300 peer-focus:scale-x-100"></div>
           </div>
 
           <button

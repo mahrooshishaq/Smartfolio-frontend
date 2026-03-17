@@ -1,6 +1,6 @@
 export default function AnimatedBackground() {
   return (
-    <div className="absolute inset-0 -z-10 bg-white">
+    <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
       {/* Blue Ellipse */}
       <div 
         className="absolute w-[800px] h-[800px] rounded-full blur-3xl opacity-60"
