@@ -50,7 +50,7 @@ export default function ResumeUploadPage() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const uploadRes = await fetch('http://localhost:3001/resume/upload', {
+      const uploadRes = await fetch('http://localhost:3000/resume/upload', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -70,7 +70,7 @@ export default function ResumeUploadPage() {
 
       // 2. Trigger Analysis
       // Lens A if jobDescription exists, Lens B if not.
-      const analyzeRes = await fetch('http://localhost:3001/resume/analyze', {
+      const analyzeRes = await fetch('http://localhost:3000/resume/analyze', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

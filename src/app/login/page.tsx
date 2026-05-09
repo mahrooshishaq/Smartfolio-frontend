@@ -43,10 +43,20 @@ export default function LoginPage() {
       localStorage.setItem('accessToken', accessToken);
       localStorage.setItem('refreshToken', refreshToken);
 
-      // Redirect to dashboard
-      setTimeout(() => {
-        window.location.href = "/dashboard";
-      }, 1000);
+      // Check onboarding status, then redirect
+      try {
+        const statusRes = await axios.get('http://localhost:3000/onboarding/status', {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        const onboarded = statusRes.data?.completed;
+        setTimeout(() => {
+          window.location.href = onboarded ? "/dashboard" : "/onboarding";
+        }, 1000);
+      } catch {
+        setTimeout(() => {
+          window.location.href = "/dashboard";
+        }, 1000);
+      }
     } catch (err: any) {
       const backendMessage = err.response?.data?.message;
       if (Array.isArray(backendMessage)) {
