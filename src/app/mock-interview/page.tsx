@@ -1,12 +1,13 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState, useRef, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import AnimatedBackground from '@/components/AnimatedBackground';
+import VoiceWave from '@/components/VoiceWave';
 import {
   FiLogOut, FiLayout, FiFileText, FiMic, FiBookOpen, FiFile, FiBriefcase,
   FiHelpCircle, FiSettings, FiLoader, FiCheckCircle, FiXCircle, FiAlertCircle,
   FiRefreshCw, FiSend, FiArrowLeft, FiUser, FiCpu, FiZap, FiArrowRight,
-  FiStar, FiTrendingUp,
+  FiStar, FiTrendingUp, FiVolume2, FiSquare, FiRotateCcw
 } from 'react-icons/fi';
 
 const API = 'http://localhost:3000';
@@ -66,24 +67,107 @@ const SidebarItem = ({ icon: Icon, label, active = false, onClick }: { icon: any
 );
 
 export default function MockInterviewPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]"><FiLoader className="animate-spin text-gray-300" size={32} /></div>}>
+      <MockInterviewContent />
+    </Suspense>
+  );
+}
+
+function MockInterviewContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [token, setToken] = useState<string | null>(null);
 
-  // 'input' | 'loading' | 'round_intro' | 'round' | 'evaluating' | 'results'
+  // Stage: 'input' | 'loading' | 'round_intro' | 'round' | 'evaluating' | 'results'
   const [stage, setStage] = useState<'input' | 'loading' | 'round_intro' | 'round' | 'evaluating' | 'results'>('input');
   const [jobDescription, setJobDescription] = useState('');
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [questions, setQuestions] = useState<PublicQuestion[]>([]);
   const [answers, setAnswers] = useState<Record<number, string | number>>({});
   const [currentRoundIdx, setCurrentRoundIdx] = useState(0);
+  const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0); // Index within the current round's questions
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
   const [error, setError] = useState('');
+
+  // Audio States
+  const [isListening, setIsListening] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [transcript, setTranscript] = useState('');
+  const recognitionRef = useRef<any>(null);
+  const transcriptRef = useRef('');
 
   useEffect(() => {
     const t = localStorage.getItem('accessToken');
     if (!t) { router.push('/login'); return; }
     setToken(t);
-  }, [router]);
+
+    // Initialize STT
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = true;
+      recognitionRef.current.interimResults = true;
+      recognitionRef.current.lang = 'en-US';
+
+      recognitionRef.current.onresult = (event: any) => {
+        let interimTranscript = '';
+        let finalTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+          } else {
+            interimTranscript += event.results[i][0].transcript;
+          }
+        }
+        const current = finalTranscript || interimTranscript;
+        setTranscript(current);
+        transcriptRef.current = current;
+      };
+
+      recognitionRef.current.onend = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current.onerror = (event: any) => {
+        console.error('Speech recognition error', event.error);
+        setIsListening(false);
+      };
+    }
+
+    // Check for sessionId in URL
+    const sid = searchParams.get('sessionId');
+    if (sid && t) {
+      fetchSessionDetail(t, sid);
+    }
+  }, [router, searchParams]);
+
+  const fetchSessionDetail = async (accessToken: string, sid: string) => {
+    setStage('loading');
+    try {
+      const res = await fetch(`${API}/mock-interview/${sid}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSessionId(data.id);
+        setQuestions(data.questions);
+        const ansObj: Record<number, string | number> = {};
+        data.answers.forEach((a: any) => { ansObj[a.questionId] = a.answer; });
+        setAnswers(ansObj);
+        if (data.evaluation) {
+          setEvaluation(data.evaluation);
+          setStage('results');
+        } else {
+          setStage('round_intro');
+        }
+      } else {
+        setStage('input');
+      }
+    } catch (err) {
+      setStage('input');
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('accessToken');
@@ -93,6 +177,90 @@ export default function MockInterviewPage() {
 
   const currentRound: Round = ROUND_ORDER[currentRoundIdx];
   const currentRoundQuestions = questions.filter((q) => q.round === currentRound);
+  const activeQuestion = currentRoundQuestions[currentQuestionIdx];
+
+  // ─── SPEECH UTILS ───────────────────────────────────────────────────
+
+  const getBestVoice = () => {
+    if (!window.speechSynthesis) return null;
+    const voices = window.speechSynthesis.getVoices();
+    // Prioritize natural sounding voices
+    const preferred = [
+      'Google US English',
+      'Microsoft Aria Online',
+      'Microsoft Jenny Online',
+      'English (United States)',
+      'en-US'
+    ];
+    
+    for (const name of preferred) {
+      const v = voices.find(v => v.name.includes(name));
+      if (v) return v;
+    }
+    return voices.find(v => v.lang.startsWith('en')) || voices[0];
+  };
+
+  const cleanTextForSpeech = (text: string) => {
+    return text
+      .replace(/_+/g, ' ') // Replace underscores with space
+      .replace(/[:;]/g, '.') // Replace colons/semicolons with dots for better pausing
+      .replace(/[()]/g, ',') // Replace parens with commas
+      .replace(/[*#]/g, '') // Remove markdown-style symbols
+      .trim();
+  };
+
+  const speak = (text: string) => {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    
+    const cleanedText = cleanTextForSpeech(text);
+    const utterance = new SpeechSynthesisUtterance(cleanedText);
+    const voice = getBestVoice();
+    if (voice) utterance.voice = voice;
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => {
+      setIsSpeaking(false);
+      // Automatically start listening after question is asked
+      startListening();
+    };
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const startListening = () => {
+    if (!recognitionRef.current) return;
+    setTranscript('');
+    transcriptRef.current = '';
+    try {
+      recognitionRef.current.start();
+      setIsListening(true);
+    } catch (e) {
+      console.warn('Recognition already started');
+    }
+  };
+
+  const stopListening = () => {
+    if (!recognitionRef.current) return;
+    recognitionRef.current.stop();
+    setIsListening(false);
+
+    // Save current transcript as answer if it exists
+    const finalTranscript = transcriptRef.current;
+    if (finalTranscript.trim() && activeQuestion) {
+      setAnswers(prev => ({ ...prev, [activeQuestion.id]: finalTranscript.trim() }));
+    }
+  };
+
+  // ─── FLOW CONTROL ──────────────────────────────────────────────────
+
+  useEffect(() => {
+    // Speak when entering round or moving to next question
+    if (stage === 'round' && activeQuestion) {
+      speak(activeQuestion.question);
+    }
+  }, [stage, currentQuestionIdx]);
 
   const generateTest = async () => {
     if (!token) return;
@@ -118,6 +286,7 @@ export default function MockInterviewPage() {
       setQuestions(data.questions);
       setAnswers({});
       setCurrentRoundIdx(0);
+      setCurrentQuestionIdx(0);
       setStage('round_intro');
     } catch (err: any) {
       setError(err.message || 'Something went wrong.');
@@ -127,18 +296,41 @@ export default function MockInterviewPage() {
 
   const startCurrentRound = () => {
     setError('');
+    setCurrentQuestionIdx(0);
     setStage('round');
   };
 
-  const goToNextRound = () => {
-    // Validate current round answered
-    const unanswered = currentRoundQuestions.filter((q) => answers[q.id] === undefined || answers[q.id] === '');
-    if (unanswered.length > 0) {
-      setError(`Please answer all questions in this round. Missing: ${unanswered.length}.`);
-      return;
+  const handleNext = () => {
+    // Capture the absolute latest transcript
+    const currentAnswer = transcriptRef.current;
+
+    // Stop listening if active
+    if (isListening) {
+      if (recognitionRef.current) recognitionRef.current.stop();
+      setIsListening(false);
     }
+
+    // Save current transcript to answers if not empty
+    if (currentAnswer.trim() && activeQuestion) {
+      setAnswers(prev => ({ ...prev, [activeQuestion.id]: currentAnswer.trim() }));
+    }
+
+    // Check if we have more questions in this round
+    if (currentQuestionIdx < currentRoundQuestions.length - 1) {
+      setCurrentQuestionIdx(prev => prev + 1);
+      setTranscript('');
+      transcriptRef.current = '';
+    } else {
+      // End of round
+      goToNextRound();
+    }
+  };
+
+  const goToNextRound = () => {
     if (currentRoundIdx < ROUND_ORDER.length - 1) {
       setCurrentRoundIdx(currentRoundIdx + 1);
+      setCurrentQuestionIdx(0);
+      setTranscript('');
       setError('');
       setStage('round_intro');
     } else {
@@ -151,7 +343,7 @@ export default function MockInterviewPage() {
     setStage('evaluating');
     setError('');
     try {
-      const payload = questions.map((q) => ({ questionId: q.id, answer: answers[q.id] }));
+      const payload = questions.map((q) => ({ questionId: q.id, answer: answers[q.id] || '' }));
       const res = await fetch(`${API}/mock-interview/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -172,12 +364,14 @@ export default function MockInterviewPage() {
   };
 
   const restart = () => {
+    window.speechSynthesis.cancel();
     setStage('input');
     setJobDescription('');
     setSessionId(null);
     setQuestions([]);
     setAnswers({});
     setCurrentRoundIdx(0);
+    setCurrentQuestionIdx(0);
     setEvaluation(null);
     setError('');
   };
@@ -188,6 +382,7 @@ export default function MockInterviewPage() {
     return { icon: FiXCircle, color: 'text-red-500', bg: 'bg-red-50', label: 'Incorrect' };
   };
 
+  const isLastQuestionInRound = currentQuestionIdx === currentRoundQuestions.length - 1;
   const isLastRound = currentRoundIdx === ROUND_ORDER.length - 1;
 
   return (
@@ -229,7 +424,7 @@ export default function MockInterviewPage() {
               <p className="font-raleway text-sm text-gray-400 mt-1">
                 {stage === 'input' && 'Paste a job description to start a 3-round mock interview'}
                 {stage === 'round_intro' && `Get ready for Round ${currentRoundIdx + 1} of ${ROUND_ORDER.length}`}
-                {stage === 'round' && `Round ${currentRoundIdx + 1} of ${ROUND_ORDER.length} — ${ROUND_META[currentRound].title}`}
+                {stage === 'round' && `Question ${currentQuestionIdx + 1} of ${currentRoundQuestions.length} — ${ROUND_META[currentRound].title}`}
                 {stage === 'results' && 'Your full interview evaluation'}
               </p>
             </div>
@@ -249,7 +444,7 @@ export default function MockInterviewPage() {
                 const isDone = idx < currentRoundIdx;
                 return (
                   <div key={r} className="flex-1 flex items-center gap-2">
-                    <div className={`flex-1 h-1.5 rounded-full transition-all ${isDone ? 'bg-emerald-400' : isActive ? meta.bg.replace('bg-', 'bg-').replace('-50', '-400') : 'bg-gray-200'}`} />
+                    <div className={`flex-1 h-1.5 rounded-full transition-all ${isDone ? 'bg-emerald-400' : isActive ? 'bg-indigo-400' : 'bg-gray-200'}`} />
                   </div>
                 );
               })}
@@ -273,11 +468,11 @@ export default function MockInterviewPage() {
                 className="font-raleway w-full min-h-[260px] bg-gray-50 border border-gray-100 rounded-2xl p-5 text-sm text-slate-700 placeholder-gray-400 focus:outline-none focus:border-[#4F46E5] resize-y"
               />
               <div className="bg-indigo-50/50 rounded-2xl p-5 mt-5">
-                <p className="font-century text-sm font-bold text-slate-700 mb-3">What to expect</p>
+                <p className="font-century text-sm font-bold text-slate-700 mb-3">Professional Interview Simulation</p>
                 <div className="space-y-2 text-xs text-slate-600 font-raleway">
-                  <div className="flex items-center gap-2"><FiUser className="text-rose-500" size={14} /> Round 1 — HR & Behavioral (5 questions)</div>
-                  <div className="flex items-center gap-2"><FiCpu className="text-blue-500" size={14} /> Round 2 — Technical (8 questions)</div>
-                  <div className="flex items-center gap-2"><FiZap className="text-amber-500" size={14} /> Round 3 — Problem Solving (2 scenarios)</div>
+                  <div className="flex items-center gap-2"><FiVolume2 className="text-rose-500" size={14} /> Natural voice-guided questions</div>
+                  <div className="flex items-center gap-2"><FiMic className="text-blue-500" size={14} /> Voice-to-text response capture</div>
+                  <div className="flex items-center gap-2"><FiZap className="text-amber-500" size={14} /> Comprehensive 3-round performance analysis</div>
                 </div>
               </div>
               <div className="flex items-center justify-between mt-4">
@@ -331,85 +526,104 @@ export default function MockInterviewPage() {
             </div>
           )}
 
-          {/* ROUND STAGE */}
-          {stage === 'round' && (
-            <div className="space-y-5 max-w-4xl mx-auto pb-10">
-              {currentRoundQuestions.map((q, idx) => (
-                <div key={q.id} className="bg-white rounded-[2rem] shadow-sm border border-gray-50 p-7">
-                  <div className="flex items-start gap-3 mb-4">
-                    <span className={`font-century text-sm font-bold ${ROUND_META[currentRound].color} ${ROUND_META[currentRound].bg} w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0`}>
-                      {idx + 1}
-                    </span>
-                    <div className="flex-1">
-                      <span className="font-raleway text-[10px] font-bold uppercase tracking-wider text-gray-400">
-                        {q.type === 'mcq' ? 'Multiple Choice' :
-                         q.type === 'fill_in_the_blank' ? 'Fill in the Blank' :
-                         q.type === 'short_answer' ? 'Short Answer' :
-                         q.type === 'behavioral' ? 'Behavioral' : 'Scenario'}
-                      </span>
-                      <h3 className="font-century text-base font-bold text-slate-800 mt-1 leading-relaxed">{q.question}</h3>
-                    </div>
+          {/* ROUND STAGE (Sequential Audio Focus) */}
+          {stage === 'round' && activeQuestion && (
+            <div className="max-w-4xl mx-auto">
+              <div className="bg-white rounded-[2rem] shadow-sm border border-gray-50 p-10 text-center relative overflow-hidden">
+                {/* Background pulse when listening */}
+                {isListening && <div className="absolute inset-0 bg-indigo-50/30 animate-pulse pointer-events-none" />}
+
+                <div className="relative z-10">
+                  <span className={`inline-block font-raleway text-[10px] font-bold uppercase tracking-[0.2em] px-4 py-1.5 rounded-full mb-6 ${ROUND_META[currentRound].bg} ${ROUND_META[currentRound].color}`}>
+                    {activeQuestion.type.replace('_', ' ')}
+                  </span>
+                  
+                  <h3 className="font-century text-2xl font-black text-slate-800 mb-8 leading-relaxed max-w-2xl mx-auto">
+                    {activeQuestion.question}
+                  </h3>
+
+                  {/* VOICE VISUALIZER */}
+                  <div className="mb-10">
+                    <VoiceWave 
+                      isActive={isSpeaking || isListening} 
+                      mode={isSpeaking ? 'speaking' : 'listening'}
+                      color={isSpeaking ? 'bg-rose-400' : 'bg-indigo-500'}
+                    />
                   </div>
 
-                  {q.type === 'mcq' && q.options && (
-                    <div className="space-y-2 ml-11">
-                      {q.options.map((opt, optIdx) => (
-                        <label
-                          key={optIdx}
-                          className={`font-raleway flex items-center gap-3 px-4 py-3 rounded-xl border cursor-pointer transition-all ${
-                            answers[q.id] === optIdx
-                              ? 'border-[#4F46E5] bg-indigo-50 text-slate-800'
-                              : 'border-gray-100 hover:border-gray-200 text-slate-600'
-                          }`}
-                        >
-                          <input
-                            type="radio"
-                            name={`q-${q.id}`}
-                            checked={answers[q.id] === optIdx}
-                            onChange={() => setAnswers((prev) => ({ ...prev, [q.id]: optIdx }))}
-                            className="accent-[#4F46E5]"
-                          />
-                          <span className="text-sm">{opt}</span>
-                        </label>
-                      ))}
-                    </div>
-                  )}
+                  {/* TRANSCRIPT AREA */}
+                  <div className="min-h-[120px] bg-gray-50 rounded-2xl p-6 mb-8 border border-dashed border-gray-200 flex flex-col items-center justify-center">
+                    {isSpeaking && (
+                      <p className="font-raleway text-sm text-rose-500 font-semibold animate-pulse">AI is speaking...</p>
+                    )}
+                    {!isSpeaking && !isListening && !transcript && (
+                      <p className="font-raleway text-sm text-gray-400 italic">Microphone is off. Click the button below to start.</p>
+                    )}
+                    {isListening && !transcript && (
+                      <p className="font-raleway text-sm text-indigo-500 font-semibold animate-pulse">Listening to you...</p>
+                    )}
+                    {transcript && (
+                      <p className="font-raleway text-sm text-slate-600 leading-relaxed italic">"{transcript}"</p>
+                    )}
+                  </div>
 
-                  {q.type === 'fill_in_the_blank' && (
-                    <div className="ml-11" style={{ width: 'calc(100% - 2.75rem)' }}>
-                      <input
-                        type="text"
-                        value={(answers[q.id] as string) ?? ''}
-                        onChange={(e) => setAnswers((prev) => ({ ...prev, [q.id]: e.target.value }))}
-                        placeholder="Type your answer..."
-                        className="font-raleway w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-slate-700 placeholder-gray-400 focus:outline-none focus:border-[#4F46E5]"
-                      />
-                    </div>
-                  )}
+                  {/* CONTROLS */}
+                  <div className="flex items-center justify-center gap-4">
+                    <button
+                      onClick={() => speak(activeQuestion.question)}
+                      className="w-12 h-12 flex items-center justify-center rounded-xl bg-gray-100 text-gray-500 hover:bg-gray-200 transition-all"
+                      title="Replay Question"
+                    >
+                      <FiRotateCcw size={20} />
+                    </button>
 
-                  {(q.type === 'short_answer' || q.type === 'scenario' || q.type === 'behavioral') && (
-                    <textarea
-                      value={(answers[q.id] as string) ?? ''}
-                      onChange={(e) => setAnswers((prev) => ({ ...prev, [q.id]: e.target.value }))}
-                      placeholder={
-                        q.type === 'scenario' ? 'Walk through your approach...' :
-                        q.type === 'behavioral' ? 'Take your time — share a specific example...' :
-                        'Your answer...'
-                      }
-                      className={`font-raleway w-full ml-11 ${q.type === 'scenario' || q.type === 'behavioral' ? 'min-h-[140px]' : 'min-h-[80px]'} bg-gray-50 border border-gray-100 rounded-xl p-4 text-sm text-slate-700 placeholder-gray-400 focus:outline-none focus:border-[#4F46E5] resize-y`}
-                      style={{ width: 'calc(100% - 2.75rem)' }}
-                    />
-                  )}
+                    <button
+                      onClick={isListening ? stopListening : startListening}
+                      disabled={isSpeaking}
+                      className={`w-20 h-20 flex items-center justify-center rounded-3xl transition-all shadow-lg ${
+                        isListening 
+                          ? 'bg-rose-500 text-white hover:bg-rose-600 scale-110' 
+                          : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                      } disabled:opacity-50`}
+                    >
+                      {isListening ? <FiSquare size={32} /> : <FiMic size={32} />}
+                    </button>
+
+                    <button
+                      onClick={handleNext}
+                      className="font-raleway flex items-center gap-2 bg-slate-800 hover:bg-slate-900 text-white px-8 py-4 rounded-2xl font-semibold text-sm transition-all"
+                    >
+                      {isLastQuestionInRound ? (isLastRound ? 'Finish Interview' : 'Next Round') : 'Next Question'}
+                      <FiArrowRight size={18} />
+                    </button>
+                  </div>
+
+                  {/* MANUAL TEXT OVERRIDE (For accessibility) */}
+                  <div className="mt-12 pt-8 border-t border-gray-50">
+                    <button 
+                      onClick={() => {
+                        const val = prompt('Type your answer if voice recognition is not working:', answers[activeQuestion.id] as string || '');
+                        if (val !== null) setAnswers(prev => ({ ...prev, [activeQuestion.id]: val }));
+                      }}
+                      className="text-xs text-gray-400 hover:text-indigo-500 font-raleway transition-colors underline underline-offset-4"
+                    >
+                      Problem with voice? Type your answer instead
+                    </button>
+                  </div>
                 </div>
-              ))}
+              </div>
 
-              <div className="flex justify-end pt-4">
-                <button
-                  onClick={goToNextRound}
-                  className="font-raleway flex items-center gap-2 bg-[#4F46E5] hover:bg-[#4338CA] text-white px-10 py-4 rounded-2xl font-semibold text-sm transition-all"
-                >
-                  {isLastRound ? <><FiSend size={16} /> Submit Interview</> : <>Next Round <FiArrowRight size={16} /></>}
-                </button>
+              {/* ROUND PROGRESS */}
+              <div className="flex justify-center mt-8 gap-2">
+                {currentRoundQuestions.map((_, i) => (
+                  <div 
+                    key={i} 
+                    className={`h-1.5 rounded-full transition-all ${
+                      i === currentQuestionIdx ? 'w-8 bg-indigo-500' : 
+                      i < currentQuestionIdx ? 'w-4 bg-emerald-400' : 'w-4 bg-gray-200'
+                    }`} 
+                  />
+                ))}
               </div>
             </div>
           )}
@@ -523,6 +737,7 @@ export default function MockInterviewPage() {
                                   <span className={`font-raleway text-[10px] font-bold uppercase tracking-wider ${style.color}`}>{style.label}</span>
                                 </div>
                                 <p className="font-raleway text-xs text-gray-500 mb-1 line-clamp-2">{q.question}</p>
+                                <p className="font-raleway text-sm text-slate-600 font-semibold mb-1">Your Answer: <span className="italic font-normal">"{answers[q.id] || 'No answer'}"</span></p>
                                 <p className="font-raleway text-sm text-slate-600">{fb.explanation}</p>
                               </div>
                             </div>

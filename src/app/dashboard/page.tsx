@@ -154,6 +154,8 @@ export default function DashboardPage() {
   const [recentCourses, setRecentCourses] = useState<Course[]>([]);
 
   const [scraperRunning, setScraperRunning] = useState(false);
+  const [interviewSessions, setInterviewSessions] = useState<any[]>([]);
+  const [documentHistory, setDocumentHistory] = useState<any[]>([]);
 
   const fetchData = useCallback(async (accessToken: string) => {
     const headers = { Authorization: `Bearer ${accessToken}` };
@@ -165,6 +167,8 @@ export default function DashboardPage() {
       fetch(`${API}/courses/me/stats`, { headers }).then(r => r.ok ? r.json() : null),
       fetch(`${API}/jobs/me?page=1&limit=5`, { headers }).then(r => r.ok ? r.json() : { data: [] }),
       fetch(`${API}/courses/me?page=1&limit=5`, { headers }).then(r => r.ok ? r.json() : { data: [] }),
+      fetch(`${API}/mock-interview/sessions`, { headers }).then(r => r.ok ? r.json() : []),
+      fetch(`${API}/document-generation/history`, { headers }).then(r => r.ok ? r.json() : []),
     ]);
 
     const getValue = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' ? r.value : null;
@@ -174,6 +178,8 @@ export default function DashboardPage() {
     const cStats = getValue(results[3]);
     const jobs = getValue(results[4])?.data || [];
     const courses = getValue(results[5])?.data || [];
+    const interviews = getValue(results[6]) || [];
+    const docs = getValue(results[7]) || [];
 
     setUserContext(ctx);
     setResumeAnalyses(getValue(results[1]) || []);
@@ -181,6 +187,8 @@ export default function DashboardPage() {
     setCourseStats(cStats);
     setRecentJobs(jobs);
     setRecentCourses(courses);
+    setInterviewSessions(interviews);
+    setDocumentHistory(docs);
     setLoading(false);
 
     // If onboarded but no data yet, scraper is likely still running
@@ -345,64 +353,57 @@ export default function DashboardPage() {
           </div>
 
           {/* Row 2: Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
             {/* Resume Score Card */}
-            <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-50">
-              <h3 className="font-raleway text-gray-400 text-[10px] font-bold mb-4 uppercase tracking-widest">Resume Score</h3>
+            <div 
+              onClick={() => latestAnalysis && router.push(`/analysis-results?resumeId=${latestAnalysis.resumeId}`)}
+              className="bg-white p-5 rounded-3xl shadow-sm border border-gray-50 flex flex-col items-center justify-center text-center cursor-pointer hover:shadow-md transition-all"
+            >
+              <h3 className="font-raleway text-gray-400 text-[9px] font-bold mb-3 uppercase tracking-widest">Resume</h3>
               {latestAnalysis ? (
-                <div className="flex items-center gap-5">
-                  <ScoreRing score={latestAnalysis.overallScore} size={100} strokeWidth={8} color="#F472B6" />
-                  <div className="flex-1 space-y-2">
-                    {Object.entries(latestAnalysis.categoryScores || {}).slice(0, 4).map(([key, val]) => (
-                      <div key={key} className="font-raleway flex justify-between text-[11px] font-bold">
-                        <span className="text-slate-500 capitalize">{key.replace(/_/g, ' ')}</span>
-                        <span className={getScoreColor(val)}>{val}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                <ScoreRing score={latestAnalysis.overallScore} size={80} strokeWidth={6} color="#F472B6" />
               ) : (
-                <EmptyState
-                  icon={FiFileText}
-                  title="No Resume Analyzed"
-                  description="Upload your resume to get a score"
-                  buttonLabel="Analyze Now"
-                  onClick={() => router.push('/upload-resume')}
-                />
+                <div className="w-20 h-20 rounded-full bg-gray-50 flex items-center justify-center text-gray-300">
+                  <FiFileText size={24} />
+                </div>
               )}
             </div>
 
-            {/* Jobs Stats Card */}
-            {scraperRunning && !jobStats?.total_jobs ? (
-              <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-50">
-                <ScraperPulse label="Finding personalized jobs..." />
-              </div>
-            ) : (
-              <StatCard
-                title="Jobs Found"
-                value={jobStats?.total_jobs || 0}
-                subtitle={jobStats ? `Across ${Object.keys(jobStats.counts_by_category || {}).length} categories` : 'Run scraper to find jobs'}
-                icon={FiBriefcase}
-                color="bg-emerald-500"
-                onClick={() => router.push('/jobs')}
-              />
-            )}
+            <StatCard
+              title="Interviews"
+              value={interviewSessions.length}
+              subtitle={interviewSessions.length > 0 ? `${Math.round(interviewSessions.reduce((acc, s) => acc + (s.overallScore || 0), 0) / (interviewSessions.filter(s => s.isSubmitted).length || 1))}% Avg` : 'Practice now'}
+              icon={FiMic}
+              color="bg-rose-500"
+              onClick={() => router.push('/mock-interview')}
+            />
 
-            {/* Courses Stats Card */}
-            {scraperRunning && !courseStats?.total_courses ? (
-              <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-50">
-                <ScraperPulse label="Finding personalized courses..." />
-              </div>
-            ) : (
-              <StatCard
-                title="Courses Available"
-                value={courseStats?.total_courses || 0}
-                subtitle={courseStats ? `On ${Object.keys(courseStats.counts_by_platform || {}).length} platforms` : 'Run scraper to find courses'}
-                icon={FiBookOpen}
-                color="bg-purple-500"
-                onClick={() => router.push('/courses')}
-              />
-            )}
+            <StatCard
+              title="Documents"
+              value={documentHistory.length}
+              subtitle={documentHistory.length > 0 ? 'Assets ready' : 'Start creating'}
+              icon={FiFile}
+              color="bg-amber-500"
+              onClick={() => router.push('/document-generation')}
+            />
+
+            <StatCard
+              title="Jobs"
+              value={jobStats?.total_jobs || 0}
+              subtitle="Matched for you"
+              icon={FiBriefcase}
+              color="bg-emerald-500"
+              onClick={() => router.push('/jobs')}
+            />
+
+            <StatCard
+              title="Courses"
+              value={courseStats?.total_courses || 0}
+              subtitle="To level up"
+              icon={FiBookOpen}
+              color="bg-purple-500"
+              onClick={() => router.push('/courses')}
+            />
           </div>
 
           {/* Row 3: Jobs by Type + Courses by Level */}
@@ -450,96 +451,96 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Row 4: Recent Jobs + Recent Courses */}
+          {/* Row 4: Recent Interviews + Recent Docs */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            {/* Recent Jobs */}
+            {/* Recent Interviews */}
             <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-50">
               <div className="flex items-center justify-between mb-5">
-                <h3 className="font-raleway text-gray-400 text-[10px] font-bold uppercase tracking-widest">Recent Jobs</h3>
-                {recentJobs.length > 0 && (
-                  <button onClick={() => router.push('/jobs')} className="font-raleway text-[11px] font-bold text-[#4F46E5] flex items-center gap-1 hover:underline">
+                <h3 className="font-raleway text-gray-400 text-[10px] font-bold uppercase tracking-widest">Recent Interviews</h3>
+                {interviewSessions.length > 0 && (
+                  <button onClick={() => router.push('/mock-interview')} className="font-raleway text-[11px] font-bold text-[#4F46E5] flex items-center gap-1 hover:underline">
                     View All <FiArrowRight size={12} />
                   </button>
                 )}
               </div>
-              {recentJobs.length > 0 ? (
+              {interviewSessions.length > 0 ? (
                 <div className="space-y-4">
-                  {recentJobs.map((job) => (
-                    <div key={job.id} className="flex items-center gap-3 group">
-                      <img
-                        src={job.company_logo}
-                        alt={job.company}
-                        className="w-9 h-9 rounded-lg object-contain bg-gray-50 p-1"
-                        onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(job.company)}&background=E0E7FF&color=4F46E5&size=36`; }}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-century text-sm font-bold text-slate-800 truncate group-hover:text-[#4F46E5] transition-colors">{job.title}</p>
-                        <p className="font-raleway text-[11px] text-gray-400">{job.company} {job.location && `• ${job.location}`}</p>
+                  {interviewSessions.slice(0, 5).map((session) => (
+                    <div 
+                      key={session.id} 
+                      onClick={() => router.push(`/mock-interview?sessionId=${session.id}`)}
+                      className="flex items-center gap-3 group cursor-pointer"
+                    >
+                      <div className="w-9 h-9 rounded-lg bg-rose-50 flex items-center justify-center text-rose-500 group-hover:bg-rose-500 group-hover:text-white transition-all">
+                        <FiMic size={16} />
                       </div>
-                      {job.job_type && (
-                        <span className={`font-raleway text-[10px] font-bold px-2 py-0.5 rounded-md ${getTypeBadgeColor(job.job_type)}`}>{job.job_type}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-century text-sm font-bold text-slate-800 truncate group-hover:text-[#4F46E5] transition-colors">
+                          {session.jobDescriptionPreview || 'Mock Interview Session'}
+                        </p>
+                        <p className="font-raleway text-[11px] text-gray-400">
+                          {new Date(session.createdAt).toLocaleDateString()} • {session.isSubmitted ? 'Completed' : 'Draft'}
+                        </p>
+                      </div>
+                      {session.overallScore && (
+                        <span className={`font-raleway text-[10px] font-bold px-2 py-0.5 rounded-md ${getScoreColor(session.overallScore)} bg-opacity-10`}>
+                          {session.overallScore}%
+                        </span>
                       )}
-                      <a href={job.apply_url} target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-[#4F46E5] transition-colors">
-                        <FiExternalLink size={14} />
-                      </a>
                     </div>
                   ))}
                 </div>
-              ) : scraperRunning ? (
-                <ScraperPulse label="Searching for jobs..." />
               ) : (
                 <EmptyState
-                  icon={FiBriefcase}
-                  title="No Jobs Yet"
-                  description="Find personalized job listings"
-                  buttonLabel="Find Jobs"
-                  onClick={() => router.push('/jobs')}
+                  icon={FiMic}
+                  title="No Interviews"
+                  description="Start practicing for your dream job"
+                  buttonLabel="Start Mock Interview"
+                  onClick={() => router.push('/mock-interview')}
                 />
               )}
             </div>
 
-            {/* Recent Courses */}
+            {/* Recent Documents */}
             <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-50">
               <div className="flex items-center justify-between mb-5">
-                <h3 className="font-raleway text-gray-400 text-[10px] font-bold uppercase tracking-widest">Recent Courses</h3>
-                {recentCourses.length > 0 && (
-                  <button onClick={() => router.push('/courses')} className="font-raleway text-[11px] font-bold text-[#4F46E5] flex items-center gap-1 hover:underline">
+                <h3 className="font-raleway text-gray-400 text-[10px] font-bold uppercase tracking-widest">Generated Documents</h3>
+                {documentHistory.length > 0 && (
+                  <button onClick={() => router.push('/document-generation')} className="font-raleway text-[11px] font-bold text-[#4F46E5] flex items-center gap-1 hover:underline">
                     View All <FiArrowRight size={12} />
                   </button>
                 )}
               </div>
-              {recentCourses.length > 0 ? (
+              {documentHistory.length > 0 ? (
                 <div className="space-y-4">
-                  {recentCourses.map((course) => (
-                    <div key={course.id} className="flex items-center gap-3 group">
-                      <img
-                        src={course.platform_logo}
-                        alt={course.platform}
-                        className="w-9 h-9 rounded-lg object-contain bg-gray-50 p-1"
-                        onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(course.platform)}&background=F3E8FF&color=9333EA&size=36`; }}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-century text-sm font-bold text-slate-800 truncate group-hover:text-[#4F46E5] transition-colors">{course.title}</p>
-                        <p className="font-raleway text-[11px] text-gray-400">{course.instructor} • {course.platform}</p>
+                  {documentHistory.slice(0, 5).map((doc) => (
+                    <div 
+                      key={doc.id} 
+                      onClick={() => router.push(`/document-generation?docId=${doc.id}`)}
+                      className="flex items-center gap-3 group cursor-pointer"
+                    >
+                      <div className="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center text-amber-500 group-hover:bg-amber-500 group-hover:text-white transition-all">
+                        <FiFile size={16} />
                       </div>
-                      {course.level && course.level !== 'Not specified' && (
-                        <span className="font-raleway text-[10px] font-bold px-2 py-0.5 rounded-md bg-purple-50 text-purple-600">{course.level}</span>
-                      )}
-                      <a href={course.course_url} target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-[#4F46E5] transition-colors">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-century text-sm font-bold text-slate-800 truncate group-hover:text-[#4F46E5] transition-colors">{doc.title}</p>
+                        <p className="font-raleway text-[11px] text-gray-400">
+                          {doc.documentType.replace(/_/g, ' ')} • {new Date(doc.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <button onClick={() => router.push('/document-generation')} className="text-gray-300 hover:text-[#4F46E5] transition-colors">
                         <FiExternalLink size={14} />
-                      </a>
+                      </button>
                     </div>
                   ))}
                 </div>
-              ) : scraperRunning ? (
-                <ScraperPulse label="Searching for courses..." />
               ) : (
                 <EmptyState
-                  icon={FiBookOpen}
-                  title="No Courses Yet"
-                  description="Find courses to boost your skills"
-                  buttonLabel="Find Courses"
-                  onClick={() => router.push('/courses')}
+                  icon={FiFile}
+                  title="No Documents"
+                  description="Generate cover letters or emails"
+                  buttonLabel="Generate Now"
+                  onClick={() => router.push('/document-generation')}
                 />
               )}
             </div>

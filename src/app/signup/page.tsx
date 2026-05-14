@@ -97,7 +97,7 @@ export default function SignupPage() {
           <button
             type="button"
             className="w-full py-2.5 px-4 border border-gray-300 rounded-full flex items-center justify-center gap-3 text-gray-600 hover:bg-gray-200 hover:border-gray-400 active:bg-gray-800 active:text-white active:border-gray-800 transition-all duration-200"
-            onClick={() => { /* Add Google Auth logic if needed */ }}
+            onClick={() => { window.location.href = 'http://localhost:3000/auth/google'; }}
           >
             <FaGoogle className="text-xl" />
             <span className="text-lg font-medium">Sign up with Google</span>

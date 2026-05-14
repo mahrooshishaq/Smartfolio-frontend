@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import AnimatedBackground from '@/components/AnimatedBackground';
 import {
   FiLogOut, FiLayout, FiFileText, FiMic, FiBookOpen, FiFile, FiBriefcase,
@@ -27,6 +27,7 @@ const SidebarItem = ({ icon: Icon, label, active = false, onClick }: { icon: any
 
 export default function DocumentGenerationPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [token, setToken] = useState<string | null>(null);
 
   // 'select' | 'form' | 'loading' | 'result'
@@ -42,7 +43,32 @@ export default function DocumentGenerationPage() {
     const t = localStorage.getItem('accessToken');
     if (!t) { router.push('/login'); return; }
     setToken(t);
-  }, [router]);
+
+    const docId = searchParams.get('docId');
+    if (docId && t) {
+      fetchDocDetail(t, docId);
+    }
+  }, [router, searchParams]);
+
+  const fetchDocDetail = async (accessToken: string, docId: string) => {
+    setStage('loading');
+    try {
+      const res = await fetch(`${API}/document-generation/${docId}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setContent(data.content);
+        setTitle(data.title);
+        setDocType(data.documentType);
+        setStage('result');
+      } else {
+        setStage('select');
+      }
+    } catch (err) {
+      setStage('select');
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('accessToken');
