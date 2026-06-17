@@ -35,7 +35,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="scroll-smooth">
       <body className={`${raleway.variable} ${baloo.variable} ${century.variable} font-sans`}>
-        {children}
+        <React.Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+          {children}
+        </React.Suspense>
       </body>
     </html>
   );
