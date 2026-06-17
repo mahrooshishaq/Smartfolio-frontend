@@ -7,6 +7,8 @@ import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import AnimatedBackground from '@/components/AnimatedBackground';
 
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+
 export default function LoginPage() {
   const [formData, setFormData] = useState({
     email: '',
@@ -34,7 +36,7 @@ export default function LoginPage() {
 
     try {
       console.log('Submitting login:', formData);
-      const res = await axios.post('http://localhost:3000/auth/login', formData);
+      const res = await axios.post(`${API}/auth/login`, formData);
 
       console.log('Backend success message:', res.data.message);
       setSuccessMessage(res.data.message);
@@ -45,7 +47,7 @@ export default function LoginPage() {
 
       // Check onboarding status, then redirect
       try {
-        const statusRes = await axios.get('http://localhost:3000/onboarding/status', {
+        const statusRes = await axios.get(`${API}/onboarding/status`, {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
         const onboarded = statusRes.data?.completed;
@@ -94,7 +96,7 @@ export default function LoginPage() {
           <button
             type="button"
             className="w-full py-2.5 px-4 border border-gray-300 rounded-full flex items-center justify-center gap-3 text-gray-600 hover:bg-gray-200 hover:border-gray-400 active:bg-gray-800 active:text-white active:border-gray-800 transition-all duration-200"
-            onClick={() => { window.location.href = 'http://localhost:3000/auth/google';}}
+            onClick={() => { window.location.href = `${API}/auth/google`;}}
           >
             <FaGoogle className="text-xl" /> {/* Google colors usually handled by icon, or keep generic */}
             <span className="text-lg font-medium">Log in with Google</span>

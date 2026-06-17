@@ -7,6 +7,8 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import AnimatedBackground from '@/components/AnimatedBackground';
 
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -56,7 +58,7 @@ export default function ResetPasswordPage() {
     }
 
     try {
-      const response = await fetch('http://localhost:3000/auth/reset-password', {
+      const response = await fetch(`${API}/auth/reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, email, newPassword: formData.newPassword })

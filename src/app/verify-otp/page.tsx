@@ -7,6 +7,8 @@ import Link from 'next/link';
 import AnimatedBackground from '@/components/AnimatedBackground';
 import { useSearchParams } from 'next/navigation';
 
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+
 
 export default function VerifyOtpPage() {
   const [otp, setOtp] = useState(['', '', '', '']);
@@ -83,7 +85,7 @@ export default function VerifyOtpPage() {
 
     try {
       console.log('Verifying OTP:', otpCode);
-      const res = await axios.post('http://localhost:3000/auth/verify-otp', {
+      const res = await axios.post(`${API}/auth/verify-otp`, {
         otp: otpCode,
         email: email,
       });
@@ -108,7 +110,7 @@ export default function VerifyOtpPage() {
 
     try {
       console.log('Resending OTP');
-      const res = await axios.post('http://localhost:3000/auth/resend-otp', {
+      const res = await axios.post(`${API}/auth/resend-otp`, {
         email: email,
       });
 

@@ -8,6 +8,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import AnimatedBackground from '@/components/AnimatedBackground';
 
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+
 export default function SignupPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({
@@ -44,7 +46,7 @@ export default function SignupPage() {
 
     try {
       console.log('Submitting:', formData);
-      const res = await axios.post("http://localhost:3000/auth/signup", {
+      const res = await axios.post(`${API}/auth/signup`, {
         name: `${formData.firstName} ${formData.lastName}`,
         email: formData.email,
         password: formData.password,
@@ -97,7 +99,7 @@ export default function SignupPage() {
           <button
             type="button"
             className="w-full py-2.5 px-4 border border-gray-300 rounded-full flex items-center justify-center gap-3 text-gray-600 hover:bg-gray-200 hover:border-gray-400 active:bg-gray-800 active:text-white active:border-gray-800 transition-all duration-200"
-            onClick={() => { window.location.href = 'http://localhost:3000/auth/google'; }}
+            onClick={() => { window.location.href = `${API}/auth/google`; }}
           >
             <FaGoogle className="text-xl" />
             <span className="text-lg font-medium">Sign up with Google</span>

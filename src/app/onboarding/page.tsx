@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import AnimatedBackground from '@/components/AnimatedBackground';
 import { FiArrowRight, FiArrowLeft, FiCheck, FiMapPin, FiLoader } from 'react-icons/fi';
 
-const API = 'http://localhost:3000';
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 // --- Enums matching backend ---
 const GOALS = [

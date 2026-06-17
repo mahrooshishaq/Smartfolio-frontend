@@ -4,6 +4,8 @@ import { CloudUpload, FileText, X, Loader2, ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import AnimatedBackground from '@/components/AnimatedBackground';
 
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+
 export default function ResumeUploadPage() {
   const [file, setFile] = useState<File | null>(null);
   const [jobDescription, setJobDescription] = useState('');
@@ -50,7 +52,7 @@ export default function ResumeUploadPage() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const uploadRes = await fetch('http://localhost:3000/resume/upload', {
+      const uploadRes = await fetch(`${API}/resume/upload`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -70,7 +72,7 @@ export default function ResumeUploadPage() {
 
       // 2. Trigger Analysis
       // Lens A if jobDescription exists, Lens B if not.
-      const analyzeRes = await fetch('http://localhost:3000/resume/analyze', {
+      const analyzeRes = await fetch(`${API}/resume/analyze`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

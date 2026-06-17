@@ -5,6 +5,8 @@ import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import AnimatedBackground from '@/components/AnimatedBackground';
 
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -13,7 +15,7 @@ const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
 
   try {
-    const response = await fetch("http://localhost:3000/auth/forgot-password", {
+    const response = await fetch(`${API}/auth/forgot-password`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email }),

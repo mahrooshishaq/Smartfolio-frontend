@@ -10,7 +10,7 @@ import {
   FiStar, FiTrendingUp, FiVolume2, FiSquare, FiRotateCcw
 } from 'react-icons/fi';
 
-const API = 'http://localhost:3000';
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 type Round = 'hr' | 'technical' | 'problem_solving';
 type QuestionType = 'mcq' | 'short_answer' | 'scenario' | 'fill_in_the_blank' | 'behavioral';

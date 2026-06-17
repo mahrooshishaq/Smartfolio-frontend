@@ -9,7 +9,7 @@ import {
 } from 'react-icons/fi';
 import jsPDF from 'jspdf';
 
-const API = 'http://localhost:3000';
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 type DocumentType = 'cover_letter' | 'professional_email' | 'university_statement';
 

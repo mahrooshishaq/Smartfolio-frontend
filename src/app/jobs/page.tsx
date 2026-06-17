@@ -9,7 +9,7 @@ import {
   FiChevronLeft, FiChevronRight, FiFilter, FiX, FiLoader
 } from 'react-icons/fi';
 
-const API = 'http://localhost:3000';
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 const SidebarItem = ({ icon: Icon, label, active = false, onClick }: { icon: any; label: string; active?: boolean; onClick?: () => void }) => (
   <div

@@ -3,6 +3,8 @@ import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { ArrowLeft, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
 
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+
 interface AnalysisResult {
   analysisId: string;
   resumeId: string;
@@ -72,8 +74,8 @@ function ResultsContent() {
 
         // Fetch analysis + resume content in parallel
         const [analysisRes, contentRes] = await Promise.all([
-          fetch(`http://localhost:3000/resume/${resumeId}/analyses`, { headers }),
-          fetch(`http://localhost:3000/resume/${resumeId}/content`, { headers }),
+          fetch(`${API}/resume/${resumeId}/analyses`, { headers }),
+          fetch(`${API}/resume/${resumeId}/content`, { headers }),
         ]);
 
         const analysisResult = await analysisRes.json();
