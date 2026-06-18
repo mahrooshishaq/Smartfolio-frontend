@@ -1,8 +1,10 @@
-﻿"use client";
+"use client";
 import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import { ChevronDown } from "lucide-react";
+import ResumeImg from "../../../images/Screenshot 2026-06-18 070111.png";
+import CoverImg from "../../../images/Screenshot 2026-06-18 070346.png";
 
 // --- Components ---
 
@@ -95,9 +97,8 @@ export default function Home() {
                 Try Now
               </button>
             </div>
-            <div className="md:w-2/3 w-full bg-gray-50 rounded-lg shadow-sm border p-2 h-64 md:h-96 flex items-center justify-center text-gray-400">
-               {/* Placeholder for Image 393c71.png (Resume Editor) */}
-               <span className="text-sm">[Insert Resume Editor Image Here]</span>
+            <div className="md:w-2/3 w-full bg-gray-50 rounded-lg shadow-sm border p-2 h-64 md:h-96 flex items-center justify-center text-gray-400 overflow-hidden relative">
+               <img src={ResumeImg.src} alt="Resume Editor Preview" className="w-full h-full object-cover rounded-md" />
             </div>
           </div>
         </div>
@@ -111,10 +112,9 @@ export default function Home() {
           <div className="md:w-1/2 relative">
              <div className="absolute -top-10 -left-10 w-full h-full bg-orange-100 rounded-full blur-3xl -z-10 opacity-50"></div>
              <h3 className="mb-8 uppercase tracking-widest text-gray-600 font-raleway text-sm">Personalized Documents</h3>
-             <div className="bg-white p-4 shadow-xl -rotate-2 w-3/4 mx-auto md:mx-0">
-               {/* Placeholder for Letter Image */}
-               <div className="h-64 bg-gray-50 border border-gray-100 p-4 text-[6px] text-gray-300 overflow-hidden">
-                 [Document Preview Image]
+             <div className="bg-white p-4 shadow-xl -rotate-2 w-3/4 mx-auto md:mx-0 rounded-lg">
+               <div className="h-64 bg-gray-50 border border-gray-100 overflow-hidden relative rounded">
+                 <img src={CoverImg.src} alt="Document Preview" className="w-full h-full object-cover" />
                </div>
              </div>
           </div>
@@ -158,16 +158,21 @@ export default function Home() {
 
           <div className="md:w-2/3 grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Course Cards */}
-              {[1, 2, 3, 4].map((item) => (
-                  <div key={item} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+              {[
+                { title: "UI/UX Design", platform: "Coursera", duration: "4 Months", price: "$49/month", color: "bg-blue-600" },
+                { title: "Full Stack Development", platform: "Udemy", duration: "6 Months", price: "$19/course", color: "bg-purple-600" },
+                { title: "Data Science Bootcamp", platform: "DataCamp", duration: "3 Months", price: "$29/month", color: "bg-green-600" },
+                { title: "Product Management", platform: "edX", duration: "5 Months", price: "$99/month", color: "bg-orange-600" }
+              ].map((course, index) => (
+                  <div key={index} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
                       <div className="flex items-center gap-3 mb-3">
-                          <div className="w-8 h-8 bg-blue-600 rounded-lg"></div> {/* Logo Placeholder */}
+                          <div className={`w-8 h-8 ${course.color} rounded-lg`}></div> {/* Logo Placeholder */}
                           <div>
-                              <div className="font-bold text-sm">UI/UX Design</div>
-                              <div className="text-xs text-gray-400">Coursera</div>
+                              <div className="font-bold text-sm">{course.title}</div>
+                              <div className="text-xs text-gray-400">{course.platform}</div>
                           </div>
                       </div>
-                      <div className="text-xs text-gray-500">4 Months • $49/month</div>
+                      <div className="text-xs text-gray-500">{course.duration} • {course.price}</div>
                   </div>
               ))}
           </div>
