@@ -3,8 +3,8 @@ import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import { ChevronDown } from "lucide-react";
-import ResumeImg from "../../../images/Screenshot 2026-06-18 070111.png";
-import CoverImg from "../../../images/Screenshot 2026-06-18 070346.png";
+import ResumeImg from "../../images/Screenshot 2026-06-18 070111.png";
+import CoverImg from "../../images/Screenshot 2026-06-18 070346.png";
 
 // --- Components ---
 
