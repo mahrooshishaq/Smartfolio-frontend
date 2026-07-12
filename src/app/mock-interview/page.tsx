@@ -307,8 +307,12 @@ function MockInterviewContent() {
   };
 
   const handleNext = async () => {
-    // Capture the absolute latest transcript
-    const currentAnswer = transcriptRef.current;
+    // The candidate's answer is whatever they said (latest transcript) or, if
+    // they used the typed fallback, whatever they typed — voice wins if both.
+    const typedValue = followUpQ
+      ? (followUpAnswers[followUpQ.parentQuestionId] || '')
+      : (activeQuestion && typeof answers[activeQuestion.id] === 'string' ? (answers[activeQuestion.id] as string) : '');
+    const currentAnswer = transcriptRef.current.trim() || typedValue.trim();
 
     // Stop listening if active
     if (isListening) {
@@ -423,6 +427,17 @@ function MockInterviewContent() {
 
   const isLastQuestionInRound = currentQuestionIdx === currentRoundQuestions.length - 1;
   const isLastRound = currentRoundIdx === ROUND_ORDER.length - 1;
+
+  // True once the current question has an answer on record (spoken transcript,
+  // typed text, or MCQ selection) and nobody is talking — the moment to guide
+  // the candidate toward "Next".
+  const answerReady = !!activeQuestion && !isSpeaking && !isListening && !awaitingFollowUp && (
+    followUpQ
+      ? !!(transcript.trim() || (followUpAnswers[followUpQ.parentQuestionId] || '').trim())
+      : activeQuestion.type === 'mcq'
+        ? answers[activeQuestion.id] !== undefined
+        : !!(transcript.trim() || (typeof answers[activeQuestion.id] === 'string' && (answers[activeQuestion.id] as string).trim()))
+  );
 
   return (
     <div className="flex min-h-screen bg-[#F8FAFC] text-slate-900">
@@ -715,11 +730,13 @@ function MockInterviewContent() {
                     awaitingFollowUp ? 'text-indigo-300 bg-indigo-500/10 border-indigo-400/30'
                     : isSpeaking ? 'text-indigo-300 bg-indigo-500/10 border-indigo-400/30'
                     : isListening ? 'text-emerald-300 bg-emerald-500/10 border-emerald-400/30'
+                    : answerReady ? 'text-emerald-300 bg-emerald-500/10 border-emerald-400/30'
                     : 'text-slate-400 bg-white/5 border-white/10'
                   }`}>
                     {awaitingFollowUp ? <>{INTERVIEWER.name} is thinking…</>
                       : isSpeaking ? <><span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />{INTERVIEWER.name} is asking — listen…</>
-                      : isListening ? <><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />Your turn — speak now, then press Next</>
+                      : isListening ? <><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />Your turn — speak now; pause or press stop when you&apos;re done</>
+                      : answerReady ? <><FiCheckCircle size={13} className="text-emerald-400" />Answer captured — press Next to continue</>
                       : activeQuestion.type === 'mcq' ? <>Pick an option, then press Next</>
                       : <>Mic is off — tap the mic to speak, type below, or press Next</>}
                   </span>
@@ -768,7 +785,7 @@ function MockInterviewContent() {
                   <button
                     onClick={handleNext}
                     disabled={awaitingFollowUp || (activeQuestion.type === 'mcq' && answers[activeQuestion.id] === undefined)}
-                    className="font-raleway inline-flex items-center gap-2 bg-white text-slate-900 hover:bg-slate-100 px-6 h-12 rounded-2xl font-bold text-sm transition disabled:opacity-40 disabled:cursor-not-allowed"
+                    className={`font-raleway inline-flex items-center gap-2 bg-white text-slate-900 hover:bg-slate-100 px-6 h-12 rounded-2xl font-bold text-sm transition disabled:opacity-40 disabled:cursor-not-allowed ${answerReady ? 'ring-4 ring-emerald-400/50' : ''}`}
                   >
                     {awaitingFollowUp ? 'Thinking…' : followUpQ ? 'Continue' : isLastQuestionInRound ? (isLastRound ? 'End interview' : 'Next round') : 'Next'}
                     {!awaitingFollowUp && <FiArrowRight size={16} />}
@@ -811,13 +828,20 @@ function MockInterviewContent() {
                         placeholder="Type your answer here…"
                         className="font-raleway w-full min-h-[90px] bg-white border border-slate-200 rounded-2xl p-4 text-sm text-slate-800 placeholder-slate-400 shadow-sm focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 resize-y"
                       />
-                      {sttSupported && (
-                        <div className="flex justify-end mt-2">
+                      <div className="flex items-center justify-between gap-3 mt-2">
+                        {sttSupported ? (
                           <button onClick={() => setTyping(false)} className="text-xs text-slate-400 hover:text-indigo-300 font-raleway underline underline-offset-4">
                             Use voice instead
                           </button>
-                        </div>
-                      )}
+                        ) : <span />}
+                        <button
+                          onClick={handleNext}
+                          disabled={awaitingFollowUp}
+                          className="font-raleway inline-flex items-center gap-2 bg-[#4F46E5] text-white hover:bg-indigo-700 px-5 h-10 rounded-xl font-bold text-xs transition disabled:opacity-40"
+                        >
+                          Submit answer <FiArrowRight size={14} />
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     <div className="text-center">
