@@ -200,6 +200,15 @@ function MockInterviewContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSpeaking, stage, currentQuestionIdx, currentRoundIdx]);
 
+  // Also warm the round's first question during the intro screen, so even the
+  // opening question of each round speaks instantly.
+  useEffect(() => {
+    if (stage !== 'round_intro') return;
+    const first = currentRoundQuestions[0];
+    if (first) prefetchSpeech(first.type === 'mcq' ? mcqSpeechText(first) : first.question);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage, currentRoundIdx]);
+
   // ─── VIDEO-CALL CEREMONY & TIMER (Phase 3) ─────────────────────────────
   // Connecting sequence: dial → "<interviewer> joined" → into the interview.
   useEffect(() => {
