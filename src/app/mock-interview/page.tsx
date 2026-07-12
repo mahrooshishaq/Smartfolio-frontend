@@ -65,15 +65,17 @@ function MockInterviewContent() {
   const [typing, setTyping] = useState(false); // inline typed-answer fallback (Phase 4.3)
 
   // Neural TTS fetcher (Phase 3.4) — hits the backend /tts (Kokoro via Python),
-  // returns audio or null so useSpeech falls back to browser TTS.
+  // returns audio or null so useSpeech falls back to browser TTS. Asks for
+  // ogg/opus (~10x smaller than wav) when the browser can play it (Safari can't).
   const neuralTts = useCallback(async (text: string): Promise<Blob | null> => {
     const tok = localStorage.getItem('accessToken');
     if (!tok) return null;
     try {
+      const canOgg = document.createElement('audio').canPlayType('audio/ogg; codecs=opus') !== '';
       const res = await fetch(`${API}/mock-interview/tts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok}` },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, format: canOgg ? 'ogg' : 'wav' }),
       });
       if (!res.ok) return null;
       const blob = await res.blob();
@@ -87,6 +89,7 @@ function MockInterviewContent() {
   const {
     isSpeaking, isListening, transcript, transcriptRef, supported: sttSupported,
     speak, speakMcq, startListening, stopListening: stopSpeechRecognition, resetTranscript,
+    cancel: cancelSpeech,
   } = useSpeech(neuralTts);
 
   // Loads the user's score trend for the progress card (Phase 4.1). Fails silently.
@@ -370,7 +373,7 @@ function MockInterviewContent() {
   };
 
   const restart = () => {
-    window.speechSynthesis.cancel();
+    cancelSpeech(); // stops neural audio (and any queued chunks), not just browser TTS
     setStage('input');
     setJobDescription('');
     setSessionId(null);
