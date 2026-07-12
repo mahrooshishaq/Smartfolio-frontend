@@ -16,11 +16,13 @@ import type { PublicQuestion } from './types';
  * into an answer is the caller's concern (it depends on which question is active).
  */
 
-// Sentence chunking: a short first chunk for fast first audio, then larger
-// merged chunks to keep the request count low. Single sentences longer than
-// the limit are sent whole — the server handles long text fine.
+// Sentence chunking: a short first chunk for fast first audio, then chunks
+// kept small enough that each one's spoken duration exceeds the synthesis
+// time of the next (on the free-tier CPU a chunk synthesizes at ~0.75-1x
+// realtime plus ~1.3s network) — larger chunks open audible gaps between
+// sentences. Single sentences longer than the limit are sent whole.
 const FIRST_CHUNK_MAX = 120;
-const CHUNK_MAX = 260;
+const CHUNK_MAX = 160;
 export function splitForTts(text: string): string[] {
   const sentences = text.match(/[^.?!]+[.?!]+["')\]]*\s*|[^.?!]+$/g) ?? [text];
   const chunks: string[] = [];
@@ -41,6 +43,15 @@ export function splitForTts(text: string): string[] {
 }
 
 const BLOB_CACHE_MAX = 48;
+
+// The exact text speakMcq() reads aloud — exported so callers can prefetch it
+// with matching cache keys.
+export function mcqSpeechText(q: PublicQuestion): string {
+  const optionsText = (q.options || [])
+    .map((o, i) => `Option ${String.fromCharCode(65 + i)}: ${o}`)
+    .join('. ');
+  return `${q.question}. ${optionsText}`;
+}
 
 export function useSpeech(neuralTts?: (text: string) => Promise<Blob | null>) {
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -81,7 +92,11 @@ export function useSpeech(neuralTts?: (text: string) => Promise<Blob | null>) {
     };
     rec.onend = () => setIsListening(false);
     rec.onerror = (event: any) => {
-      console.error('Speech recognition error', event.error);
+      // 'no-speech' (silence timeout) and 'aborted' (we stopped it) are normal
+      // lifecycle events, not failures — don't spam the console with errors.
+      if (event.error !== 'no-speech' && event.error !== 'aborted') {
+        console.warn('Speech recognition error', event.error);
+      }
       setIsListening(false);
     };
     recognitionRef.current = rec;
@@ -93,17 +108,23 @@ export function useSpeech(neuralTts?: (text: string) => Promise<Blob | null>) {
   const getBestVoice = () => {
     if (!window.speechSynthesis) return null;
     const voices = window.speechSynthesis.getVoices();
+    // The interviewer persona is male — prefer male en voices in the browser
+    // fallback so it matches the neural (Kokoro am_michael) voice.
     const preferred = [
-      'Google US English',
-      'Microsoft Aria Online',
-      'Microsoft Jenny Online',
-      'English (United States)',
-      'en-US',
+      'Microsoft Guy Online',
+      'Microsoft Christopher Online',
+      'Microsoft Eric Online',
+      'Google UK English Male',
+      'Microsoft David',
+      'Daniel',
+      'Alex',
     ];
     for (const name of preferred) {
       const v = voices.find((v) => v.name.includes(name));
       if (v) return v;
     }
+    const male = voices.find((v) => v.lang.startsWith('en') && /male|man\b/i.test(v.name));
+    if (male) return male;
     return voices.find((v) => v.lang.startsWith('en')) || voices[0];
   };
 
@@ -147,6 +168,11 @@ export function useSpeech(neuralTts?: (text: string) => Promise<Blob | null>) {
     utterance.pitch = 1.0;
     utterance.onstart = () => setIsSpeaking(true);
     utterance.onend = () => {
+      setIsSpeaking(false);
+      if (autoListen) startListening();
+    };
+    utterance.onerror = () => {
+      // Never leave the UI stuck in "speaking" if the utterance dies.
       setIsSpeaking(false);
       if (autoListen) startListening();
     };
@@ -246,16 +272,29 @@ export function useSpeech(neuralTts?: (text: string) => Promise<Blob | null>) {
   const speak = async (text: string, autoListen = true) => {
     const seq = ++speakSeqRef.current;
     stopAudio(); // never overlap with a previous utterance
+    stopListening(); // speaking and listening are mutually exclusive turns
     const handled = await speakNeural(text, autoListen, seq);
     if (!handled && seq === speakSeqRef.current) browserSpeak(text, autoListen);
   };
 
   // Reads an MCQ's question plus its lettered options aloud (no auto-listen).
   const speakMcq = (q: PublicQuestion) => {
-    const optionsText = (q.options || [])
-      .map((o, i) => `Option ${String.fromCharCode(65 + i)}: ${o}`)
-      .join('. ');
-    speak(`${q.question}. ${optionsText}`, false);
+    speak(mcqSpeechText(q), false);
+  };
+
+  // Warm the audio cache for text that will be spoken soon (e.g. the next
+  // question, fetched while the candidate answers the current one). Sequential
+  // and fire-and-forget; chunks land in the same cache speak() reads, so the
+  // next question starts instantly instead of waiting on synthesis.
+  const prefetchSpeech = (text: string) => {
+    if (!neuralRef.current || neuralDisabledRef.current) return;
+    const chunks = splitForTts(text);
+    (async () => {
+      for (const c of chunks) {
+        if (neuralDisabledRef.current) return;
+        await getChunkBlob(c);
+      }
+    })().catch(() => { /* prefetch is best-effort */ });
   };
 
   const resetTranscript = () => {
@@ -278,6 +317,7 @@ export function useSpeech(neuralTts?: (text: string) => Promise<Blob | null>) {
     supported,
     speak,
     speakMcq,
+    prefetchSpeech,
     startListening,
     stopListening,
     resetTranscript,

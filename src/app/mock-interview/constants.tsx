@@ -42,7 +42,7 @@ export const SENIORITY_OPTIONS: { id: Seniority; label: string }[] = [
 ];
 
 // The AI interviewer persona shown in the video-call UI (Phase 3.3).
-export const INTERVIEWER = { name: 'Aria', role: 'AI Interviewer' };
+export const INTERVIEWER = { name: 'Folio', role: 'AI Interviewer' };
 
 export const fmtTime = (secs: number) => {
   const m = Math.floor(secs / 60);

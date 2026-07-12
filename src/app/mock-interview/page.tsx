@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useCallback, Suspense } from 'react';
+import { useEffect, useState, useCallback, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import AnimatedBackground from '@/components/AnimatedBackground';
 import VoiceWave from '@/components/VoiceWave';
@@ -11,9 +11,9 @@ import {
   FiHelpCircle, FiSettings, FiLoader, FiCheckCircle, FiXCircle, FiAlertCircle,
   FiRefreshCw, FiSend, FiArrowLeft, FiUser, FiCpu, FiZap, FiArrowRight,
   FiStar, FiTrendingUp, FiVolume2, FiSquare, FiRotateCcw,
-  FiVideo, FiVideoOff, FiPhoneOff, FiMessageSquare, FiWifi
+  FiVideo, FiVideoOff, FiPhoneOff, FiMessageSquare, FiWifi, FiX
 } from 'react-icons/fi';
-import { useSpeech } from './useSpeech';
+import { useSpeech, mcqSpeechText } from './useSpeech';
 import type {
   Round, LengthTier, Seniority, PublicQuestion, Evaluation, ProgressPoint, ProgressSummary,
 } from './types';
@@ -63,6 +63,14 @@ function MockInterviewContent() {
   const [elapsed, setElapsed] = useState(0); // seconds since the call began
   const [connectPhase, setConnectPhase] = useState<'dialing' | 'joined'>('dialing');
   const [typing, setTyping] = useState(false); // inline typed-answer fallback (Phase 4.3)
+  const [confirmEnd, setConfirmEnd] = useState(false); // platform-styled end-interview dialog
+
+  // Errors surface as a toast — auto-dismiss so they never linger over the call.
+  useEffect(() => {
+    if (!error) return;
+    const t = setTimeout(() => setError(''), 8000);
+    return () => clearTimeout(t);
+  }, [error]);
 
   // Neural TTS fetcher (Phase 3.4) — hits the backend /tts (Kokoro via Python),
   // returns audio or null so useSpeech falls back to browser TTS. Asks for
@@ -88,7 +96,7 @@ function MockInterviewContent() {
   // Speech (TTS + STT) — extracted into a hook (Phase 0.3), with neural TTS (Phase 3.4)
   const {
     isSpeaking, isListening, transcript, transcriptRef, supported: sttSupported,
-    speak, speakMcq, startListening, stopListening: stopSpeechRecognition, resetTranscript,
+    speak, speakMcq, prefetchSpeech, startListening, stopListening: stopSpeechRecognition, resetTranscript,
     cancel: cancelSpeech,
   } = useSpeech(neuralTts);
 
@@ -173,8 +181,27 @@ function MockInterviewContent() {
     }
   }, [stage, currentQuestionIdx]);
 
+  // Latency: while the candidate answers, warm the NEXT question's audio in the
+  // background so it starts instantly (server + client cache hit) instead of
+  // paying live synthesis between questions. Triggered on the falling edge of
+  // isSpeaking, i.e. the moment the interviewer finishes asking.
+  const prevSpeakingRef = useRef(false);
+  useEffect(() => {
+    const justFinishedSpeaking = prevSpeakingRef.current && !isSpeaking;
+    prevSpeakingRef.current = isSpeaking;
+    if (!justFinishedSpeaking || stage !== 'round') return;
+    let next: PublicQuestion | undefined;
+    if (currentQuestionIdx < currentRoundQuestions.length - 1) {
+      next = currentRoundQuestions[currentQuestionIdx + 1];
+    } else if (currentRoundIdx < ROUND_ORDER.length - 1) {
+      next = questions.filter((q) => q.round === ROUND_ORDER[currentRoundIdx + 1])[0];
+    }
+    if (next) prefetchSpeech(next.type === 'mcq' ? mcqSpeechText(next) : next.question);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSpeaking, stage, currentQuestionIdx, currentRoundIdx]);
+
   // ─── VIDEO-CALL CEREMONY & TIMER (Phase 3) ─────────────────────────────
-  // Connecting sequence: dial → "Aria joined" → into the interview.
+  // Connecting sequence: dial → "<interviewer> joined" → into the interview.
   useEffect(() => {
     if (stage !== 'connecting') return;
     setConnectPhase('dialing');
@@ -367,7 +394,8 @@ function MockInterviewContent() {
       setStage('results');
       if (token) loadProgress(token); // refresh the trend with this attempt
     } catch (err: any) {
-      setError(err.message || 'Something went wrong.');
+      console.warn('Submit failed:', err);
+      setError('We couldn’t submit your interview — please press Next or the end button to try again.');
       setStage('round');
     }
   };
@@ -463,8 +491,40 @@ function MockInterviewContent() {
             </div>
           )}
 
+          {/* Platform toast — replaces raw banner/browser alerts; dismissible + auto-hides */}
           {error && (
-            <div className="font-raleway bg-red-50 text-red-600 px-6 py-4 rounded-2xl mb-6 text-sm max-w-4xl mx-auto">{error}</div>
+            <div role="alert" className="fixed top-6 right-6 z-[60] w-[min(24rem,calc(100vw-3rem))] rounded-2xl bg-white border border-red-100 shadow-xl px-4 py-3.5 flex items-start gap-3">
+              <span className="mt-0.5 w-8 h-8 grid place-items-center rounded-xl bg-red-50 text-red-500 flex-shrink-0"><FiAlertCircle size={16} /></span>
+              <p className="font-raleway flex-1 text-sm text-slate-700 leading-snug">{error}</p>
+              <button onClick={() => setError('')} aria-label="Dismiss" className="text-slate-400 hover:text-slate-600 transition"><FiX size={16} /></button>
+            </div>
+          )}
+
+          {/* End-interview confirm — platform-styled, replaces window.confirm */}
+          {confirmEnd && (
+            <div className="fixed inset-0 z-[70] grid place-items-center bg-black/60 backdrop-blur-sm p-4">
+              <div role="dialog" aria-modal="true" aria-label="End interview" className="w-full max-w-sm rounded-3xl bg-[#0F1424] border border-white/10 p-6 shadow-2xl text-center">
+                <div className="mx-auto mb-3 w-12 h-12 grid place-items-center rounded-2xl bg-rose-500/15 text-rose-400"><FiPhoneOff size={22} /></div>
+                <h4 className="font-century text-white font-bold text-lg">End the interview?</h4>
+                <p className="font-raleway text-slate-400 text-sm mt-1.5">
+                  You&apos;ll get your evaluation right away. Questions you haven&apos;t answered will be scored as skipped.
+                </p>
+                <div className="mt-5 flex gap-3">
+                  <button
+                    onClick={() => setConfirmEnd(false)}
+                    className="font-raleway flex-1 h-11 rounded-2xl bg-white/5 border border-white/10 text-slate-200 font-semibold text-sm hover:bg-white/10 transition"
+                  >
+                    Keep going
+                  </button>
+                  <button
+                    onClick={() => { setConfirmEnd(false); cancelSpeech(); stopSpeechRecognition(); submitInterview(); }}
+                    className="font-raleway flex-1 h-11 rounded-2xl bg-rose-500 text-white font-bold text-sm hover:bg-rose-600 transition"
+                  >
+                    End &amp; evaluate
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
 
           {/* INPUT STAGE */}
@@ -567,7 +627,7 @@ function MockInterviewContent() {
 
                 {/* MAIN */}
                 <div className="relative z-10 px-6 pb-2 min-h-[300px] flex flex-col items-center justify-center">
-                  {/* Aria interviewer tile */}
+                  {/* Interviewer tile */}
                   <div className="flex flex-col items-center gap-3 pt-2">
                     <div className="relative grid place-items-center">
                       {isSpeaking && <span className="absolute inset-0 m-auto w-28 h-28 rounded-full bg-indigo-500/25 animate-ping" />}
@@ -616,9 +676,13 @@ function MockInterviewContent() {
                     </div>
                   )}
 
-                  {/* Candidate self-view PiP */}
-                  <div className="absolute right-5 bottom-3 w-36 md:w-52 aspect-[4/3] rounded-2xl overflow-hidden border border-white/15 bg-slate-900 shadow-xl">
-                    <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+                  {/* Candidate self-view PiP — anchored top-right beside the interviewer
+                      tile row, where nothing else renders, so it never covers the
+                      question text (which is centered lower and can grow long). */}
+                  <div className="absolute right-4 top-2 w-32 md:w-48 aspect-[4/3] rounded-2xl overflow-hidden border border-white/15 bg-slate-900 shadow-xl">
+                    {/* scale-x-[-1] mirrors the self-view like every video-call app —
+                        without it your movements appear reversed and feel wrong */}
+                    <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
                     {!cameraOn && (
                       <div className="absolute inset-0 grid place-items-center bg-gradient-to-br from-slate-700 to-slate-900">
                         <FiVideoOff className="text-slate-400" size={22} />
@@ -644,6 +708,22 @@ function MockInterviewContent() {
                     )}
                   </div>
                 )}
+
+                {/* TURN GUIDE — one always-visible line that says whose turn it is and what to do */}
+                <div className="relative z-10 text-center px-6 pb-2">
+                  <span className={`font-raleway inline-flex items-center gap-2 text-xs font-semibold rounded-full px-3.5 py-1.5 border ${
+                    awaitingFollowUp ? 'text-indigo-300 bg-indigo-500/10 border-indigo-400/30'
+                    : isSpeaking ? 'text-indigo-300 bg-indigo-500/10 border-indigo-400/30'
+                    : isListening ? 'text-emerald-300 bg-emerald-500/10 border-emerald-400/30'
+                    : 'text-slate-400 bg-white/5 border-white/10'
+                  }`}>
+                    {awaitingFollowUp ? <>{INTERVIEWER.name} is thinking…</>
+                      : isSpeaking ? <><span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />{INTERVIEWER.name} is asking — listen…</>
+                      : isListening ? <><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />Your turn — speak now, then press Next</>
+                      : activeQuestion.type === 'mcq' ? <>Pick an option, then press Next</>
+                      : <>Mic is off — tap the mic to speak, type below, or press Next</>}
+                  </span>
+                </div>
 
                 {/* CONTROL DOCK */}
                 <div className="relative z-10 flex items-center justify-center gap-3 px-6 pb-6 pt-1 flex-wrap">
@@ -696,7 +776,7 @@ function MockInterviewContent() {
 
                   {!(isLastRound && isLastQuestionInRound) && (
                     <button
-                      onClick={() => { if (window.confirm('End the interview now and get your evaluation?')) submitInterview(); }}
+                      onClick={() => setConfirmEnd(true)}
                       aria-label="End interview"
                       title="End interview"
                       className="w-12 h-12 grid place-items-center rounded-2xl bg-rose-500/90 text-white hover:bg-rose-600 transition"
@@ -729,7 +809,7 @@ function MockInterviewContent() {
                           else setAnswers(prev => ({ ...prev, [activeQuestion.id]: v }));
                         }}
                         placeholder="Type your answer here…"
-                        className="font-raleway w-full min-h-[90px] bg-white/5 border border-white/15 rounded-2xl p-4 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-400 resize-y"
+                        className="font-raleway w-full min-h-[90px] bg-white border border-slate-200 rounded-2xl p-4 text-sm text-slate-800 placeholder-slate-400 shadow-sm focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 resize-y"
                       />
                       {sttSupported && (
                         <div className="flex justify-end mt-2">
