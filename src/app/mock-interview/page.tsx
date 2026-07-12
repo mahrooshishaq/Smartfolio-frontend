@@ -541,16 +541,29 @@ function MockInterviewContent() {
   const isLastQuestionInRound = currentQuestionIdx === currentRoundQuestions.length - 1;
   const isLastRound = currentRoundIdx === ROUND_ORDER.length - 1;
 
-  // True once the current question has an answer on record (spoken transcript,
-  // typed text, or MCQ selection) and nobody is talking — the moment to guide
-  // the candidate toward "Next".
-  const answerReady = !!activeQuestion && !isSpeaking && !isListening && !isTranscribing && !awaitingFollowUp && (
+  // True once the current question has an answer on record — spoken transcript,
+  // typed text, or MCQ selection.
+  const hasAnswer = !!activeQuestion && (
     followUpQ
       ? !!(transcript.trim() || (followUpAnswers[followUpQ.parentQuestionId] || '').trim())
       : activeQuestion.type === 'mcq'
         ? answers[activeQuestion.id] !== undefined
         : !!(transcript.trim() || (typeof answers[activeQuestion.id] === 'string' && (answers[activeQuestion.id] as string).trim()))
   );
+  // …and nobody is talking — the moment to guide the candidate to submit.
+  const answerReady = hasAnswer && !isSpeaking && !isListening && !isTranscribing && !awaitingFollowUp;
+
+  // The advance button says exactly what pressing it does with the current
+  // answer state — "Submit" when an answer will be recorded, "Skip" when
+  // nothing has been captured — so there's never doubt whether an answer
+  // made it in.
+  const advanceLabel = awaitingFollowUp ? 'Thinking…'
+    : isTranscribing ? 'Processing…'
+    : activeQuestion?.type === 'mcq' && !followUpQ && answers[activeQuestion.id] === undefined ? 'Select an option'
+    : followUpQ ? (hasAnswer ? 'Submit answer' : 'Skip follow-up')
+    : hasAnswer
+      ? (isLastQuestionInRound ? (isLastRound ? 'Submit & end interview' : 'Submit & next round') : 'Submit answer')
+      : (isLastQuestionInRound ? (isLastRound ? 'Skip & end interview' : 'Skip & next round') : 'Skip question');
 
   return (
     <div className="flex min-h-screen bg-[#F8FAFC] text-slate-900">
@@ -905,9 +918,9 @@ function MockInterviewContent() {
                       : isSpeaking ? <><span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />{INTERVIEWER.name} is asking — listen…</>
                       : isListening ? <><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />Your turn — speak freely; press stop when you&apos;re done</>
                       : isTranscribing ? <><FiLoader size={13} className="animate-spin" />Processing your answer…</>
-                      : answerReady ? <><FiCheckCircle size={13} className="text-emerald-400" />Answer captured — press Next to continue</>
-                      : activeQuestion.type === 'mcq' ? <>Pick an option, then press Next</>
-                      : <>Mic is off — tap the mic to speak, type below, or press Next</>}
+                      : answerReady ? <><FiCheckCircle size={13} className="text-emerald-400" />Answer captured — press &ldquo;Submit answer&rdquo; when you&apos;re happy with it</>
+                      : activeQuestion.type === 'mcq' ? <>Pick an option, then press &ldquo;Submit answer&rdquo;</>
+                      : <>Mic is off — tap the mic to speak, type below, or skip the question</>}
                   </span>
                 </div>
                 )}
@@ -955,11 +968,15 @@ function MockInterviewContent() {
 
                   <button
                     onClick={handleNext}
-                    disabled={awaitingFollowUp || (activeQuestion.type === 'mcq' && answers[activeQuestion.id] === undefined)}
+                    disabled={awaitingFollowUp || (activeQuestion.type === 'mcq' && !followUpQ && answers[activeQuestion.id] === undefined)}
                     className={`font-raleway inline-flex items-center gap-2 bg-white text-slate-900 hover:bg-slate-100 px-6 h-12 rounded-2xl font-bold text-sm transition disabled:opacity-40 disabled:cursor-not-allowed ${answerReady ? 'ring-4 ring-emerald-400/50' : ''}`}
                   >
-                    {awaitingFollowUp ? 'Thinking…' : followUpQ ? 'Continue' : isLastQuestionInRound ? (isLastRound ? 'End interview' : 'Next round') : 'Next'}
-                    {!awaitingFollowUp && <FiArrowRight size={16} />}
+                    {advanceLabel}
+                    {!awaitingFollowUp && (
+                      isTranscribing ? <FiLoader className="animate-spin" size={16} />
+                      : hasAnswer ? <FiSend size={16} />
+                      : <FiArrowRight size={16} />
+                    )}
                   </button>
 
                   {!(isLastRound && isLastQuestionInRound) && (
