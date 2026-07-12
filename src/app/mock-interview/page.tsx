@@ -1,70 +1,27 @@
 'use client';
-import { useEffect, useState, useRef, Suspense } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import AnimatedBackground from '@/components/AnimatedBackground';
 import VoiceWave from '@/components/VoiceWave';
+import { useWebcam } from './useWebcam';
+import { ResultsStage } from './ResultsStage';
+import { InputStage } from './InputStage';
 import {
   FiLogOut, FiLayout, FiFileText, FiMic, FiBookOpen, FiFile, FiBriefcase,
   FiHelpCircle, FiSettings, FiLoader, FiCheckCircle, FiXCircle, FiAlertCircle,
   FiRefreshCw, FiSend, FiArrowLeft, FiUser, FiCpu, FiZap, FiArrowRight,
-  FiStar, FiTrendingUp, FiVolume2, FiSquare, FiRotateCcw
+  FiStar, FiTrendingUp, FiVolume2, FiSquare, FiRotateCcw,
+  FiVideo, FiVideoOff, FiPhoneOff, FiMessageSquare, FiWifi
 } from 'react-icons/fi';
+import { useSpeech } from './useSpeech';
+import type {
+  Round, LengthTier, Seniority, PublicQuestion, Evaluation, ProgressPoint, ProgressSummary,
+} from './types';
+import {
+  ROUND_META, ROUND_ORDER, TIER_OPTIONS, SENIORITY_OPTIONS, INTERVIEWER, fmtTime, SidebarItem,
+} from './constants';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-
-type Round = 'hr' | 'technical' | 'problem_solving';
-type QuestionType = 'mcq' | 'short_answer' | 'scenario' | 'fill_in_the_blank' | 'behavioral';
-
-interface PublicQuestion {
-  id: number;
-  round: Round;
-  type: QuestionType;
-  question: string;
-  options?: string[];
-}
-interface QuestionFeedback { questionId: number; verdict: 'correct' | 'partial' | 'incorrect'; explanation: string; }
-interface RoundScore { hr: number; technical: number; problem_solving: number; }
-interface Evaluation {
-  overallScore: number;
-  roundScores: RoundScore;
-  perQuestion: QuestionFeedback[];
-  strengths: string[];
-  areasToImprove: string[];
-  improvementTips: string[];
-  summary: string;
-}
-
-const ROUND_META: Record<Round, { title: string; subtitle: string; icon: any; color: string; bg: string }> = {
-  hr: {
-    title: 'HR & Behavioral',
-    subtitle: 'Get to know you — your background, motivation, and work style',
-    icon: FiUser,
-    color: 'text-rose-600',
-    bg: 'bg-rose-50',
-  },
-  technical: {
-    title: 'Technical',
-    subtitle: 'Test your knowledge with multiple choice, fill-in-the-blank, and concept questions',
-    icon: FiCpu,
-    color: 'text-blue-600',
-    bg: 'bg-blue-50',
-  },
-  problem_solving: {
-    title: 'Problem Solving',
-    subtitle: 'Real-world scenarios — walk us through your approach',
-    icon: FiZap,
-    color: 'text-amber-600',
-    bg: 'bg-amber-50',
-  },
-};
-
-const ROUND_ORDER: Round[] = ['hr', 'technical', 'problem_solving'];
-
-const SidebarItem = ({ icon: Icon, label, active = false, onClick }: { icon: any; label: string; active?: boolean; onClick?: () => void }) => (
-  <div onClick={onClick} className={`font-raleway flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all ${active ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-gray-400 hover:bg-gray-50 hover:text-gray-600'}`}>
-    <Icon size={20} /><span className="text-sm">{label}</span>
-  </div>
-);
 
 export default function MockInterviewPage() {
   return (
@@ -79,9 +36,13 @@ function MockInterviewContent() {
   const searchParams = useSearchParams();
   const [token, setToken] = useState<string | null>(null);
 
-  // Stage: 'input' | 'loading' | 'round_intro' | 'round' | 'evaluating' | 'results'
-  const [stage, setStage] = useState<'input' | 'loading' | 'round_intro' | 'round' | 'evaluating' | 'results'>('input');
+  // Stage: 'input' | 'loading' | 'connecting' | 'round_intro' | 'round' | 'evaluating' | 'results'
+  const [stage, setStage] = useState<'input' | 'loading' | 'connecting' | 'round_intro' | 'round' | 'evaluating' | 'results'>('input');
   const [jobDescription, setJobDescription] = useState('');
+  const [lengthTier, setLengthTier] = useState<LengthTier>('standard');
+  const [seniority, setSeniority] = useState<Seniority | ''>('');
+  const [focusInput, setFocusInput] = useState('');
+  const [useResume, setUseResume] = useState(true);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [questions, setQuestions] = useState<PublicQuestion[]>([]);
   const [answers, setAnswers] = useState<Record<number, string | number>>({});
@@ -89,51 +50,39 @@ function MockInterviewContent() {
   const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0); // Index within the current round's questions
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
   const [error, setError] = useState('');
+  const [progress, setProgress] = useState<{ points: ProgressPoint[]; summary: ProgressSummary } | null>(null);
 
-  // Audio States
-  const [isListening, setIsListening] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [transcript, setTranscript] = useState('');
-  const recognitionRef = useRef<any>(null);
-  const transcriptRef = useRef('');
+  // Adaptive follow-ups (Phase 2.2)
+  const [followUpQ, setFollowUpQ] = useState<{ parentQuestionId: number; question: string } | null>(null);
+  const [followUpAnswers, setFollowUpAnswers] = useState<Record<number, string>>({});
+  const [awaitingFollowUp, setAwaitingFollowUp] = useState(false);
+
+  // Video-call experience (Phase 3)
+  const { videoRef, cameraOn, cameraError, start: startCamera, stop: stopCamera, toggle: toggleCamera } = useWebcam();
+  const [captionsOn, setCaptionsOn] = useState(true);
+  const [elapsed, setElapsed] = useState(0); // seconds since the call began
+  const [connectPhase, setConnectPhase] = useState<'dialing' | 'joined'>('dialing');
+  const [typing, setTyping] = useState(false); // inline typed-answer fallback (Phase 4.3)
+
+  // Speech (TTS + STT) — extracted into a hook (Phase 0.3)
+  const {
+    isSpeaking, isListening, transcript, transcriptRef, supported: sttSupported,
+    speak, speakMcq, startListening, stopListening: stopSpeechRecognition, resetTranscript,
+  } = useSpeech();
+
+  // Loads the user's score trend for the progress card (Phase 4.1). Fails silently.
+  const loadProgress = (tok: string) => {
+    fetch(`${API}/mock-interview/progress`, { headers: { Authorization: `Bearer ${tok}` } })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d) setProgress(d); })
+      .catch(() => {});
+  };
 
   useEffect(() => {
     const t = localStorage.getItem('accessToken');
     if (!t) { router.push('/login'); return; }
     setToken(t);
-
-    // Initialize STT
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = true;
-      recognitionRef.current.interimResults = true;
-      recognitionRef.current.lang = 'en-US';
-
-      recognitionRef.current.onresult = (event: any) => {
-        let interimTranscript = '';
-        let finalTranscript = '';
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript;
-          } else {
-            interimTranscript += event.results[i][0].transcript;
-          }
-        }
-        const current = finalTranscript || interimTranscript;
-        setTranscript(current);
-        transcriptRef.current = current;
-      };
-
-      recognitionRef.current.onend = () => {
-        setIsListening(false);
-      };
-
-      recognitionRef.current.onerror = (event: any) => {
-        console.error('Speech recognition error', event.error);
-        setIsListening(false);
-      };
-    }
+    loadProgress(t);
 
     // Check for sessionId in URL
     const sid = searchParams.get('sessionId');
@@ -151,6 +100,7 @@ function MockInterviewContent() {
       if (res.ok) {
         const data = await res.json();
         setSessionId(data.id);
+        if (data.lengthTier) setLengthTier(data.lengthTier);
         setQuestions(data.questions);
         const ansObj: Record<number, string | number> = {};
         data.answers.forEach((a: any) => { ansObj[a.questionId] = a.answer; });
@@ -179,74 +129,9 @@ function MockInterviewContent() {
   const currentRoundQuestions = questions.filter((q) => q.round === currentRound);
   const activeQuestion = currentRoundQuestions[currentQuestionIdx];
 
-  // ─── SPEECH UTILS ───────────────────────────────────────────────────
-
-  const getBestVoice = () => {
-    if (!window.speechSynthesis) return null;
-    const voices = window.speechSynthesis.getVoices();
-    // Prioritize natural sounding voices
-    const preferred = [
-      'Google US English',
-      'Microsoft Aria Online',
-      'Microsoft Jenny Online',
-      'English (United States)',
-      'en-US'
-    ];
-    
-    for (const name of preferred) {
-      const v = voices.find(v => v.name.includes(name));
-      if (v) return v;
-    }
-    return voices.find(v => v.lang.startsWith('en')) || voices[0];
-  };
-
-  const cleanTextForSpeech = (text: string) => {
-    return text
-      .replace(/_+/g, ' ') // Replace underscores with space
-      .replace(/[:;]/g, '.') // Replace colons/semicolons with dots for better pausing
-      .replace(/[()]/g, ',') // Replace parens with commas
-      .replace(/[*#]/g, '') // Remove markdown-style symbols
-      .trim();
-  };
-
-  const speak = (text: string) => {
-    if (!window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
-    
-    const cleanedText = cleanTextForSpeech(text);
-    const utterance = new SpeechSynthesisUtterance(cleanedText);
-    const voice = getBestVoice();
-    if (voice) utterance.voice = voice;
-    utterance.rate = 1.0;
-    utterance.pitch = 1.0;
-
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => {
-      setIsSpeaking(false);
-      // Automatically start listening after question is asked
-      startListening();
-    };
-    window.speechSynthesis.speak(utterance);
-  };
-
-  const startListening = () => {
-    if (!recognitionRef.current) return;
-    setTranscript('');
-    transcriptRef.current = '';
-    try {
-      recognitionRef.current.start();
-      setIsListening(true);
-    } catch (e) {
-      console.warn('Recognition already started');
-    }
-  };
-
+  // Stops recognition and persists whatever was captured as the current answer.
   const stopListening = () => {
-    if (!recognitionRef.current) return;
-    recognitionRef.current.stop();
-    setIsListening(false);
-
-    // Save current transcript as answer if it exists
+    stopSpeechRecognition();
     const finalTranscript = transcriptRef.current;
     if (finalTranscript.trim() && activeQuestion) {
       setAnswers(prev => ({ ...prev, [activeQuestion.id]: finalTranscript.trim() }));
@@ -258,9 +143,44 @@ function MockInterviewContent() {
   useEffect(() => {
     // Speak when entering round or moving to next question
     if (stage === 'round' && activeQuestion) {
-      speak(activeQuestion.question);
+      if (activeQuestion.type === 'mcq') {
+        speakMcq(activeQuestion);
+      } else {
+        speak(activeQuestion.question);
+      }
     }
   }, [stage, currentQuestionIdx]);
+
+  // ─── VIDEO-CALL CEREMONY & TIMER (Phase 3) ─────────────────────────────
+  // Connecting sequence: dial → "Aria joined" → into the interview.
+  useEffect(() => {
+    if (stage !== 'connecting') return;
+    setConnectPhase('dialing');
+    startCamera();
+    const t1 = setTimeout(() => setConnectPhase('joined'), 1800);
+    const t2 = setTimeout(() => setStage('round_intro'), 3200);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage]);
+
+  // Running call timer while the interview is live.
+  useEffect(() => {
+    const inCall = stage === 'connecting' || stage === 'round_intro' || stage === 'round';
+    if (!inCall) return;
+    const id = setInterval(() => setElapsed((e) => e + 1), 1000);
+    return () => clearInterval(id);
+  }, [stage]);
+
+  // Release the camera once the call is over.
+  useEffect(() => {
+    if (stage === 'results' || stage === 'input') stopCamera();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage]);
+
+  // Reset the typed-answer fallback per question; default it ON when STT is unsupported (Phase 4.3).
+  useEffect(() => {
+    setTyping(!sttSupported);
+  }, [currentQuestionIdx, currentRoundIdx, followUpQ, sttSupported]);
 
   const generateTest = async () => {
     if (!token) return;
@@ -274,7 +194,15 @@ function MockInterviewContent() {
       const res = await fetch(`${API}/mock-interview/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ jobDescription }),
+        body: JSON.stringify({
+          jobDescription,
+          lengthTier,
+          useResume,
+          ...(seniority ? { seniority } : {}),
+          ...(focusInput.trim()
+            ? { focusAreas: focusInput.split(',').map((s) => s.trim()).filter(Boolean).slice(0, 6) }
+            : {}),
+        }),
       });
       if (res.status === 401) { router.push('/login'); return; }
       if (!res.ok) {
@@ -283,11 +211,13 @@ function MockInterviewContent() {
       }
       const data = await res.json();
       setSessionId(data.sessionId);
+      if (data.lengthTier) setLengthTier(data.lengthTier);
       setQuestions(data.questions);
       setAnswers({});
       setCurrentRoundIdx(0);
       setCurrentQuestionIdx(0);
-      setStage('round_intro');
+      setElapsed(0);
+      setStage('connecting');
     } catch (err: any) {
       setError(err.message || 'Something went wrong.');
       setStage('input');
@@ -300,37 +230,85 @@ function MockInterviewContent() {
     setStage('round');
   };
 
-  const handleNext = () => {
+  // Advance to the next question (or next round / submit) — the plain forward move.
+  const advanceQuestion = () => {
+    if (currentQuestionIdx < currentRoundQuestions.length - 1) {
+      setCurrentQuestionIdx(prev => prev + 1);
+      resetTranscript();
+    } else {
+      goToNextRound();
+    }
+  };
+
+  // Ask the backend for an adaptive follow-up. Fails safe: any error -> null.
+  const fetchFollowUp = async (questionId: number, answer: string): Promise<string | null> => {
+    if (!token || !sessionId) return null;
+    try {
+      const res = await fetch(`${API}/mock-interview/follow-up`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ sessionId, questionId, answer }),
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data.followUp || null;
+    } catch {
+      return null;
+    }
+  };
+
+  const handleNext = async () => {
     // Capture the absolute latest transcript
     const currentAnswer = transcriptRef.current;
 
     // Stop listening if active
     if (isListening) {
-      if (recognitionRef.current) recognitionRef.current.stop();
-      setIsListening(false);
+      stopSpeechRecognition();
     }
 
-    // Save current transcript to answers if not empty
-    if (currentAnswer.trim() && activeQuestion) {
+    // We are currently answering a follow-up → store its answer, then advance.
+    if (followUpQ) {
+      if (currentAnswer.trim()) {
+        setFollowUpAnswers(prev => ({ ...prev, [followUpQ.parentQuestionId]: currentAnswer.trim() }));
+      }
+      setFollowUpQ(null);
+      advanceQuestion();
+      return;
+    }
+
+    // Save current transcript to answers if not empty (MCQ answers are stored on click)
+    if (currentAnswer.trim() && activeQuestion && activeQuestion.type !== 'mcq') {
       setAnswers(prev => ({ ...prev, [activeQuestion.id]: currentAnswer.trim() }));
     }
 
-    // Check if we have more questions in this round
-    if (currentQuestionIdx < currentRoundQuestions.length - 1) {
-      setCurrentQuestionIdx(prev => prev + 1);
-      setTranscript('');
-      transcriptRef.current = '';
-    } else {
-      // End of round
-      goToNextRound();
+    // Maybe ask an adaptive follow-up on open-ended answers (standard/full only, once per question).
+    const eligible =
+      !!activeQuestion &&
+      (activeQuestion.type === 'behavioral' || activeQuestion.type === 'scenario') &&
+      lengthTier !== 'quick' &&
+      currentAnswer.trim().length > 0 &&
+      !(activeQuestion.id in followUpAnswers);
+
+    if (eligible && activeQuestion) {
+      setAwaitingFollowUp(true);
+      const fu = await fetchFollowUp(activeQuestion.id, currentAnswer.trim());
+      setAwaitingFollowUp(false);
+      if (fu) {
+        setFollowUpQ({ parentQuestionId: activeQuestion.id, question: fu });
+        resetTranscript();
+        speak(fu);
+        return; // stay on this screen; the follow-up is now showing
+      }
     }
+
+    advanceQuestion();
   };
 
   const goToNextRound = () => {
     if (currentRoundIdx < ROUND_ORDER.length - 1) {
       setCurrentRoundIdx(currentRoundIdx + 1);
       setCurrentQuestionIdx(0);
-      setTranscript('');
+      resetTranscript();
       setError('');
       setStage('round_intro');
     } else {
@@ -343,11 +321,19 @@ function MockInterviewContent() {
     setStage('evaluating');
     setError('');
     try {
-      const payload = questions.map((q) => ({ questionId: q.id, answer: answers[q.id] || '' }));
+      const payload = questions.map((q) => ({ questionId: q.id, answer: answers[q.id] ?? '' }));
+      const followUpPayload = Object.entries(followUpAnswers).map(([parentQuestionId, answer]) => ({
+        parentQuestionId: Number(parentQuestionId),
+        answer,
+      }));
       const res = await fetch(`${API}/mock-interview/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ sessionId, answers: payload }),
+        body: JSON.stringify({
+          sessionId,
+          answers: payload,
+          ...(followUpPayload.length ? { followUpAnswers: followUpPayload } : {}),
+        }),
       });
       if (res.status === 401) { router.push('/login'); return; }
       if (!res.ok) {
@@ -357,6 +343,7 @@ function MockInterviewContent() {
       const data = await res.json();
       setEvaluation(data.evaluation);
       setStage('results');
+      if (token) loadProgress(token); // refresh the trend with this attempt
     } catch (err: any) {
       setError(err.message || 'Something went wrong.');
       setStage('round');
@@ -374,13 +361,15 @@ function MockInterviewContent() {
     setCurrentQuestionIdx(0);
     setEvaluation(null);
     setError('');
+    setFollowUpQ(null);
+    setFollowUpAnswers({});
+    setAwaitingFollowUp(false);
+    stopCamera();
+    setElapsed(0);
+    setCaptionsOn(true);
+    setConnectPhase('dialing');
   };
 
-  const verdictStyle = (v: string) => {
-    if (v === 'correct') return { icon: FiCheckCircle, color: 'text-emerald-600', bg: 'bg-emerald-50', label: 'Correct' };
-    if (v === 'partial') return { icon: FiAlertCircle, color: 'text-amber-600', bg: 'bg-amber-50', label: 'Partial' };
-    return { icon: FiXCircle, color: 'text-red-500', bg: 'bg-red-50', label: 'Incorrect' };
-  };
 
   const isLastQuestionInRound = currentQuestionIdx === currentRoundQuestions.length - 1;
   const isLastRound = currentRoundIdx === ROUND_ORDER.length - 1;
@@ -423,6 +412,7 @@ function MockInterviewContent() {
               <h2 className="font-century text-3xl font-black text-slate-800">Mock Interview</h2>
               <p className="font-raleway text-sm text-gray-400 mt-1">
                 {stage === 'input' && 'Paste a job description to start a 3-round mock interview'}
+                {stage === 'connecting' && 'Connecting you to your interviewer…'}
                 {stage === 'round_intro' && `Get ready for Round ${currentRoundIdx + 1} of ${ROUND_ORDER.length}`}
                 {stage === 'round' && `Question ${currentQuestionIdx + 1} of ${currentRoundQuestions.length} — ${ROUND_META[currentRound].title}`}
                 {stage === 'results' && 'Your full interview evaluation'}
@@ -457,37 +447,16 @@ function MockInterviewContent() {
 
           {/* INPUT STAGE */}
           {stage === 'input' && (
-            <div className="bg-white rounded-[2rem] shadow-sm border border-gray-50 p-10 max-w-3xl mx-auto">
-              <label className="font-raleway block text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
-                Job Description
-              </label>
-              <textarea
-                value={jobDescription}
-                onChange={(e) => setJobDescription(e.target.value)}
-                placeholder="Paste the full job description here, including required skills, technologies, and responsibilities..."
-                className="font-raleway w-full min-h-[260px] bg-gray-50 border border-gray-100 rounded-2xl p-5 text-sm text-slate-700 placeholder-gray-400 focus:outline-none focus:border-[#4F46E5] resize-y"
-              />
-              <div className="bg-indigo-50/50 rounded-2xl p-5 mt-5">
-                <p className="font-century text-sm font-bold text-slate-700 mb-3">Professional Interview Simulation</p>
-                <div className="space-y-2 text-xs text-slate-600 font-raleway">
-                  <div className="flex items-center gap-2"><FiVolume2 className="text-rose-500" size={14} /> Natural voice-guided questions</div>
-                  <div className="flex items-center gap-2"><FiMic className="text-blue-500" size={14} /> Voice-to-text response capture</div>
-                  <div className="flex items-center gap-2"><FiZap className="text-amber-500" size={14} /> Comprehensive 3-round performance analysis</div>
-                </div>
-              </div>
-              <div className="flex items-center justify-between mt-4">
-                <p className="font-raleway text-xs text-gray-400">
-                  {jobDescription.length} characters {jobDescription.length < 20 && '(min 20)'}
-                </p>
-                <button
-                  onClick={generateTest}
-                  disabled={jobDescription.trim().length < 20}
-                  className="font-raleway flex items-center gap-2 bg-[#4F46E5] hover:bg-[#4338CA] text-white px-8 py-3 rounded-2xl font-semibold text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <FiSend size={16} /> Start Interview
-                </button>
-              </div>
-            </div>
+            <InputStage
+              jobDescription={jobDescription} setJobDescription={setJobDescription}
+              lengthTier={lengthTier} setLengthTier={setLengthTier}
+              seniority={seniority} setSeniority={setSeniority}
+              focusInput={focusInput} setFocusInput={setFocusInput}
+              useResume={useResume} setUseResume={setUseResume}
+              onStart={generateTest}
+              sttSupported={sttSupported}
+              progress={progress}
+            />
           )}
 
           {/* LOADING STAGE */}
@@ -496,6 +465,32 @@ function MockInterviewContent() {
               <FiLoader className="animate-spin text-[#4F46E5] mb-4" size={40} />
               <p className="font-century text-lg font-bold text-slate-700">Preparing your interview...</p>
               <p className="font-raleway text-sm text-gray-400 mt-2">Crafting questions across 3 rounds</p>
+            </div>
+          )}
+
+          {/* CONNECTING (call ceremony) */}
+          {stage === 'connecting' && (
+            <div className="max-w-4xl mx-auto">
+              <div className="relative overflow-hidden rounded-[2rem] bg-[#0A0E1A] border border-white/5 p-14 text-center shadow-2xl">
+                <div className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-96 rounded-full bg-indigo-500/20 blur-3xl" />
+                <div className="relative z-10 flex flex-col items-center">
+                  <div className="relative mb-6 grid place-items-center">
+                    {connectPhase === 'dialing' && <span className="absolute inset-0 m-auto w-24 h-24 rounded-full bg-indigo-500/30 animate-ping" />}
+                    <div className="relative w-24 h-24 rounded-full grid place-items-center bg-gradient-to-br from-indigo-400 via-violet-500 to-blue-500 shadow-lg">
+                      <FiUser className="text-white" size={40} />
+                    </div>
+                  </div>
+                  <p className="font-century text-2xl font-black text-white mb-2">
+                    {connectPhase === 'dialing' ? `Connecting to ${INTERVIEWER.name}…` : `${INTERVIEWER.name} has joined`}
+                  </p>
+                  <p className="font-raleway text-sm text-slate-400">
+                    {connectPhase === 'dialing' ? 'Setting up your interview room' : 'Your interview is about to begin'}
+                  </p>
+                  <div className="mt-8 inline-flex items-center gap-2 text-slate-500 text-xs font-raleway">
+                    <FiVideo size={14} /> {cameraOn ? 'Camera ready' : (cameraError || 'Waiting for camera…')}
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
@@ -526,105 +521,211 @@ function MockInterviewContent() {
             </div>
           )}
 
-          {/* ROUND STAGE (Sequential Audio Focus) */}
+          {/* ROUND STAGE — VIDEO CALL */}
           {stage === 'round' && activeQuestion && (
-            <div className="max-w-4xl mx-auto">
-              <div className="bg-white rounded-[2rem] shadow-sm border border-gray-50 p-10 text-center relative overflow-hidden">
-                {/* Background pulse when listening */}
-                {isListening && <div className="absolute inset-0 bg-indigo-50/30 animate-pulse pointer-events-none" />}
+            <div className="max-w-5xl mx-auto">
+              <div className="relative overflow-hidden rounded-[2rem] bg-[#0A0E1A] border border-white/5 shadow-2xl">
+                {/* ambient glows */}
+                <div className="pointer-events-none absolute -top-24 -left-16 w-96 h-96 rounded-full bg-indigo-600/15 blur-3xl" />
+                <div className="pointer-events-none absolute -bottom-24 -right-10 w-96 h-96 rounded-full bg-blue-600/10 blur-3xl" />
 
-                <div className="relative z-10">
-                  <span className={`inline-block font-raleway text-[10px] font-bold uppercase tracking-[0.2em] px-4 py-1.5 rounded-full mb-6 ${ROUND_META[currentRound].bg} ${ROUND_META[currentRound].color}`}>
-                    {activeQuestion.type.replace('_', ' ')}
+                {/* TOP BAR */}
+                <div className="relative z-10 flex items-center gap-3 px-6 py-4 flex-wrap">
+                  <span className="inline-flex items-center gap-2 rounded-full bg-rose-500/10 border border-rose-500/25 px-3 py-1.5 text-rose-400 text-[11px] font-bold tracking-wide">
+                    <span className="w-2 h-2 rounded-full bg-rose-400 animate-pulse" /> REC
                   </span>
-                  
-                  <h3 className="font-century text-2xl font-black text-slate-800 mb-8 leading-relaxed max-w-2xl mx-auto">
-                    {activeQuestion.question}
-                  </h3>
+                  <span className="text-slate-200 text-xs font-bold tabular-nums">{fmtTime(elapsed)}</span>
+                  <span className="inline-flex items-center gap-2 rounded-full bg-white/5 border border-white/10 px-3 py-1.5 text-slate-300 text-[11px] font-semibold">
+                    {ROUND_META[currentRound].title}
+                    <span className="text-slate-500">· Q{currentQuestionIdx + 1}/{currentRoundQuestions.length}</span>
+                  </span>
+                  <div className="flex-1" />
+                  <span className="inline-flex items-center gap-1.5 text-slate-400 text-[11px] font-semibold"><FiWifi size={13} /> Connected</span>
+                </div>
 
-                  {/* VOICE VISUALIZER */}
-                  <div className="mb-10">
-                    <VoiceWave 
-                      isActive={isSpeaking || isListening} 
-                      mode={isSpeaking ? 'speaking' : 'listening'}
-                      color={isSpeaking ? 'bg-rose-400' : 'bg-indigo-500'}
-                    />
+                {/* MAIN */}
+                <div className="relative z-10 px-6 pb-2 min-h-[300px] flex flex-col items-center justify-center">
+                  {/* Aria interviewer tile */}
+                  <div className="flex flex-col items-center gap-3 pt-2">
+                    <div className="relative grid place-items-center">
+                      {isSpeaking && <span className="absolute inset-0 m-auto w-28 h-28 rounded-full bg-indigo-500/25 animate-ping" />}
+                      <div className="relative w-28 h-28 rounded-full grid place-items-center bg-gradient-to-br from-indigo-400 via-violet-500 to-blue-500 shadow-xl">
+                        {isSpeaking
+                          ? <VoiceWave isActive mode="speaking" color="bg-white" />
+                          : <FiUser className="text-white/90" size={44} />}
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-white font-century font-bold text-base">{INTERVIEWER.name}</p>
+                      <p className="text-slate-400 text-xs font-raleway inline-flex items-center gap-2">
+                        {INTERVIEWER.role}
+                        {isSpeaking && <span className="text-indigo-300 font-semibold">· speaking</span>}
+                        {isListening && <span className="text-emerald-300 font-semibold">· listening</span>}
+                      </p>
+                    </div>
                   </div>
 
-                  {/* TRANSCRIPT AREA */}
-                  <div className="min-h-[120px] bg-gray-50 rounded-2xl p-6 mb-8 border border-dashed border-gray-200 flex flex-col items-center justify-center">
-                    {isSpeaking && (
-                      <p className="font-raleway text-sm text-rose-500 font-semibold animate-pulse">AI is speaking...</p>
-                    )}
-                    {!isSpeaking && !isListening && !transcript && (
-                      <p className="font-raleway text-sm text-gray-400 italic">Microphone is off. Click the button below to start.</p>
-                    )}
-                    {isListening && !transcript && (
-                      <p className="font-raleway text-sm text-indigo-500 font-semibold animate-pulse">Listening to you...</p>
-                    )}
-                    {transcript && (
-                      <p className="font-raleway text-sm text-slate-600 leading-relaxed italic">"{transcript}"</p>
-                    )}
+                  {/* Question badge + text */}
+                  <div className="mt-6 text-center max-w-2xl">
+                    <span className={`inline-block font-raleway text-[10px] font-bold uppercase tracking-[0.2em] px-3 py-1 rounded-full mb-3 ${followUpQ ? 'bg-indigo-500/20 text-indigo-300' : 'bg-white/5 text-slate-300'}`}>
+                      {followUpQ ? 'Follow-up' : activeQuestion.type.replace('_', ' ')}
+                    </span>
+                    <h3 className="font-century text-xl md:text-2xl font-black text-white leading-relaxed">
+                      {followUpQ ? followUpQ.question : activeQuestion.question}
+                    </h3>
                   </div>
 
-                  {/* CONTROLS */}
-                  <div className="flex items-center justify-center gap-4">
-                    <button
-                      onClick={() => speak(activeQuestion.question)}
-                      className="w-12 h-12 flex items-center justify-center rounded-xl bg-gray-100 text-gray-500 hover:bg-gray-200 transition-all"
-                      title="Replay Question"
-                    >
-                      <FiRotateCcw size={20} />
-                    </button>
+                  {/* MCQ OPTIONS */}
+                  {activeQuestion.type === 'mcq' && activeQuestion.options && (
+                    <div className="mt-6 w-full max-w-xl grid grid-cols-1 gap-2.5">
+                      {activeQuestion.options.map((opt, i) => {
+                        const selected = answers[activeQuestion.id] === i;
+                        return (
+                          <button
+                            key={i}
+                            onClick={() => setAnswers(prev => ({ ...prev, [activeQuestion.id]: i }))}
+                            className={`font-raleway flex items-center gap-3 text-left px-4 py-3 rounded-2xl border transition-all ${selected ? 'border-indigo-400 bg-indigo-500/15 text-white' : 'border-white/10 bg-white/5 text-slate-300 hover:border-indigo-400/50'}`}
+                          >
+                            <span className={`flex-shrink-0 w-7 h-7 rounded-full grid place-items-center text-xs font-bold ${selected ? 'bg-indigo-500 text-white' : 'bg-white/10 text-slate-300'}`}>{String.fromCharCode(65 + i)}</span>
+                            <span className="text-sm">{opt}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
 
+                  {/* Candidate self-view PiP */}
+                  <div className="absolute right-5 bottom-3 w-36 md:w-52 aspect-[4/3] rounded-2xl overflow-hidden border border-white/15 bg-slate-900 shadow-xl">
+                    <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+                    {!cameraOn && (
+                      <div className="absolute inset-0 grid place-items-center bg-gradient-to-br from-slate-700 to-slate-900">
+                        <FiVideoOff className="text-slate-400" size={22} />
+                      </div>
+                    )}
+                    <span className="absolute left-2 bottom-1.5 flex items-center gap-1.5 rounded-md bg-black/50 px-2 py-0.5 text-[10px] font-bold text-white">
+                      {isListening ? <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> : <FiMic size={10} />} You
+                    </span>
+                  </div>
+                </div>
+
+                {/* CAPTIONS */}
+                {captionsOn && (
+                  <div className="relative z-10 mx-6 mb-3 rounded-2xl bg-black/30 border border-white/10 px-4 py-3 backdrop-blur-sm min-h-[52px] flex items-center">
+                    {isSpeaking ? (
+                      <p className="font-raleway text-sm text-slate-100"><span className="text-indigo-300 font-bold mr-2">{INTERVIEWER.name}:</span>{followUpQ ? followUpQ.question : activeQuestion.question}</p>
+                    ) : transcript ? (
+                      <p className="font-raleway text-sm text-slate-200"><span className="text-emerald-300 font-bold mr-2">You:</span>{transcript}</p>
+                    ) : isListening ? (
+                      <p className="font-raleway text-sm text-slate-400 italic">Listening…</p>
+                    ) : (
+                      <p className="font-raleway text-sm text-slate-500 italic">{activeQuestion.type === 'mcq' ? 'Select an answer below.' : 'Tap the mic to answer.'}</p>
+                    )}
+                  </div>
+                )}
+
+                {/* CONTROL DOCK */}
+                <div className="relative z-10 flex items-center justify-center gap-3 px-6 pb-6 pt-1 flex-wrap">
+                  <button
+                    onClick={() => (activeQuestion.type === 'mcq' ? speakMcq(activeQuestion) : (followUpQ ? speak(followUpQ.question) : speak(activeQuestion.question)))}
+                    title="Replay question"
+                    className="w-12 h-12 grid place-items-center rounded-2xl bg-white/5 border border-white/10 text-slate-200 hover:bg-white/10 transition"
+                  >
+                    <FiRotateCcw size={20} />
+                  </button>
+
+                  {activeQuestion.type !== 'mcq' && (
                     <button
                       onClick={isListening ? stopListening : startListening}
                       disabled={isSpeaking}
-                      className={`w-20 h-20 flex items-center justify-center rounded-3xl transition-all shadow-lg ${
-                        isListening 
-                          ? 'bg-rose-500 text-white hover:bg-rose-600 scale-110' 
-                          : 'bg-indigo-600 text-white hover:bg-indigo-700'
-                      } disabled:opacity-50`}
+                      aria-label={isListening ? 'Stop answering' : 'Start answering'}
+                      className={`w-16 h-16 grid place-items-center rounded-3xl transition shadow-lg ${isListening ? 'bg-rose-500 text-white' : 'bg-indigo-600 text-white hover:bg-indigo-700'} disabled:opacity-50`}
                     >
-                      {isListening ? <FiSquare size={32} /> : <FiMic size={32} />}
+                      {isListening ? <FiSquare size={26} /> : <FiMic size={26} />}
                     </button>
+                  )}
 
+                  <button
+                    onClick={toggleCamera}
+                    aria-label="Toggle camera"
+                    title={cameraOn ? 'Turn camera off' : 'Turn camera on'}
+                    className="w-12 h-12 grid place-items-center rounded-2xl bg-white/5 border border-white/10 text-slate-200 hover:bg-white/10 transition"
+                  >
+                    {cameraOn ? <FiVideo size={20} /> : <FiVideoOff size={20} />}
+                  </button>
+
+                  <button
+                    onClick={() => setCaptionsOn(v => !v)}
+                    aria-label="Toggle captions"
+                    aria-pressed={captionsOn}
+                    title="Toggle captions"
+                    className={`w-12 h-12 grid place-items-center rounded-2xl border transition ${captionsOn ? 'bg-indigo-500/15 border-indigo-400/40 text-indigo-300' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'}`}
+                  >
+                    <FiMessageSquare size={20} />
+                  </button>
+
+                  <button
+                    onClick={handleNext}
+                    disabled={awaitingFollowUp || (activeQuestion.type === 'mcq' && answers[activeQuestion.id] === undefined)}
+                    className="font-raleway inline-flex items-center gap-2 bg-white text-slate-900 hover:bg-slate-100 px-6 h-12 rounded-2xl font-bold text-sm transition disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {awaitingFollowUp ? 'Thinking…' : followUpQ ? 'Continue' : isLastQuestionInRound ? (isLastRound ? 'End interview' : 'Next round') : 'Next'}
+                    {!awaitingFollowUp && <FiArrowRight size={16} />}
+                  </button>
+
+                  {!(isLastRound && isLastQuestionInRound) && (
                     <button
-                      onClick={handleNext}
-                      className="font-raleway flex items-center gap-2 bg-slate-800 hover:bg-slate-900 text-white px-8 py-4 rounded-2xl font-semibold text-sm transition-all"
+                      onClick={() => { if (window.confirm('End the interview now and get your evaluation?')) submitInterview(); }}
+                      aria-label="End interview"
+                      title="End interview"
+                      className="w-12 h-12 grid place-items-center rounded-2xl bg-rose-500/90 text-white hover:bg-rose-600 transition"
                     >
-                      {isLastQuestionInRound ? (isLastRound ? 'Finish Interview' : 'Next Round') : 'Next Question'}
-                      <FiArrowRight size={18} />
+                      <FiPhoneOff size={18} />
                     </button>
-                  </div>
+                  )}
+                </div>
 
-                  {/* MANUAL TEXT OVERRIDE (For accessibility) */}
-                  <div className="mt-12 pt-8 border-t border-gray-50">
-                    <button 
-                      onClick={() => {
-                        const val = prompt('Type your answer if voice recognition is not working:', answers[activeQuestion.id] as string || '');
-                        if (val !== null) setAnswers(prev => ({ ...prev, [activeQuestion.id]: val }));
-                      }}
-                      className="text-xs text-gray-400 hover:text-indigo-500 font-raleway transition-colors underline underline-offset-4"
-                    >
-                      Problem with voice? Type your answer instead
-                    </button>
-                  </div>
+                {/* ROUND PROGRESS */}
+                <div className="relative z-10 flex justify-center gap-2 pb-6">
+                  {currentRoundQuestions.map((_, i) => (
+                    <div key={i} className={`h-1.5 rounded-full transition-all ${i === currentQuestionIdx ? 'w-8 bg-indigo-400' : i < currentQuestionIdx ? 'w-4 bg-emerald-400' : 'w-4 bg-white/15'}`} />
+                  ))}
                 </div>
               </div>
 
-              {/* ROUND PROGRESS */}
-              <div className="flex justify-center mt-8 gap-2">
-                {currentRoundQuestions.map((_, i) => (
-                  <div 
-                    key={i} 
-                    className={`h-1.5 rounded-full transition-all ${
-                      i === currentQuestionIdx ? 'w-8 bg-indigo-500' : 
-                      i < currentQuestionIdx ? 'w-4 bg-emerald-400' : 'w-4 bg-gray-200'
-                    }`} 
-                  />
-                ))}
-              </div>
+              {/* TYPED-ANSWER FALLBACK (spoken-answer questions only) — Phase 4.3 */}
+              {activeQuestion.type !== 'mcq' && (
+                <div className="mt-4">
+                  {typing ? (
+                    <div className="max-w-2xl mx-auto">
+                      <textarea
+                        value={followUpQ
+                          ? (followUpAnswers[followUpQ.parentQuestionId] || '')
+                          : ((answers[activeQuestion.id] as string) || '')}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          if (followUpQ) setFollowUpAnswers(prev => ({ ...prev, [followUpQ.parentQuestionId]: v }));
+                          else setAnswers(prev => ({ ...prev, [activeQuestion.id]: v }));
+                        }}
+                        placeholder="Type your answer here…"
+                        className="font-raleway w-full min-h-[90px] bg-white/5 border border-white/15 rounded-2xl p-4 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-400 resize-y"
+                      />
+                      {sttSupported && (
+                        <div className="flex justify-end mt-2">
+                          <button onClick={() => setTyping(false)} className="text-xs text-slate-400 hover:text-indigo-300 font-raleway underline underline-offset-4">
+                            Use voice instead
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center">
+                      <button onClick={() => setTyping(true)} className="text-xs text-slate-400 hover:text-indigo-300 font-raleway underline underline-offset-4">
+                        Prefer to type? Enter your answer instead
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -639,138 +740,7 @@ function MockInterviewContent() {
 
           {/* RESULTS STAGE */}
           {stage === 'results' && evaluation && (
-            <div className="space-y-6 max-w-4xl mx-auto pb-10">
-              {/* Overall Score */}
-              <div className="bg-white rounded-[2rem] shadow-sm border border-gray-50 p-10 text-center">
-                <div className="relative inline-flex items-center justify-center mb-4">
-                  <svg className="w-44 h-44 -rotate-90">
-                    <circle cx="88" cy="88" r="78" stroke="#F1F5F9" strokeWidth="12" fill="none" />
-                    <circle
-                      cx="88" cy="88" r="78" stroke="#4F46E5" strokeWidth="12" fill="none"
-                      strokeLinecap="round"
-                      strokeDasharray={`${(evaluation.overallScore / 100) * 490} 490`}
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="font-century text-5xl font-black text-slate-800">{evaluation.overallScore}</span>
-                    <span className="font-raleway text-xs text-gray-400 uppercase tracking-wider">/ 100</span>
-                  </div>
-                </div>
-                <h3 className="font-century text-xl font-black text-slate-800 mb-2">Overall Performance</h3>
-                <p className="font-raleway text-sm text-gray-500 max-w-2xl mx-auto leading-relaxed">{evaluation.summary}</p>
-              </div>
-
-              {/* Per-round scores */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {ROUND_ORDER.map((r) => {
-                  const meta = ROUND_META[r];
-                  const Icon = meta.icon;
-                  const score = evaluation.roundScores[r];
-                  return (
-                    <div key={r} className="bg-white rounded-[2rem] shadow-sm border border-gray-50 p-6 text-center">
-                      <div className={`w-12 h-12 rounded-2xl ${meta.bg} ${meta.color} flex items-center justify-center mx-auto mb-3`}>
-                        <Icon size={22} />
-                      </div>
-                      <p className="font-raleway text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">{meta.title}</p>
-                      <p className="font-century text-3xl font-black text-slate-800">{score}<span className="text-base text-gray-400">/100</span></p>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Strengths & Areas to Improve */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-white rounded-[2rem] shadow-sm border border-gray-50 p-7">
-                  <div className="flex items-center gap-2 mb-4">
-                    <FiStar className="text-emerald-500" size={20} />
-                    <h3 className="font-century text-lg font-black text-slate-800">Strengths</h3>
-                  </div>
-                  <ul className="space-y-3">
-                    {evaluation.strengths.map((s, i) => (
-                      <li key={i} className="flex items-start gap-2 font-raleway text-sm text-slate-600">
-                        <span className="text-emerald-500 mt-0.5">•</span> {s}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="bg-white rounded-[2rem] shadow-sm border border-gray-50 p-7">
-                  <div className="flex items-center gap-2 mb-4">
-                    <FiTrendingUp className="text-amber-500" size={20} />
-                    <h3 className="font-century text-lg font-black text-slate-800">Areas to Improve</h3>
-                  </div>
-                  <ul className="space-y-3">
-                    {evaluation.areasToImprove.map((a, i) => (
-                      <li key={i} className="flex items-start gap-2 font-raleway text-sm text-slate-600">
-                        <span className="text-amber-500 mt-0.5">•</span> {a}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-
-              {/* Per-question breakdown */}
-              <div className="bg-white rounded-[2rem] shadow-sm border border-gray-50 p-7">
-                <h3 className="font-century text-lg font-black text-slate-800 mb-5">Question Breakdown</h3>
-                <div className="space-y-3">
-                  {ROUND_ORDER.map((r) => {
-                    const roundQs = questions.filter((q) => q.round === r);
-                    const meta = ROUND_META[r];
-                    return (
-                      <div key={r}>
-                        <p className={`font-raleway text-[10px] font-bold uppercase tracking-wider ${meta.color} mb-2 mt-3`}>
-                          {meta.title}
-                        </p>
-                        {roundQs.map((q) => {
-                          const fb = evaluation.perQuestion.find((f) => f.questionId === q.id);
-                          if (!fb) return null;
-                          const style = verdictStyle(fb.verdict);
-                          const Icon = style.icon;
-                          return (
-                            <div key={q.id} className="flex items-start gap-4 p-4 rounded-xl bg-gray-50 mb-2">
-                              <div className={`${style.bg} ${style.color} w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0`}>
-                                <Icon size={18} />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span className="font-century text-xs font-bold text-slate-700">Q{q.id}</span>
-                                  <span className={`font-raleway text-[10px] font-bold uppercase tracking-wider ${style.color}`}>{style.label}</span>
-                                </div>
-                                <p className="font-raleway text-xs text-gray-500 mb-1 line-clamp-2">{q.question}</p>
-                                <p className="font-raleway text-sm text-slate-600 font-semibold mb-1">Your Answer: <span className="italic font-normal">"{answers[q.id] || 'No answer'}"</span></p>
-                                <p className="font-raleway text-sm text-slate-600">{fb.explanation}</p>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Improvement tips */}
-              <div className="bg-white rounded-[2rem] shadow-sm border border-gray-50 p-7">
-                <h3 className="font-century text-lg font-black text-slate-800 mb-5">What to Work On Next</h3>
-                <div className="space-y-3">
-                  {evaluation.improvementTips.map((tip, idx) => (
-                    <div key={idx} className="flex items-start gap-3 p-4 bg-indigo-50/40 rounded-xl">
-                      <span className="font-century text-sm font-bold text-[#4F46E5] flex-shrink-0">{idx + 1}.</span>
-                      <p className="font-raleway text-sm text-slate-700 leading-relaxed">{tip}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex justify-center">
-                <button
-                  onClick={restart}
-                  className="font-raleway flex items-center gap-2 bg-[#4F46E5] hover:bg-[#4338CA] text-white px-10 py-4 rounded-2xl font-semibold text-sm transition-all"
-                >
-                  <FiRefreshCw size={16} /> Try Another Interview
-                </button>
-              </div>
-            </div>
+            <ResultsStage evaluation={evaluation} questions={questions} answers={answers} onRestart={restart} />
           )}
         </div>
       </main>
