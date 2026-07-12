@@ -223,9 +223,12 @@ function MockInterviewContent() {
 
   useEffect(() => {
     // Speak when entering round or moving to next question — but not during the
-    // rest interstitial; when the countdown clears, this re-fires and speaks.
+    // rest interstitial; when the countdown clears, this re-fires and speaks
+    // whatever is pending: the follow-up if one arrived, else the question.
     if (stage === 'round' && activeQuestion && restCountdown === null) {
-      if (activeQuestion.type === 'mcq') {
+      if (followUpQ) {
+        speak(followUpQ.question);
+      } else if (activeQuestion.type === 'mcq') {
         speakMcq(activeQuestion);
       } else {
         speak(activeQuestion.question);
@@ -455,8 +458,11 @@ function MockInterviewContent() {
       if (fu) {
         setFollowUpQ({ parentQuestionId: activeQuestion.id, question: fu });
         resetTranscript();
-        speak(fu);
-        return; // stay on this screen; the follow-up is now showing
+        // Same breather as between questions — and the pause covers the
+        // follow-up's TTS synthesis, so it narrates the moment it appears.
+        setRestCountdown(REST_SECONDS);
+        prefetchSpeech(fu);
+        return; // stay on this screen; the follow-up shows once the rest ends
       }
     }
 
@@ -823,7 +829,7 @@ function MockInterviewContent() {
                       </div>
                       <h3 className="font-century text-xl font-black text-white">Take a moment to rest</h3>
                       <p className="font-raleway text-sm text-slate-400 mt-1.5">
-                        Next question in {restCountdown}s — {INTERVIEWER.name} is preparing it
+                        {followUpQ ? 'Follow-up question' : 'Next question'} in {restCountdown}s — {INTERVIEWER.name} is preparing it
                       </p>
                       <button
                         onClick={() => setRestCountdown(null)}
