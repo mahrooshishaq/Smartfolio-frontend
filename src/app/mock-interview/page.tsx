@@ -289,12 +289,18 @@ function MockInterviewContent() {
   };
 
   // Advance to the next question (or next round / submit) — the plain forward move.
-  const advanceQuestion = () => {
+  // `finalAnswers`/`finalFollowUps` carry answers captured in THIS event tick:
+  // setState hasn't flushed yet when the last question submits, so reading the
+  // state inside submitInterview would silently drop the final answer.
+  const advanceQuestion = (
+    finalAnswers: Record<number, string | number> = answers,
+    finalFollowUps: Record<number, string> = followUpAnswers,
+  ) => {
     if (currentQuestionIdx < currentRoundQuestions.length - 1) {
       setCurrentQuestionIdx(prev => prev + 1);
       resetTranscript();
     } else {
-      goToNextRound();
+      goToNextRound(finalAnswers, finalFollowUps);
     }
   };
 
@@ -329,18 +335,26 @@ function MockInterviewContent() {
     }
 
     // We are currently answering a follow-up → store its answer, then advance.
+    // The updated map is passed down explicitly so a follow-up answered on the
+    // LAST question still reaches submitInterview (setState hasn't flushed yet).
     if (followUpQ) {
-      if (currentAnswer.trim()) {
-        setFollowUpAnswers(prev => ({ ...prev, [followUpQ.parentQuestionId]: currentAnswer.trim() }));
-      }
+      const updatedFollowUps = currentAnswer
+        ? { ...followUpAnswers, [followUpQ.parentQuestionId]: currentAnswer }
+        : followUpAnswers;
+      if (currentAnswer) setFollowUpAnswers(updatedFollowUps);
       setFollowUpQ(null);
-      advanceQuestion();
+      advanceQuestion(answers, updatedFollowUps);
       return;
     }
 
-    // Save current transcript to answers if not empty (MCQ answers are stored on click)
-    if (currentAnswer.trim() && activeQuestion && activeQuestion.type !== 'mcq') {
-      setAnswers(prev => ({ ...prev, [activeQuestion.id]: currentAnswer.trim() }));
+    // Save current answer (MCQ answers are stored on click) — again passing the
+    // fresh map down so the final question's answer is never dropped on submit.
+    const updatedAnswers =
+      currentAnswer && activeQuestion && activeQuestion.type !== 'mcq'
+        ? { ...answers, [activeQuestion.id]: currentAnswer }
+        : answers;
+    if (updatedAnswers !== answers) {
+      setAnswers(updatedAnswers);
     }
 
     // Maybe ask an adaptive follow-up on open-ended answers (standard/full only, once per question).
@@ -353,7 +367,7 @@ function MockInterviewContent() {
 
     if (eligible && activeQuestion) {
       setAwaitingFollowUp(true);
-      const fu = await fetchFollowUp(activeQuestion.id, currentAnswer.trim());
+      const fu = await fetchFollowUp(activeQuestion.id, currentAnswer);
       setAwaitingFollowUp(false);
       if (fu) {
         setFollowUpQ({ parentQuestionId: activeQuestion.id, question: fu });
@@ -363,10 +377,13 @@ function MockInterviewContent() {
       }
     }
 
-    advanceQuestion();
+    advanceQuestion(updatedAnswers);
   };
 
-  const goToNextRound = () => {
+  const goToNextRound = (
+    finalAnswers: Record<number, string | number> = answers,
+    finalFollowUps: Record<number, string> = followUpAnswers,
+  ) => {
     if (currentRoundIdx < ROUND_ORDER.length - 1) {
       setCurrentRoundIdx(currentRoundIdx + 1);
       setCurrentQuestionIdx(0);
@@ -374,17 +391,20 @@ function MockInterviewContent() {
       setError('');
       setStage('round_intro');
     } else {
-      submitInterview();
+      submitInterview(finalAnswers, finalFollowUps);
     }
   };
 
-  const submitInterview = async () => {
+  const submitInterview = async (
+    finalAnswers: Record<number, string | number> = answers,
+    finalFollowUps: Record<number, string> = followUpAnswers,
+  ) => {
     if (!token || !sessionId) return;
     setStage('evaluating');
     setError('');
     try {
-      const payload = questions.map((q) => ({ questionId: q.id, answer: answers[q.id] ?? '' }));
-      const followUpPayload = Object.entries(followUpAnswers).map(([parentQuestionId, answer]) => ({
+      const payload = questions.map((q) => ({ questionId: q.id, answer: finalAnswers[q.id] ?? '' }));
+      const followUpPayload = Object.entries(finalFollowUps).map(([parentQuestionId, answer]) => ({
         parentQuestionId: Number(parentQuestionId),
         answer,
       }));
@@ -541,7 +561,19 @@ function MockInterviewContent() {
                     Keep going
                   </button>
                   <button
-                    onClick={() => { setConfirmEnd(false); cancelSpeech(); stopSpeechRecognition(); submitInterview(); }}
+                    onClick={() => {
+                      setConfirmEnd(false);
+                      cancelSpeech();
+                      stopSpeechRecognition();
+                      // Include whatever the candidate said on the current question
+                      // before ending — don't throw away an in-flight answer.
+                      const inFlight = transcriptRef.current.trim();
+                      submitInterview(
+                        activeQuestion && activeQuestion.type !== 'mcq' && inFlight
+                          ? { ...answers, [activeQuestion.id]: inFlight }
+                          : answers,
+                      );
+                    }}
                     className="font-raleway flex-1 h-11 rounded-2xl bg-rose-500 text-white font-bold text-sm hover:bg-rose-600 transition"
                   >
                     End &amp; evaluate
@@ -655,9 +687,11 @@ function MockInterviewContent() {
                   <div className="flex flex-col items-center gap-3 pt-2">
                     <div className="relative grid place-items-center">
                       {isSpeaking && <span className="absolute inset-0 m-auto w-28 h-28 rounded-full bg-indigo-500/25 animate-ping" />}
-                      <div className="relative w-28 h-28 rounded-full grid place-items-center bg-gradient-to-br from-indigo-400 via-violet-500 to-blue-500 shadow-xl">
+                      {/* overflow-hidden keeps the equalizer bars clipped inside the
+                          circle — without it they spill past the tile edges */}
+                      <div className="relative w-28 h-28 rounded-full overflow-hidden grid place-items-center bg-gradient-to-br from-indigo-400 via-violet-500 to-blue-500 shadow-xl">
                         {isSpeaking
-                          ? <VoiceWave isActive mode="speaking" color="bg-white" />
+                          ? <span className="scale-75 grid place-items-center"><VoiceWave isActive mode="speaking" color="bg-white" /></span>
                           : <FiUser className="text-white/90" size={44} />}
                       </div>
                     </div>
