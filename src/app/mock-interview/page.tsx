@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import AnimatedBackground from '@/components/AnimatedBackground';
 import VoiceWave from '@/components/VoiceWave';
@@ -64,11 +64,30 @@ function MockInterviewContent() {
   const [connectPhase, setConnectPhase] = useState<'dialing' | 'joined'>('dialing');
   const [typing, setTyping] = useState(false); // inline typed-answer fallback (Phase 4.3)
 
-  // Speech (TTS + STT) — extracted into a hook (Phase 0.3)
+  // Neural TTS fetcher (Phase 3.4) — hits the backend /tts (Kokoro via Python),
+  // returns audio or null so useSpeech falls back to browser TTS.
+  const neuralTts = useCallback(async (text: string): Promise<Blob | null> => {
+    const tok = localStorage.getItem('accessToken');
+    if (!tok) return null;
+    try {
+      const res = await fetch(`${API}/mock-interview/tts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok}` },
+        body: JSON.stringify({ text }),
+      });
+      if (!res.ok) return null;
+      const blob = await res.blob();
+      return blob.size > 0 ? blob : null;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  // Speech (TTS + STT) — extracted into a hook (Phase 0.3), with neural TTS (Phase 3.4)
   const {
     isSpeaking, isListening, transcript, transcriptRef, supported: sttSupported,
     speak, speakMcq, startListening, stopListening: stopSpeechRecognition, resetTranscript,
-  } = useSpeech();
+  } = useSpeech(neuralTts);
 
   // Loads the user's score trend for the progress card (Phase 4.1). Fails silently.
   const loadProgress = (tok: string) => {

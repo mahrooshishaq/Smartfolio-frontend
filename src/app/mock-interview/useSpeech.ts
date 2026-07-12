@@ -8,13 +8,18 @@ import type { PublicQuestion } from './types';
  * `stopListening` here only stops recognition; persisting the captured transcript
  * into an answer is the caller's concern (it depends on which question is active).
  */
-export function useSpeech() {
+export function useSpeech(neuralTts?: (text: string) => Promise<Blob | null>) {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [supported, setSupported] = useState(true); // STT support
   const recognitionRef = useRef<any>(null);
   const transcriptRef = useRef('');
+  // Neural TTS (Phase 3.4): a fetcher returning audio, or null to use browser TTS.
+  const neuralRef = useRef(neuralTts);
+  const neuralDisabledRef = useRef(false); // stop retrying once TTS proves unavailable
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  useEffect(() => { neuralRef.current = neuralTts; }, [neuralTts]);
 
   useEffect(() => {
     const SpeechRecognition =
@@ -92,11 +97,12 @@ export function useSpeech() {
     setIsListening(false);
   };
 
-  // Phase 3.4 seam — neural TTS integration point.
-  // To use a natural voice, fetch audio from a backend TTS proxy here and play it
-  // via an <audio> element, keeping this browser-TTS path as the automatic fallback.
-  const speak = (text: string, autoListen = true) => {
-    if (!window.speechSynthesis) return;
+  // Browser SpeechSynthesis — the always-available fallback.
+  const browserSpeak = (text: string, autoListen: boolean) => {
+    if (!window.speechSynthesis) {
+      if (autoListen) startListening();
+      return;
+    }
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(cleanTextForSpeech(text));
     const voice = getBestVoice();
@@ -109,6 +115,37 @@ export function useSpeech() {
       if (autoListen) startListening();
     };
     window.speechSynthesis.speak(utterance);
+  };
+
+  // Phase 3.4 — try a natural neural voice first, fall back to browser TTS on any failure.
+  const speak = async (text: string, autoListen = true) => {
+    const fetcher = neuralRef.current;
+    if (fetcher && !neuralDisabledRef.current) {
+      const blob = await fetcher(text).catch(() => null);
+      if (blob && blob.size > 0) {
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        audioRef.current = audio;
+        audio.onended = () => {
+          setIsSpeaking(false);
+          URL.revokeObjectURL(url);
+          if (autoListen) startListening();
+        };
+        window.speechSynthesis?.cancel();
+        setIsSpeaking(true);
+        try {
+          await audio.play();
+          return; // playing — onended handles the rest
+        } catch {
+          setIsSpeaking(false);
+          URL.revokeObjectURL(url);
+          audioRef.current = null;
+        }
+      } else {
+        neuralDisabledRef.current = true; // TTS unavailable this session; stop retrying
+      }
+    }
+    browserSpeak(text, autoListen);
   };
 
   // Reads an MCQ's question plus its lettered options aloud (no auto-listen).
@@ -124,7 +161,14 @@ export function useSpeech() {
     transcriptRef.current = '';
   };
 
-  const cancel = () => window.speechSynthesis?.cancel();
+  const cancel = () => {
+    window.speechSynthesis?.cancel();
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    setIsSpeaking(false);
+  };
 
   return {
     isSpeaking,
