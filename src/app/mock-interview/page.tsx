@@ -23,6 +23,10 @@ import {
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
+// Breather between questions: long enough to reset (and for the next question's
+// audio to finish synthesizing in the background), short enough to keep pace.
+const REST_SECONDS = 5;
+
 export default function MockInterviewPage() {
   return (
     <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]"><FiLoader className="animate-spin text-gray-300" size={32} /></div>}>
@@ -64,6 +68,8 @@ function MockInterviewContent() {
   const [connectPhase, setConnectPhase] = useState<'dialing' | 'joined'>('dialing');
   const [typing, setTyping] = useState(false); // inline typed-answer fallback (Phase 4.3)
   const [confirmEnd, setConfirmEnd] = useState(false); // platform-styled end-interview dialog
+  // Rest interstitial between questions — null when not resting, else seconds left.
+  const [restCountdown, setRestCountdown] = useState<number | null>(null);
 
   // Errors surface as a toast — auto-dismiss so they never linger over the call.
   useEffect(() => {
@@ -93,12 +99,48 @@ function MockInterviewContent() {
     }
   }, []);
 
+  // Whisper STT fetcher — sends the recorded answer to the backend (Groq
+  // whisper-large-v3), far more accurate than browser recognition for accented
+  // English. The current question rides along as a vocabulary hint. Returns
+  // null on any failure so useSpeech keeps the browser transcript instead.
+  const speechContextRef = useRef('');
+  const transcribeAudio = useCallback(async (audio: Blob): Promise<string | null> => {
+    const tok = localStorage.getItem('accessToken');
+    if (!tok) return null;
+    try {
+      const ext = audio.type.includes('mp4') ? 'mp4' : audio.type.includes('ogg') ? 'ogg' : 'webm';
+      const form = new FormData();
+      form.append('audio', audio, `answer.${ext}`);
+      if (speechContextRef.current) form.append('context', speechContextRef.current.slice(0, 600));
+      const res = await fetch(`${API}/mock-interview/transcribe`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${tok}` },
+        body: form,
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      return typeof data.text === 'string' ? data.text : null;
+    } catch {
+      return null;
+    }
+  }, []);
+
   // Speech (TTS + STT) — extracted into a hook (Phase 0.3), with neural TTS (Phase 3.4)
   const {
-    isSpeaking, isListening, transcript, transcriptRef, supported: sttSupported,
-    speak, speakMcq, prefetchSpeech, startListening, stopListening: stopSpeechRecognition, resetTranscript,
+    isSpeaking, isListening, isTranscribing, transcript, transcriptRef, supported: sttSupported,
+    speak, speakMcq, prefetchSpeech, preloadLiveCaptions, startListening,
+    finalizeListening, resetTranscript,
     cancel: cancelSpeech,
-  } = useSpeech(neuralTts);
+  } = useSpeech(neuralTts, transcribeAudio);
+
+  // Warm the on-device live-caption engine (if enabled) while the call
+  // "connects" — the model downloads during the ceremony, not the first answer.
+  // round_intro also triggers it to cover resuming a session by URL, which
+  // skips the connecting stage. No-op when the feature flag is off.
+  useEffect(() => {
+    if (stage === 'connecting' || stage === 'round_intro') preloadLiveCaptions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage]);
 
   // Loads the user's score trend for the progress card (Phase 4.1). Fails silently.
   const loadProgress = (tok: string) => {
@@ -158,28 +200,48 @@ function MockInterviewContent() {
   const currentRound: Round = ROUND_ORDER[currentRoundIdx];
   const currentRoundQuestions = questions.filter((q) => q.round === currentRound);
   const activeQuestion = currentRoundQuestions[currentQuestionIdx];
+  const resting = restCountdown !== null;
 
-  // Stops recognition and persists whatever was captured as the current answer.
-  const stopListening = () => {
-    stopSpeechRecognition();
-    const finalTranscript = transcriptRef.current;
-    if (finalTranscript.trim() && activeQuestion) {
-      setAnswers(prev => ({ ...prev, [activeQuestion.id]: finalTranscript.trim() }));
+  // Keep the Whisper vocabulary hint pointed at whatever is being answered.
+  useEffect(() => {
+    speechContextRef.current = followUpQ ? followUpQ.question : (activeQuestion?.question ?? '');
+  }, [followUpQ, activeQuestion]);
+
+  // Stops the mic, waits for the accurate (Whisper) transcript, and persists it
+  // as the answer to whatever is being asked — follow-up or main question.
+  const stopListening = async () => {
+    const finalTranscript = (await finalizeListening()).trim();
+    if (!finalTranscript) return;
+    if (followUpQ) {
+      setFollowUpAnswers(prev => ({ ...prev, [followUpQ.parentQuestionId]: finalTranscript }));
+    } else if (activeQuestion && activeQuestion.type !== 'mcq') {
+      setAnswers(prev => ({ ...prev, [activeQuestion.id]: finalTranscript }));
     }
   };
 
   // ─── FLOW CONTROL ──────────────────────────────────────────────────
 
   useEffect(() => {
-    // Speak when entering round or moving to next question
-    if (stage === 'round' && activeQuestion) {
+    // Speak when entering round or moving to next question — but not during the
+    // rest interstitial; when the countdown clears, this re-fires and speaks.
+    if (stage === 'round' && activeQuestion && restCountdown === null) {
       if (activeQuestion.type === 'mcq') {
         speakMcq(activeQuestion);
       } else {
         speak(activeQuestion.question);
       }
     }
-  }, [stage, currentQuestionIdx]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage, currentQuestionIdx, restCountdown === null]);
+
+  // Tick the rest countdown down to zero, then clear it (which triggers the
+  // question to display and speak). Any stage change cancels the rest.
+  useEffect(() => {
+    if (restCountdown === null) return;
+    if (stage !== 'round' || restCountdown <= 0) { setRestCountdown(null); return; }
+    const t = setTimeout(() => setRestCountdown((c) => (c === null ? null : c - 1)), 1000);
+    return () => clearTimeout(t);
+  }, [restCountdown, stage]);
 
   // Latency: while the candidate answers, warm the NEXT question's audio in the
   // background so it starts instantly (server + client cache hit) instead of
@@ -297,8 +359,14 @@ function MockInterviewContent() {
     finalFollowUps: Record<number, string> = followUpAnswers,
   ) => {
     if (currentQuestionIdx < currentRoundQuestions.length - 1) {
+      const next = currentRoundQuestions[currentQuestionIdx + 1];
       setCurrentQuestionIdx(prev => prev + 1);
       resetTranscript();
+      // Rest interstitial: give the candidate a breather while the next
+      // question's audio synthesizes in the background — when the countdown
+      // ends, the question shows and narrates at the same instant.
+      setRestCountdown(REST_SECONDS);
+      if (next) prefetchSpeech(next.type === 'mcq' ? mcqSpeechText(next) : next.question);
     } else {
       goToNextRound(finalAnswers, finalFollowUps);
     }
@@ -321,18 +389,33 @@ function MockInterviewContent() {
     }
   };
 
+  // Guards against double-advancing: Next can be pressed again while we await
+  // the transcription of the recorded answer.
+  const advancingRef = useRef(false);
+
   const handleNext = async () => {
+    if (advancingRef.current) return;
+    advancingRef.current = true;
+    try {
+      await handleNextInner();
+    } finally {
+      advancingRef.current = false;
+    }
+  };
+
+  const handleNextInner = async () => {
+    // Finish capturing first: stop the mic and wait for the accurate (Whisper)
+    // transcript — or the browser transcript if transcription is unavailable.
+    const spoken = (isListening || isTranscribing)
+      ? (await finalizeListening()).trim()
+      : transcriptRef.current.trim();
+
     // The candidate's answer is whatever they said (latest transcript) or, if
     // they used the typed fallback, whatever they typed — voice wins if both.
     const typedValue = followUpQ
       ? (followUpAnswers[followUpQ.parentQuestionId] || '')
       : (activeQuestion && typeof answers[activeQuestion.id] === 'string' ? (answers[activeQuestion.id] as string) : '');
-    const currentAnswer = transcriptRef.current.trim() || typedValue.trim();
-
-    // Stop listening if active
-    if (isListening) {
-      stopSpeechRecognition();
-    }
+    const currentAnswer = spoken || typedValue.trim();
 
     // We are currently answering a follow-up → store its answer, then advance.
     // The updated map is passed down explicitly so a follow-up answered on the
@@ -447,6 +530,7 @@ function MockInterviewContent() {
     setFollowUpQ(null);
     setFollowUpAnswers({});
     setAwaitingFollowUp(false);
+    setRestCountdown(null);
     stopCamera();
     setElapsed(0);
     setCaptionsOn(true);
@@ -460,7 +544,7 @@ function MockInterviewContent() {
   // True once the current question has an answer on record (spoken transcript,
   // typed text, or MCQ selection) and nobody is talking — the moment to guide
   // the candidate toward "Next".
-  const answerReady = !!activeQuestion && !isSpeaking && !isListening && !awaitingFollowUp && (
+  const answerReady = !!activeQuestion && !isSpeaking && !isListening && !isTranscribing && !awaitingFollowUp && (
     followUpQ
       ? !!(transcript.trim() || (followUpAnswers[followUpQ.parentQuestionId] || '').trim())
       : activeQuestion.type === 'mcq'
@@ -561,18 +645,24 @@ function MockInterviewContent() {
                     Keep going
                   </button>
                   <button
-                    onClick={() => {
+                    onClick={async () => {
                       setConfirmEnd(false);
                       cancelSpeech();
-                      stopSpeechRecognition();
                       // Include whatever the candidate said on the current question
-                      // before ending — don't throw away an in-flight answer.
-                      const inFlight = transcriptRef.current.trim();
-                      submitInterview(
-                        activeQuestion && activeQuestion.type !== 'mcq' && inFlight
-                          ? { ...answers, [activeQuestion.id]: inFlight }
-                          : answers,
-                      );
+                      // before ending — don't throw away an in-flight answer. Waits
+                      // for the accurate transcript if one is still being produced.
+                      const inFlight = (isListening || isTranscribing)
+                        ? (await finalizeListening()).trim()
+                        : transcriptRef.current.trim();
+                      if (followUpQ && inFlight) {
+                        submitInterview(answers, { ...followUpAnswers, [followUpQ.parentQuestionId]: inFlight });
+                      } else {
+                        submitInterview(
+                          activeQuestion && activeQuestion.type !== 'mcq' && inFlight
+                            ? { ...answers, [activeQuestion.id]: inFlight }
+                            : answers,
+                        );
+                      }
                     }}
                     className="font-raleway flex-1 h-11 rounded-2xl bg-rose-500 text-white font-bold text-sm hover:bg-rose-600 transition"
                   >
@@ -705,7 +795,34 @@ function MockInterviewContent() {
                     </div>
                   </div>
 
+                  {/* REST INTERSTITIAL — a breather between questions while the
+                      next question's audio synthesizes in the background */}
+                  {resting && (
+                    <div className="mt-6 text-center max-w-2xl flex flex-col items-center">
+                      <span className="inline-block font-raleway text-[10px] font-bold uppercase tracking-[0.2em] px-3 py-1 rounded-full mb-4 bg-emerald-500/15 text-emerald-300">
+                        Answer saved
+                      </span>
+                      <div className="relative grid place-items-center mb-4">
+                        <span className="absolute w-20 h-20 rounded-full bg-indigo-500/20 animate-ping" />
+                        <div className="relative w-20 h-20 rounded-full grid place-items-center bg-white/5 border border-white/15">
+                          <span className="font-century text-3xl font-black text-white tabular-nums">{restCountdown}</span>
+                        </div>
+                      </div>
+                      <h3 className="font-century text-xl font-black text-white">Take a moment to rest</h3>
+                      <p className="font-raleway text-sm text-slate-400 mt-1.5">
+                        Next question in {restCountdown}s — {INTERVIEWER.name} is preparing it
+                      </p>
+                      <button
+                        onClick={() => setRestCountdown(null)}
+                        className="font-raleway mt-4 text-xs text-slate-400 hover:text-indigo-300 underline underline-offset-4"
+                      >
+                        I&apos;m ready — skip the wait
+                      </button>
+                    </div>
+                  )}
+
                   {/* Question badge + text */}
+                  {!resting && (
                   <div className="mt-6 text-center max-w-2xl">
                     <span className={`inline-block font-raleway text-[10px] font-bold uppercase tracking-[0.2em] px-3 py-1 rounded-full mb-3 ${followUpQ ? 'bg-indigo-500/20 text-indigo-300' : 'bg-white/5 text-slate-300'}`}>
                       {followUpQ ? 'Follow-up' : activeQuestion.type.replace('_', ' ')}
@@ -714,9 +831,10 @@ function MockInterviewContent() {
                       {followUpQ ? followUpQ.question : activeQuestion.question}
                     </h3>
                   </div>
+                  )}
 
                   {/* MCQ OPTIONS */}
-                  {activeQuestion.type === 'mcq' && activeQuestion.options && (
+                  {!resting && activeQuestion.type === 'mcq' && activeQuestion.options && (
                     <div className="mt-6 w-full max-w-xl grid grid-cols-1 gap-2.5">
                       {activeQuestion.options.map((opt, i) => {
                         const selected = answers[activeQuestion.id] === i;
@@ -753,12 +871,17 @@ function MockInterviewContent() {
                 </div>
 
                 {/* CAPTIONS */}
-                {captionsOn && (
+                {captionsOn && !resting && (
                   <div className="relative z-10 mx-6 mb-3 rounded-2xl bg-black/30 border border-white/10 px-4 py-3 backdrop-blur-sm min-h-[52px] flex items-center">
                     {isSpeaking ? (
                       <p className="font-raleway text-sm text-slate-100"><span className="text-indigo-300 font-bold mr-2">{INTERVIEWER.name}:</span>{followUpQ ? followUpQ.question : activeQuestion.question}</p>
                     ) : transcript ? (
-                      <p className="font-raleway text-sm text-slate-200"><span className="text-emerald-300 font-bold mr-2">You:</span>{transcript}</p>
+                      <p className="font-raleway text-sm text-slate-200">
+                        <span className="text-emerald-300 font-bold mr-2">You:</span>{transcript}
+                        {isTranscribing && <span className="text-slate-400 italic ml-2">refining…</span>}
+                      </p>
+                    ) : isTranscribing ? (
+                      <p className="font-raleway text-sm text-slate-400 italic">Transcribing your answer…</p>
                     ) : isListening ? (
                       <p className="font-raleway text-sm text-slate-400 italic">Listening…</p>
                     ) : (
@@ -768,24 +891,29 @@ function MockInterviewContent() {
                 )}
 
                 {/* TURN GUIDE — one always-visible line that says whose turn it is and what to do */}
+                {!resting && (
                 <div className="relative z-10 text-center px-6 pb-2">
                   <span className={`font-raleway inline-flex items-center gap-2 text-xs font-semibold rounded-full px-3.5 py-1.5 border ${
                     awaitingFollowUp ? 'text-indigo-300 bg-indigo-500/10 border-indigo-400/30'
                     : isSpeaking ? 'text-indigo-300 bg-indigo-500/10 border-indigo-400/30'
                     : isListening ? 'text-emerald-300 bg-emerald-500/10 border-emerald-400/30'
+                    : isTranscribing ? 'text-indigo-300 bg-indigo-500/10 border-indigo-400/30'
                     : answerReady ? 'text-emerald-300 bg-emerald-500/10 border-emerald-400/30'
                     : 'text-slate-400 bg-white/5 border-white/10'
                   }`}>
                     {awaitingFollowUp ? <>{INTERVIEWER.name} is thinking…</>
                       : isSpeaking ? <><span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />{INTERVIEWER.name} is asking — listen…</>
-                      : isListening ? <><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />Your turn — speak now; pause or press stop when you&apos;re done</>
+                      : isListening ? <><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />Your turn — speak freely; press stop when you&apos;re done</>
+                      : isTranscribing ? <><FiLoader size={13} className="animate-spin" />Processing your answer…</>
                       : answerReady ? <><FiCheckCircle size={13} className="text-emerald-400" />Answer captured — press Next to continue</>
                       : activeQuestion.type === 'mcq' ? <>Pick an option, then press Next</>
                       : <>Mic is off — tap the mic to speak, type below, or press Next</>}
                   </span>
                 </div>
+                )}
 
                 {/* CONTROL DOCK */}
+                {!resting && (
                 <div className="relative z-10 flex items-center justify-center gap-3 px-6 pb-6 pt-1 flex-wrap">
                   <button
                     onClick={() => (activeQuestion.type === 'mcq' ? speakMcq(activeQuestion) : (followUpQ ? speak(followUpQ.question) : speak(activeQuestion.question)))}
@@ -845,6 +973,7 @@ function MockInterviewContent() {
                     </button>
                   )}
                 </div>
+                )}
 
                 {/* ROUND PROGRESS */}
                 <div className="relative z-10 flex justify-center gap-2 pb-6">
@@ -855,7 +984,7 @@ function MockInterviewContent() {
               </div>
 
               {/* TYPED-ANSWER FALLBACK (spoken-answer questions only) — Phase 4.3 */}
-              {activeQuestion.type !== 'mcq' && (
+              {!resting && activeQuestion.type !== 'mcq' && (
                 <div className="mt-4">
                   {typing ? (
                     <div className="max-w-2xl mx-auto">
