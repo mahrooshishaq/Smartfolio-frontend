@@ -97,6 +97,12 @@ export function useSpeech(
   const [supported, setSupported] = useState(true); // STT support
   const recognitionRef = useRef<any>(null);
   const transcriptRef = useRef('');
+  // Browser-recognizer accumulation: Chrome ends a recognition session at every
+  // pause; we auto-restart it, but each new session's results start empty, so
+  // finalized text must be banked across sessions or the caption (and the
+  // fallback answer) would restart from the pause.
+  const recFinalizedRef = useRef(''); // text finalized in earlier sessions of this listen
+  const recSessionFinalRef = useRef(''); // text finalized so far in the current session
   // Whisper STT: mic recording that gets transcribed server-side on stop.
   const transcribeRef = useRef(transcribeAudio);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -147,17 +153,31 @@ export function useSpeech(
     rec.interimResults = true;
     rec.lang = 'en-US';
     rec.onresult = (event: any) => {
+      // Rebuild the whole session's text each event (results accumulate within
+      // a session), then prepend text banked from earlier sessions of this
+      // listen — otherwise every silence-triggered restart would make the
+      // caption start over from the pause.
       let interim = '';
-      let final = '';
-      for (let i = event.resultIndex; i < event.results.length; ++i) {
-        if (event.results[i].isFinal) final += event.results[i][0].transcript;
+      let sessionFinal = '';
+      for (let i = 0; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) sessionFinal += event.results[i][0].transcript;
         else interim += event.results[i][0].transcript;
       }
-      const current = final || interim;
+      recSessionFinalRef.current = sessionFinal;
+      const current = [recFinalizedRef.current, sessionFinal, interim]
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .join(' ');
       setTranscript(current);
       transcriptRef.current = current;
     };
     rec.onend = () => {
+      // Bank this session's finalized text before a restart wipes event.results.
+      recFinalizedRef.current = [recFinalizedRef.current, recSessionFinalRef.current]
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .join(' ');
+      recSessionFinalRef.current = '';
       // The browser recognizer gives up after a pause; while the answer is
       // still being recorded, restart it so live captions keep flowing (the
       // recorder itself never stopped, so no words are lost either way).
@@ -344,6 +364,8 @@ export function useSpeech(
     setIsTranscribing(false);
     setTranscript('');
     transcriptRef.current = '';
+    recFinalizedRef.current = '';
+    recSessionFinalRef.current = '';
     // Caption engine: Moonshine when loaded, else the browser recognizer.
     // (If Moonshine is still downloading, this listen just uses the browser.)
     if (moonshineReady) {

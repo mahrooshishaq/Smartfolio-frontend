@@ -1,4 +1,9 @@
-import { FiStar, FiTrendingUp, FiCheckCircle, FiXCircle, FiAlertCircle, FiRefreshCw } from 'react-icons/fi';
+'use client';
+import { useState } from 'react';
+import {
+  FiStar, FiTrendingUp, FiCheckCircle, FiXCircle, FiAlertCircle, FiRefreshCw,
+  FiChevronDown, FiChevronUp,
+} from 'react-icons/fi';
 import { ROUND_ORDER, ROUND_META } from './constants';
 import type { Evaluation, PublicQuestion } from './types';
 
@@ -10,6 +15,34 @@ const formatAnswer = (q: PublicQuestion, ans: string | number | undefined): stri
   }
   return String(ans);
 };
+
+// Spoken answers can run long now that the full recording is transcribed —
+// show a short preview and let the candidate expand to the complete captured
+// answer (e.g. to verify the mic really heard everything they said).
+const ANSWER_PREVIEW_CHARS = 160;
+
+function AnswerDisclosure({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  if (text.length <= ANSWER_PREVIEW_CHARS) {
+    return <span className="italic font-normal">&quot;{text}&quot;</span>;
+  }
+  const words = text.trim().split(/\s+/).length;
+  return (
+    <span className="font-normal">
+      <span className="italic">
+        &quot;{open ? text : `${text.slice(0, ANSWER_PREVIEW_CHARS).trimEnd()}…`}&quot;
+      </span>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="ml-2 inline-flex items-center gap-1 align-baseline font-raleway text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors"
+      >
+        {open
+          ? <>Hide full answer <FiChevronUp size={12} /></>
+          : <>Show full answer · {words} words <FiChevronDown size={12} /></>}
+      </button>
+    </span>
+  );
+}
 
 const verdictStyle = (v: string) => {
   if (v === 'correct') return { icon: FiCheckCircle, color: 'text-emerald-600', bg: 'bg-emerald-50', label: 'Correct' };
@@ -156,7 +189,7 @@ export function ResultsStage({ evaluation, questions, answers, onRestart }: Resu
                           <span className={`font-raleway text-[10px] font-bold uppercase tracking-wider ${style.color}`}>{style.label}</span>
                         </div>
                         <p className="font-raleway text-xs text-gray-500 mb-1 line-clamp-2">{q.question}</p>
-                        <p className="font-raleway text-sm text-slate-600 font-semibold mb-1">Your Answer: <span className="italic font-normal">&quot;{formatAnswer(q, answers[q.id])}&quot;</span></p>
+                        <p className="font-raleway text-sm text-slate-600 font-semibold mb-1">Your Answer: <AnswerDisclosure text={formatAnswer(q, answers[q.id])} /></p>
                         <p className="font-raleway text-sm text-slate-600">{fb.explanation}</p>
                         {fb.idealAnswer && (
                           <p className="font-raleway text-xs text-slate-500 mt-2 bg-emerald-50/60 rounded-lg px-3 py-2">
