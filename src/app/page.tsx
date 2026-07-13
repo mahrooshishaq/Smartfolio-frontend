@@ -110,7 +110,8 @@ export default function Home() {
           
           {/* Left: Personalized Documents */}
           <div className="md:w-1/2 relative">
-             <div className="absolute -top-10 -left-10 w-full h-full bg-orange-100 rounded-full blur-3xl -z-10 opacity-50"></div>
+             {/* Decorative glow; clipped by the page's overflow-x guard. */}
+             <div data-audit-ignore className="absolute -top-10 -left-10 w-full h-full bg-orange-100 rounded-full blur-3xl -z-10 opacity-50"></div>
              <h3 className="mb-8 uppercase tracking-widest text-gray-600 font-raleway text-sm">Personalized Documents</h3>
              <div className="bg-white p-4 shadow-xl -rotate-2 w-3/4 mx-auto md:mx-0 rounded-lg">
                <div className="h-64 bg-gray-50 border border-gray-100 overflow-hidden relative rounded">

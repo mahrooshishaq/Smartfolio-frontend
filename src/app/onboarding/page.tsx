@@ -230,7 +230,7 @@ export default function OnboardingPage() {
           </div>
 
           {/* Card */}
-          <div className="bg-white/90 backdrop-blur-sm rounded-[2.5rem] shadow-xl p-10 border border-gray-50">
+          <div className="bg-white/90 backdrop-blur-sm rounded-[2.5rem] shadow-xl p-5 sm:p-10 border border-gray-50">
 
             {/* Step title */}
             <div className="mb-2 text-xs font-semibold text-indigo-500 uppercase tracking-wider font-raleway">
@@ -248,7 +248,7 @@ export default function OnboardingPage() {
             {step === 0 && (
               <div className="space-y-3">
                 <p className="text-sm text-gray-500 font-raleway mb-4">Select 1-5 goals that matter most to you.</p>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {GOALS.map(g => {
                     const selected = goals.includes(g.value);
                     return (

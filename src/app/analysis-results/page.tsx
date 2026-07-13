@@ -231,19 +231,19 @@ function ResultsContent() {
         <div className="lg:col-span-8 space-y-6">
 
           {/* Resume Content Card */}
-          <div className="bg-white rounded-3xl p-10 shadow-2xl shadow-slate-200 border-4 border-blue-500 min-h-[600px]">
+          <div className="bg-white rounded-3xl p-5 md:p-10 shadow-2xl shadow-slate-200 border-4 border-blue-500 min-h-[600px]">
             {resumeSections.name && (
               <div className="mb-8">
-                <h1 className="text-3xl font-bold text-slate-800 mb-1">{resumeSections.name}</h1>
+                <h1 className="text-2xl md:text-3xl font-bold text-slate-800 mb-1">{resumeSections.name}</h1>
                 {resumeSections.contact && (
                   <p className="text-sm text-slate-400 font-medium">{resumeSections.contact}</p>
                 )}
               </div>
             )}
 
-            <div className="grid grid-cols-12 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
               {/* Main content */}
-              <div className="col-span-8 space-y-8">
+              <div className="md:col-span-8 space-y-8">
                 {resumeSections.sections.map((section, i) => (
                   <div key={i}>
                     <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-300 mb-4 border-b border-slate-100 pb-2">
@@ -265,7 +265,7 @@ function ResultsContent() {
 
               {/* Sidebar: Skills */}
               {resumeSections.skills.length > 0 && (
-                <div className="col-span-4 border-l border-slate-50 pl-6">
+                <div className="md:col-span-4 md:border-l border-slate-50 md:pl-6 border-t md:border-t-0 pt-6 md:pt-0">
                   <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-300 mb-4">Skills</h4>
                   <div className="flex flex-wrap gap-1.5">
                     {resumeSections.skills.map((skill, i) => (
