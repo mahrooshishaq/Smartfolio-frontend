@@ -17,6 +17,7 @@ import { useSpeech, mcqSpeechText } from './useSpeech';
 import type {
   Round, LengthTier, Seniority, PublicQuestion, Evaluation, ProgressPoint, ProgressSummary,
 } from './types';
+import BrandMark from '@/components/BrandMark';
 import {
   ROUND_META, ROUND_ORDER, TIER_OPTIONS, SENIORITY_OPTIONS, INTERVIEWER, fmtTime, SidebarItem,
 } from './constants';
@@ -620,11 +621,7 @@ function MockInterviewContent() {
       {/* SIDEBAR */}
       <aside className="w-72 bg-white border-r border-gray-100 p-8 flex flex-col sticky top-0 h-screen">
         <div className="flex items-center gap-2 mb-12 px-2">
-          <div className="flex gap-1.5">
-            <div className="w-2.5 h-2.5 rounded-full bg-red-400" />
-            <div className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
-            <div className="w-2.5 h-2.5 rounded-full bg-green-400" />
-          </div>
+          <BrandMark className="w-7 h-7" />
           <h1 className="font-baloo text-xl ml-2 tracking-wide text-slate-800">SmartFolio - AI</h1>
         </div>
         <nav className="flex-1 space-y-2">

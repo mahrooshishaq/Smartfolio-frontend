@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { CloudUpload, FileText, X, Loader2, ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import AnimatedBackground from '@/components/AnimatedBackground';
+import BrandMark from '@/components/BrandMark';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
@@ -116,11 +117,7 @@ export default function ResumeUploadPage() {
           >
             <ArrowLeft size={20} className="text-gray-600" />
           </button>
-          <div className="flex gap-1.5 ml-4">
-            <div className="w-2.5 h-2.5 rounded-full bg-red-400" />
-            <div className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
-            <div className="w-2.5 h-2.5 rounded-full bg-green-400" />
-          </div>
+          <BrandMark className="w-7 h-7 ml-4" />
           <h1 className="font-baloo text-xl ml-4 tracking-wide text-slate-800">SmartFolio - AI</h1>
         </div>
 

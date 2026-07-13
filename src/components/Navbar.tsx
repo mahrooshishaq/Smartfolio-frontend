@@ -1,17 +1,13 @@
 "use client";
 import Link from "next/link";
+import BrandMark from "@/components/BrandMark";
 
 export default function Navbar() {
   return (
     <nav className="sticky top-0 z-50 flex items-center justify-between px-8 py-4 bg-white/10 backdrop-blur-md border-b border-white/20">
       {/* Logo */}
       <div className="flex items-center gap-2">
-        {/* Simple dots representation */}
-        <div className="flex gap-1">
-          <div className="w-2 h-2 rounded-full bg-red-400"></div>
-          <div className="w-2 h-2 rounded-full bg-yellow-400"></div>
-          <div className="w-2 h-2 rounded-full bg-green-400"></div>
-        </div>
+        <BrandMark className="w-7 h-7" />
         <span className="font-baloo text-xl tracking-wide text-gray-800">
           SmartFolio - AI
         </span>
