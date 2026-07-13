@@ -1,30 +1,17 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import AnimatedBackground from '@/components/AnimatedBackground';
-import BrandMark from '@/components/BrandMark';
 import {
-  FiLogOut, FiLayout, FiFileText, FiMic,
-  FiBookOpen, FiFile, FiBriefcase, FiHelpCircle,
-  FiSettings, FiArrowRight, FiUpload, FiSearch,
+  FiFileText, FiMic,
+  FiBookOpen, FiFile, FiBriefcase,
+  FiArrowRight, FiUpload, FiSearch,
   FiMapPin, FiExternalLink, FiLoader,
 } from 'react-icons/fi';
+import ScoreRing from '@/components/ScoreRing';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 // --- Sub-components ---
-
-const SidebarItem = ({ icon: Icon, label, active = false, onClick }: { icon: any; label: string; active?: boolean; onClick?: () => void }) => (
-  <div
-    onClick={onClick}
-    className={`font-raleway flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all ${active ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-gray-400 hover:bg-gray-50 hover:text-gray-600'}`}
-  >
-    <Icon size={20} />
-    <span className="text-sm">{label}</span>
-  </div>
-);
-
-import ScoreRing from '@/components/ScoreRing';
 
 const StatCard = ({ title, value, subtitle, icon: Icon, color, onClick }: { title: string; value: string | number; subtitle?: string; icon: any; color: string; onClick?: () => void }) => (
   <div onClick={onClick} className={`bg-white p-6 rounded-[2rem] shadow-sm border border-gray-50 ${onClick ? 'cursor-pointer hover:shadow-md' : ''} transition-all`}>
@@ -209,12 +196,6 @@ export default function DashboardPage() {
     return () => clearInterval(interval);
   }, [scraperRunning, token, fetchData]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    router.push('/login');
-  };
-
   const latestAnalysis = resumeAnalyses.length > 0 ? resumeAnalyses[resumeAnalyses.length - 1] : null;
 
   const getScoreColor = (score: number) => {
@@ -237,44 +218,14 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
+      <div className="py-32 flex items-center justify-center">
         <FiLoader className="animate-spin text-gray-300" size={32} />
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen bg-[#F8FAFC] text-slate-900">
-      {/* SIDEBAR */}
-      <aside className="w-72 bg-white border-r border-gray-100 p-8 flex flex-col sticky top-0 h-screen">
-        <div className="flex items-center gap-2 mb-12 px-2">
-          <BrandMark className="w-7 h-7" />
-          <h1 className="font-baloo text-xl ml-2 tracking-wide text-slate-800">SmartFolio - AI</h1>
-        </div>
-        <nav className="flex-1 space-y-2">
-          <SidebarItem icon={FiLayout} label="Dashboard" active />
-          <SidebarItem icon={FiFileText} label="Resume Analysis" onClick={() => router.push('/upload-resume')} />
-          <SidebarItem icon={FiMic} label="Mock Interview" onClick={() => router.push('/mock-interview')} />
-          <SidebarItem icon={FiBookOpen} label="Courses" onClick={() => router.push('/courses')} />
-          <SidebarItem icon={FiFile} label="Document Generation" onClick={() => router.push('/document-generation')} />
-          <SidebarItem icon={FiBriefcase} label="Jobs" onClick={() => router.push('/jobs')} />
-        </nav>
-        <div className="mt-auto pt-8 border-t border-gray-50 space-y-2">
-          <p className="font-raleway text-[10px] font-bold text-gray-300 px-4 mb-4 uppercase tracking-[0.15em]">Support</p>
-          <SidebarItem icon={FiHelpCircle} label="Get Started" />
-          <SidebarItem icon={FiSettings} label="Settings" onClick={() => router.push('/dashboard/settings')} />
-          <button onClick={handleLogout} className="w-full"><SidebarItem icon={FiLogOut} label="Logout" /></button>
-          <div className="mt-8 px-4 py-2 bg-slate-50 rounded-2xl">
-            <p className="font-century text-sm font-bold text-slate-800">{userName || 'User'}</p>
-            <p className="font-raleway text-[11px] text-gray-400 truncate">{userContext?.currentRole || 'SmartFolio User'}</p>
-          </div>
-        </div>
-      </aside>
-
-      {/* MAIN */}
-      <main className="relative flex-1 overflow-hidden p-10">
-        <AnimatedBackground />
-        <div className="relative z-10 h-full overflow-y-auto">
+    <div>
 
           {/* Row 1: Welcome + Quick Actions */}
           <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-50 p-8 mb-8">
@@ -542,8 +493,6 @@ export default function DashboardPage() {
             </div>
           )}
 
-        </div>
-      </main>
     </div>
   );
 }

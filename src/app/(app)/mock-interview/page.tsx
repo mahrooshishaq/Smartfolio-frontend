@@ -1,14 +1,13 @@
 'use client';
 import { useEffect, useState, useCallback, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import AnimatedBackground from '@/components/AnimatedBackground';
 import VoiceWave from '@/components/VoiceWave';
 import { useWebcam } from './useWebcam';
 import { ResultsStage } from './ResultsStage';
 import { InputStage } from './InputStage';
 import {
-  FiLogOut, FiLayout, FiFileText, FiMic, FiBookOpen, FiFile, FiBriefcase,
-  FiHelpCircle, FiSettings, FiLoader, FiCheckCircle, FiXCircle, FiAlertCircle,
+  FiMic,
+  FiLoader, FiCheckCircle, FiXCircle, FiAlertCircle,
   FiRefreshCw, FiSend, FiArrowLeft, FiUser, FiCpu, FiZap, FiArrowRight,
   FiStar, FiTrendingUp, FiVolume2, FiSquare, FiRotateCcw,
   FiVideo, FiVideoOff, FiPhoneOff, FiMessageSquare, FiWifi, FiX
@@ -17,9 +16,8 @@ import { useSpeech, mcqSpeechText } from './useSpeech';
 import type {
   Round, LengthTier, Seniority, PublicQuestion, Evaluation, ProgressPoint, ProgressSummary,
 } from './types';
-import BrandMark from '@/components/BrandMark';
 import {
-  ROUND_META, ROUND_ORDER, TIER_OPTIONS, SENIORITY_OPTIONS, INTERVIEWER, fmtTime, SidebarItem,
+  ROUND_META, ROUND_ORDER, TIER_OPTIONS, SENIORITY_OPTIONS, INTERVIEWER, fmtTime,
 } from './constants';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
@@ -195,12 +193,6 @@ function MockInterviewContent() {
     } catch (err) {
       setStage('input');
     }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    router.push('/login');
   };
 
   const currentRound: Round = ROUND_ORDER[currentRoundIdx];
@@ -617,33 +609,7 @@ function MockInterviewContent() {
       : (isLastQuestionInRound ? (isLastRound ? 'Skip & end interview' : 'Skip & next round') : 'Skip question');
 
   return (
-    <div className="flex min-h-screen bg-[#F8FAFC] text-slate-900">
-      {/* SIDEBAR */}
-      <aside className="w-72 bg-white border-r border-gray-100 p-8 flex flex-col sticky top-0 h-screen">
-        <div className="flex items-center gap-2 mb-12 px-2">
-          <BrandMark className="w-7 h-7" />
-          <h1 className="font-baloo text-xl ml-2 tracking-wide text-slate-800">SmartFolio - AI</h1>
-        </div>
-        <nav className="flex-1 space-y-2">
-          <SidebarItem icon={FiLayout} label="Dashboard" onClick={() => router.push('/dashboard')} />
-          <SidebarItem icon={FiFileText} label="Resume Analysis" onClick={() => router.push('/upload-resume')} />
-          <SidebarItem icon={FiMic} label="Mock Interview" active />
-          <SidebarItem icon={FiBookOpen} label="Courses" onClick={() => router.push('/courses')} />
-          <SidebarItem icon={FiFile} label="Document Generation" onClick={() => router.push('/document-generation')} />
-          <SidebarItem icon={FiBriefcase} label="Jobs" onClick={() => router.push('/jobs')} />
-        </nav>
-        <div className="mt-auto pt-8 border-t border-gray-50 space-y-2">
-          <p className="font-raleway text-[10px] font-bold text-gray-300 px-4 mb-4 uppercase tracking-[0.15em]">Support</p>
-          <SidebarItem icon={FiHelpCircle} label="Get Started" />
-          <SidebarItem icon={FiSettings} label="Settings" onClick={() => router.push('/dashboard/settings')} />
-          <button onClick={handleLogout} className="w-full"><SidebarItem icon={FiLogOut} label="Logout" /></button>
-        </div>
-      </aside>
-
-      {/* MAIN */}
-      <main className="relative flex-1 overflow-hidden p-10">
-        <AnimatedBackground />
-        <div className="relative z-10 h-full overflow-y-auto">
+    <div>
           {/* HEADER */}
           <div className="flex items-center justify-between mb-8">
             <div>
@@ -1109,8 +1075,6 @@ function MockInterviewContent() {
           {stage === 'results' && evaluation && (
             <ResultsStage evaluation={evaluation} questions={questions} answers={answers} onRestart={restart} />
           )}
-        </div>
-      </main>
     </div>
   );
 }

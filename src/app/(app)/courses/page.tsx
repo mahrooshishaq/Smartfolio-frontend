@@ -1,26 +1,12 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import AnimatedBackground from '@/components/AnimatedBackground';
-import BrandMark from '@/components/BrandMark';
 import {
-  FiLogOut, FiLayout, FiFileText, FiMic,
-  FiBookOpen, FiFile, FiBriefcase, FiHelpCircle,
-  FiSettings, FiSearch, FiExternalLink, FiStar,
+  FiBookOpen, FiSearch, FiExternalLink, FiStar,
   FiChevronLeft, FiChevronRight, FiFilter, FiX, FiLoader, FiClock
 } from 'react-icons/fi';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-
-const SidebarItem = ({ icon: Icon, label, active = false, onClick }: { icon: any; label: string; active?: boolean; onClick?: () => void }) => (
-  <div
-    onClick={onClick}
-    className={`font-raleway flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all ${active ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-gray-400 hover:bg-gray-50 hover:text-gray-600'}`}
-  >
-    <Icon size={20} />
-    <span className="text-sm">{label}</span>
-  </div>
-);
 
 interface Course {
   id: string;
@@ -170,12 +156,6 @@ export default function CoursesPage() {
     return () => clearTimeout(timer);
   }, [search, platform, level, category, price]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    router.push('/login');
-  };
-
   const clearFilters = () => {
     setSearch(''); setPlatform(''); setLevel(''); setCategory(''); setPrice('');
   };
@@ -203,37 +183,7 @@ export default function CoursesPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#F8FAFC] text-slate-900">
-      {/* SIDEBAR */}
-      <aside className="w-72 bg-white border-r border-gray-100 p-8 flex flex-col sticky top-0 h-screen">
-        <div className="flex items-center gap-2 mb-12 px-2">
-          <BrandMark className="w-7 h-7" />
-          <h1 className="font-baloo text-xl ml-2 tracking-wide text-slate-800">SmartFolio - AI</h1>
-        </div>
-        <nav className="flex-1 space-y-2">
-          <SidebarItem icon={FiLayout} label="Dashboard" onClick={() => router.push('/dashboard')} />
-          <SidebarItem icon={FiFileText} label="Resume Analysis" onClick={() => router.push('/upload-resume')} />
-          <SidebarItem icon={FiMic} label="Mock Interview" onClick={() => router.push('/mock-interview')} />
-          <SidebarItem icon={FiBookOpen} label="Courses" active />
-          <SidebarItem icon={FiFile} label="Document Generation" onClick={() => router.push('/document-generation')} />
-          <SidebarItem icon={FiBriefcase} label="Jobs" onClick={() => router.push('/jobs')} />
-        </nav>
-        <div className="mt-auto pt-8 border-t border-gray-50 space-y-2">
-          <p className="font-raleway text-[10px] font-bold text-gray-300 px-4 mb-4 uppercase tracking-[0.15em]">Support</p>
-          <SidebarItem icon={FiHelpCircle} label="Get Started" />
-          <SidebarItem icon={FiSettings} label="Settings" onClick={() => router.push('/dashboard/settings')} />
-          <button onClick={handleLogout} className="w-full"><SidebarItem icon={FiLogOut} label="Logout" /></button>
-          <div className="mt-8 px-4 py-2 bg-slate-50 rounded-2xl">
-            <p className="font-century text-sm font-bold text-slate-800">{userName}</p>
-            <p className="font-raleway text-[11px] text-gray-400 truncate">user@smartfolio.ai</p>
-          </div>
-        </div>
-      </aside>
-
-      {/* MAIN */}
-      <main className="relative flex-1 overflow-hidden p-10">
-        <AnimatedBackground />
-        <div className="relative z-10 h-full overflow-y-auto">
+    <div>
           {/* Header */}
           <div className="flex items-center justify-between mb-8">
             <div>
@@ -433,8 +383,6 @@ export default function CoursesPage() {
               </button>
             </div>
           )}
-        </div>
-      </main>
     </div>
   );
 }

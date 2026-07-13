@@ -1,14 +1,12 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import AnimatedBackground from '@/components/AnimatedBackground';
 import {
-  FiLogOut, FiLayout, FiFileText, FiMic, FiBookOpen, FiFile, FiBriefcase,
-  FiHelpCircle, FiSettings, FiLoader, FiArrowLeft, FiDownload, FiCopy,
+  FiFile,
+  FiLoader, FiArrowLeft, FiDownload, FiCopy,
   FiSend, FiMail, FiBookmark, FiCheck, FiRefreshCw,
 } from 'react-icons/fi';
 import jsPDF from 'jspdf';
-import BrandMark from '@/components/BrandMark';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
@@ -19,12 +17,6 @@ const DOC_TYPES: { type: DocumentType; title: string; description: string; icon:
   { type: 'professional_email', title: 'Professional Email', description: 'Concise email for hiring managers, networking, or follow-ups', icon: FiMail },
   { type: 'university_statement', title: 'Personal Statement', description: 'University admission essay tailored to your program', icon: FiBookmark },
 ];
-
-const SidebarItem = ({ icon: Icon, label, active = false, onClick }: { icon: any; label: string; active?: boolean; onClick?: () => void }) => (
-  <div onClick={onClick} className={`font-raleway flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all ${active ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-gray-400 hover:bg-gray-50 hover:text-gray-600'}`}>
-    <Icon size={20} /><span className="text-sm">{label}</span>
-  </div>
-);
 
 export default function DocumentGenerationPage() {
   const router = useRouter();
@@ -69,12 +61,6 @@ export default function DocumentGenerationPage() {
     } catch (err) {
       setStage('select');
     }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    router.push('/login');
   };
 
   const selectType = (t: DocumentType) => {
@@ -208,33 +194,7 @@ export default function DocumentGenerationPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#F8FAFC] text-slate-900">
-      {/* SIDEBAR */}
-      <aside className="w-72 bg-white border-r border-gray-100 p-8 flex flex-col sticky top-0 h-screen">
-        <div className="flex items-center gap-2 mb-12 px-2">
-          <BrandMark className="w-7 h-7" />
-          <h1 className="font-baloo text-xl ml-2 tracking-wide text-slate-800">SmartFolio - AI</h1>
-        </div>
-        <nav className="flex-1 space-y-2">
-          <SidebarItem icon={FiLayout} label="Dashboard" onClick={() => router.push('/dashboard')} />
-          <SidebarItem icon={FiFileText} label="Resume Analysis" onClick={() => router.push('/upload-resume')} />
-          <SidebarItem icon={FiMic} label="Mock Interview" onClick={() => router.push('/mock-interview')} />
-          <SidebarItem icon={FiBookOpen} label="Courses" onClick={() => router.push('/courses')} />
-          <SidebarItem icon={FiFile} label="Document Generation" active />
-          <SidebarItem icon={FiBriefcase} label="Jobs" onClick={() => router.push('/jobs')} />
-        </nav>
-        <div className="mt-auto pt-8 border-t border-gray-50 space-y-2">
-          <p className="font-raleway text-[10px] font-bold text-gray-300 px-4 mb-4 uppercase tracking-[0.15em]">Support</p>
-          <SidebarItem icon={FiHelpCircle} label="Get Started" />
-          <SidebarItem icon={FiSettings} label="Settings" onClick={() => router.push('/dashboard/settings')} />
-          <button onClick={handleLogout} className="w-full"><SidebarItem icon={FiLogOut} label="Logout" /></button>
-        </div>
-      </aside>
-
-      {/* MAIN */}
-      <main className="relative flex-1 overflow-hidden p-10">
-        <AnimatedBackground />
-        <div className="relative z-10 h-full overflow-y-auto">
+    <div>
           {/* HEADER */}
           <div className="flex items-center justify-between mb-8">
             <div>
@@ -343,8 +303,6 @@ export default function DocumentGenerationPage() {
               </div>
             </div>
           )}
-        </div>
-      </main>
     </div>
   );
 }
