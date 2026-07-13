@@ -1,5 +1,5 @@
 // src/app/layout.tsx
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Raleway, Baloo_Chettan_2, Didact_Gothic } from "next/font/google";
 import '../styles/globals.css';
 import React from 'react';
@@ -21,6 +21,12 @@ const century = Didact_Gothic({
   subsets: ["latin"], 
   variable: "--font-century" 
 });
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
 
 export const metadata: Metadata = {
   title: "SmartFolio - AI",

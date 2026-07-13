@@ -1,5 +1,26 @@
 @import "tailwindcss";
 
+/* Mobile guards */
+html,
+body {
+  overflow-x: clip;
+}
+
+/* Prevent iOS focus-zoom on form fields (fires when font-size < 16px) */
+@media (max-width: 1023px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+button,
+a,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
 /* Keyframe Animations for Floating Ellipses */
 @keyframes float-1 {
   0%, 100% {
