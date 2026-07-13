@@ -95,9 +95,9 @@ const TagInput = ({ label, tags, onChange, placeholder }: { label: string; tags:
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addTag(); } }}
           placeholder={placeholder}
-          className="font-raleway flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-slate-700 placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent transition-all"
+          className="font-raleway flex-1 min-w-0 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-slate-700 placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent transition-all"
         />
-        <button onClick={addTag} className="bg-[#4F46E5] hover:bg-[#4338CA] text-white px-3 py-2.5 rounded-xl transition-all">
+        <button onClick={addTag} className="shrink-0 bg-[#4F46E5] hover:bg-[#4338CA] text-white px-3 py-2.5 rounded-xl transition-all">
           <FiPlus size={16} />
         </button>
       </div>

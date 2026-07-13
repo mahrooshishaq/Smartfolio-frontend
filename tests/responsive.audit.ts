@@ -3,6 +3,7 @@ import type { Page } from '@playwright/test';
 export type Viewport = { name: string; width: number; height: number };
 
 export const VIEWPORTS: Viewport[] = [
+  { name: 'narrow-320', width: 320, height: 658 },
   { name: 'iphone-se', width: 375, height: 667 },
   { name: 'iphone-14', width: 390, height: 844 },
   { name: 'tablet', width: 768, height: 1024 },
