@@ -228,10 +228,10 @@ export default function DashboardPage() {
     <div>
 
           {/* Row 1: Welcome + Quick Actions */}
-          <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-50 p-8 mb-8">
-            <div className="flex items-center justify-between">
+          <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-50 p-5 md:p-8 mb-8">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <h2 className="font-century text-3xl font-black text-slate-800">
+                <h2 className="font-century text-2xl md:text-3xl font-black text-slate-800">
                   Welcome back, {userName?.split(' ')[0] || 'there'}!
                 </h2>
                 {userContext?.currentRole && userContext?.targetRole ? (
@@ -243,14 +243,14 @@ export default function DashboardPage() {
                   <p className="font-raleway text-sm text-gray-400 mt-1">Your AI-powered career companion</p>
                 )}
               </div>
-              <div className="flex items-center gap-3">
-                <button onClick={() => router.push('/upload-resume')} className="font-raleway flex items-center gap-2 bg-[#4F46E5] hover:bg-[#4338CA] text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-all">
+              <div className="flex flex-wrap items-center gap-3">
+                <button onClick={() => router.push('/upload-resume')} className="font-raleway flex flex-1 sm:flex-none items-center justify-center gap-2 bg-[#4F46E5] hover:bg-[#4338CA] text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-all">
                   <FiUpload size={14} /> Analyze Resume
                 </button>
-                <button onClick={() => router.push('/jobs')} className="font-raleway flex items-center gap-2 bg-white hover:bg-gray-50 text-slate-700 px-5 py-2.5 rounded-xl text-xs font-bold border border-gray-200 transition-all">
+                <button onClick={() => router.push('/jobs')} className="font-raleway flex flex-1 sm:flex-none items-center justify-center gap-2 bg-white hover:bg-gray-50 text-slate-700 px-5 py-2.5 rounded-xl text-xs font-bold border border-gray-200 transition-all">
                   <FiSearch size={14} /> Find Jobs
                 </button>
-                <button onClick={() => router.push('/courses')} className="font-raleway flex items-center gap-2 bg-white hover:bg-gray-50 text-slate-700 px-5 py-2.5 rounded-xl text-xs font-bold border border-gray-200 transition-all">
+                <button onClick={() => router.push('/courses')} className="font-raleway flex flex-1 sm:flex-none items-center justify-center gap-2 bg-white hover:bg-gray-50 text-slate-700 px-5 py-2.5 rounded-xl text-xs font-bold border border-gray-200 transition-all">
                   <FiBookOpen size={14} /> Find Courses
                 </button>
               </div>
@@ -285,7 +285,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Row 2: Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
             {/* Resume Score Card */}
             <div 
               onClick={() => latestAnalysis && router.push(`/analysis-results?resumeId=${latestAnalysis.resumeId}`)}

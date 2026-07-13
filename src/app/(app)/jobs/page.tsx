@@ -183,23 +183,23 @@ export default function JobsPage() {
   return (
     <div>
           {/* Header */}
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
             <div>
-              <h2 className="font-century text-3xl font-black text-slate-800">Jobs For You</h2>
+              <h2 className="font-century text-2xl md:text-3xl font-black text-slate-800">Jobs For You</h2>
               <p className="font-raleway text-sm text-gray-400 mt-1">Personalized job recommendations based on your profile</p>
             </div>
             <button
               onClick={runScraper}
               disabled={scraping}
-              className="font-raleway flex items-center gap-2 bg-[#4F46E5] hover:bg-[#4338CA] text-white px-6 py-3 rounded-2xl font-semibold text-sm transition-all disabled:opacity-60"
+              className="font-raleway flex items-center justify-center gap-2 self-start bg-[#4F46E5] hover:bg-[#4338CA] text-white px-6 py-3 rounded-2xl font-semibold text-sm transition-all disabled:opacity-60"
             >
               {scraping ? <><FiLoader className="animate-spin" size={16} /> Finding Jobs...</> : <><FiSearch size={16} /> Find New Jobs</>}
             </button>
           </div>
 
           {/* Search & Filter Bar */}
-          <div className="bg-white rounded-[2rem] shadow-sm border border-gray-50 p-6 mb-8">
-            <div className="flex items-center gap-4">
+          <div className="bg-white rounded-[2rem] shadow-sm border border-gray-50 p-4 md:p-6 mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
               <div className="flex-1 relative">
                 <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
                 <input
@@ -224,7 +224,7 @@ export default function JobsPage() {
             </div>
 
             {showFilters && filters && (
-              <div className="grid grid-cols-4 gap-4 mt-5 pt-5 border-t border-gray-50">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mt-5 pt-5 border-t border-gray-50">
                 <select value={jobType} onChange={(e) => setJobType(e.target.value)} className="font-raleway text-sm bg-gray-50 rounded-xl px-4 py-3 text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-100">
                   <option value="">All Job Types</option>
                   {filters.job_types.map(t => <option key={t} value={t}>{t}</option>)}

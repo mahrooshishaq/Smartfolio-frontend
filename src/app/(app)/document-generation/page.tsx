@@ -196,9 +196,9 @@ export default function DocumentGenerationPage() {
   return (
     <div>
           {/* HEADER */}
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
             <div>
-              <h2 className="font-century text-3xl font-black text-slate-800">Document Generation</h2>
+              <h2 className="font-century text-2xl md:text-3xl font-black text-slate-800">Document Generation</h2>
               <p className="font-raleway text-sm text-gray-400 mt-1">
                 {stage === 'select' && 'Pick a document type to start'}
                 {stage === 'form' && 'Fill in the details and let AI draft it for you'}
@@ -240,7 +240,7 @@ export default function DocumentGenerationPage() {
 
           {/* FORM STAGE */}
           {stage === 'form' && (
-            <div className="bg-white rounded-[2rem] shadow-sm border border-gray-50 p-10 max-w-3xl mx-auto">
+            <div className="bg-white rounded-[2rem] shadow-sm border border-gray-50 p-5 md:p-10 max-w-3xl mx-auto">
               <h3 className="font-century text-xl font-black text-slate-800 mb-6">
                 {DOC_TYPES.find((d) => d.type === docType)?.title}
               </h3>
@@ -269,15 +269,15 @@ export default function DocumentGenerationPage() {
           {/* RESULT STAGE */}
           {stage === 'result' && (
             <div className="space-y-5 max-w-4xl mx-auto pb-10">
-              <div className="bg-white rounded-[2rem] shadow-sm border border-gray-50 p-8">
-                <div className="flex items-center justify-between mb-5">
+              <div className="bg-white rounded-[2rem] shadow-sm border border-gray-50 p-5 md:p-8">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-5">
                   <h3 className="font-century text-lg font-black text-slate-800">{title}</h3>
                   <span className="font-raleway text-xs text-gray-400">{content.length} characters</span>
                 </div>
                 <textarea
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
-                  className="font-raleway w-full min-h-[500px] bg-gray-50 border border-gray-100 rounded-2xl p-6 text-sm text-slate-700 leading-relaxed focus:outline-none focus:border-[#4F46E5] resize-y whitespace-pre-wrap"
+                  className="font-raleway w-full min-h-[60vh] bg-gray-50 border border-gray-100 rounded-2xl p-4 md:p-6 text-sm text-slate-700 leading-relaxed focus:outline-none focus:border-[#4F46E5] resize-y whitespace-pre-wrap"
                 />
               </div>
 

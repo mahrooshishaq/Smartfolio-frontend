@@ -250,20 +250,20 @@ export default function SettingsPage() {
     <div>
 
           {/* Header */}
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
             <div className="flex items-center gap-4">
-              <button onClick={() => router.push('/dashboard')} className="text-gray-400 hover:text-slate-700 transition-colors">
+              <button onClick={() => router.push('/dashboard')} className="text-gray-400 hover:text-slate-700 transition-colors min-h-11 min-w-11 flex items-center justify-center -ml-2">
                 <FiArrowLeft size={20} />
               </button>
               <div>
-                <h2 className="font-century text-3xl font-black text-slate-800">Profile Settings</h2>
+                <h2 className="font-century text-2xl md:text-3xl font-black text-slate-800">Profile Settings</h2>
                 <p className="font-raleway text-sm text-gray-400 mt-1">Update your career profile to improve recommendations</p>
               </div>
             </div>
             <button
               onClick={handleSave}
               disabled={saving}
-              className={`font-raleway flex items-center gap-2 px-6 py-3 rounded-2xl font-semibold text-sm transition-all ${
+              className={`font-raleway flex items-center justify-center gap-2 self-start px-6 py-3 rounded-2xl font-semibold text-sm transition-all ${
                 saved
                   ? 'bg-emerald-500 text-white'
                   : 'bg-[#4F46E5] hover:bg-[#4338CA] text-white disabled:opacity-60'
