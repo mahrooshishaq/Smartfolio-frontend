@@ -68,8 +68,13 @@ function MockInterviewContent() {
   const [connectPhase, setConnectPhase] = useState<'dialing' | 'joined'>('dialing');
   const [typing, setTyping] = useState(false); // inline typed-answer fallback (Phase 4.3)
   const [confirmEnd, setConfirmEnd] = useState(false); // platform-styled end-interview dialog
-  // Rest interstitial between questions — null when not resting, else seconds left.
+  // Rest interstitial after EVERY submit/skip — null when not resting, else
+  // seconds left. restMeta says what the card announces (what comes next and
+  // whether an answer was saved); restActionRef runs when the countdown ends
+  // (or is skipped) for transitions beyond "speak the current question".
   const [restCountdown, setRestCountdown] = useState<number | null>(null);
+  const [restMeta, setRestMeta] = useState<{ next: 'question' | 'followup' | 'round' | 'finish'; saved: boolean }>({ next: 'question', saved: true });
+  const restActionRef = useRef<(() => void) | null>(null);
 
   // Errors surface as a toast — auto-dismiss so they never linger over the call.
   useEffect(() => {
@@ -237,13 +242,45 @@ function MockInterviewContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stage, currentQuestionIdx, restCountdown === null]);
 
-  // Tick the rest countdown down to zero, then clear it (which triggers the
-  // question to display and speak). Any stage change cancels the rest.
+  // Every submit/skip flows through here so the pacing is uniform: 5 seconds
+  // of rest, then whatever comes next. `action` (round change, final submit)
+  // runs when the countdown ends or is skipped; without one, clearing the
+  // countdown lets the speak effect narrate the pending question/follow-up.
+  const beginRest = (
+    next: 'question' | 'followup' | 'round' | 'finish',
+    saved: boolean,
+    action?: () => void,
+  ) => {
+    restActionRef.current = action ?? null;
+    setRestMeta({ next, saved });
+    setRestCountdown(REST_SECONDS);
+  };
+
+  const finishRest = () => {
+    setRestCountdown(null);
+    const action = restActionRef.current;
+    restActionRef.current = null;
+    if (action) action();
+  };
+
+  // True when the stored answer for a question is non-empty (covers spoken/
+  // typed text and MCQ indices, where 0 is a valid answer).
+  const isAnswered = (map: Record<number, string | number>, q?: PublicQuestion) =>
+    !!q && map[q.id] !== undefined && String(map[q.id]).trim() !== '';
+
+  // Tick the rest countdown down to zero, then finish it (running any queued
+  // transition). Leaving the round stage abandons the rest AND its action.
   useEffect(() => {
     if (restCountdown === null) return;
-    if (stage !== 'round' || restCountdown <= 0) { setRestCountdown(null); return; }
+    if (stage !== 'round') {
+      setRestCountdown(null);
+      restActionRef.current = null;
+      return;
+    }
+    if (restCountdown <= 0) { finishRest(); return; }
     const t = setTimeout(() => setRestCountdown((c) => (c === null ? null : c - 1)), 1000);
     return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restCountdown, stage]);
 
   // Latency: while the candidate answers, warm the NEXT question's audio in the
@@ -368,7 +405,7 @@ function MockInterviewContent() {
       // Rest interstitial: give the candidate a breather while the next
       // question's audio synthesizes in the background — when the countdown
       // ends, the question shows and narrates at the same instant.
-      setRestCountdown(REST_SECONDS);
+      beginRest('question', isAnswered(finalAnswers, activeQuestion));
       if (next) prefetchSpeech(next.type === 'mcq' ? mcqSpeechText(next) : next.question);
     } else {
       goToNextRound(finalAnswers, finalFollowUps);
@@ -460,7 +497,8 @@ function MockInterviewContent() {
         resetTranscript();
         // Same breather as between questions — and the pause covers the
         // follow-up's TTS synthesis, so it narrates the moment it appears.
-        setRestCountdown(REST_SECONDS);
+        // A follow-up only happens on a non-empty answer, so saved is true.
+        beginRest('followup', true);
         prefetchSpeech(fu);
         return; // stay on this screen; the follow-up shows once the rest ends
       }
@@ -473,14 +511,19 @@ function MockInterviewContent() {
     finalAnswers: Record<number, string | number> = answers,
     finalFollowUps: Record<number, string> = followUpAnswers,
   ) => {
+    // Round boundaries get the same breather as every other submit/skip —
+    // the queued action fires when the countdown ends (or is skipped).
+    const saved = isAnswered(finalAnswers, activeQuestion);
     if (currentRoundIdx < ROUND_ORDER.length - 1) {
-      setCurrentRoundIdx(currentRoundIdx + 1);
-      setCurrentQuestionIdx(0);
-      resetTranscript();
-      setError('');
-      setStage('round_intro');
+      beginRest('round', saved, () => {
+        setCurrentRoundIdx(currentRoundIdx + 1);
+        setCurrentQuestionIdx(0);
+        resetTranscript();
+        setError('');
+        setStage('round_intro');
+      });
     } else {
-      submitInterview(finalAnswers, finalFollowUps);
+      beginRest('finish', saved, () => submitInterview(finalAnswers, finalFollowUps));
     }
   };
 
@@ -537,6 +580,7 @@ function MockInterviewContent() {
     setFollowUpAnswers({});
     setAwaitingFollowUp(false);
     setRestCountdown(null);
+    restActionRef.current = null;
     stopCamera();
     setElapsed(0);
     setCaptionsOn(true);
@@ -818,8 +862,8 @@ function MockInterviewContent() {
                       next question's audio synthesizes in the background */}
                   {resting && (
                     <div className="mt-6 text-center max-w-2xl flex flex-col items-center">
-                      <span className="inline-block font-raleway text-[10px] font-bold uppercase tracking-[0.2em] px-3 py-1 rounded-full mb-4 bg-emerald-500/15 text-emerald-300">
-                        Answer saved
+                      <span className={`inline-block font-raleway text-[10px] font-bold uppercase tracking-[0.2em] px-3 py-1 rounded-full mb-4 ${restMeta.saved ? 'bg-emerald-500/15 text-emerald-300' : 'bg-white/10 text-slate-300'}`}>
+                        {restMeta.saved ? 'Answer saved' : 'Question skipped'}
                       </span>
                       <div className="relative grid place-items-center mb-4">
                         <span className="absolute w-20 h-20 rounded-full bg-indigo-500/20 animate-ping" />
@@ -827,12 +871,17 @@ function MockInterviewContent() {
                           <span className="font-century text-3xl font-black text-white tabular-nums">{restCountdown}</span>
                         </div>
                       </div>
-                      <h3 className="font-century text-xl font-black text-white">Take a moment to rest</h3>
+                      <h3 className="font-century text-xl font-black text-white">
+                        {restMeta.next === 'finish' ? 'That was the last question!' : 'Take a moment to rest'}
+                      </h3>
                       <p className="font-raleway text-sm text-slate-400 mt-1.5">
-                        {followUpQ ? 'Follow-up question' : 'Next question'} in {restCountdown}s — {INTERVIEWER.name} is preparing it
+                        {restMeta.next === 'followup' ? <>Follow-up question in {restCountdown}s — {INTERVIEWER.name} is preparing it</>
+                          : restMeta.next === 'round' ? <>Round complete — next round in {restCountdown}s</>
+                          : restMeta.next === 'finish' ? <>Your evaluation starts in {restCountdown}s</>
+                          : <>Next question in {restCountdown}s — {INTERVIEWER.name} is preparing it</>}
                       </p>
                       <button
-                        onClick={() => setRestCountdown(null)}
+                        onClick={finishRest}
                         className="font-raleway mt-4 text-xs text-slate-400 hover:text-indigo-300 underline underline-offset-4"
                       >
                         I&apos;m ready — skip the wait
