@@ -1,25 +1,25 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
   <defs>
     <linearGradient id="sf-page" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#22304d"/>
-      <stop offset="1" stop-color="#0e1626"/>
+      <stop offset="0" stop-color="#322e86"/>
+      <stop offset="1" stop-color="#6d28d9"/>
     </linearGradient>
     <linearGradient id="sf-line" x1="0" y1="1" x2="1" y2="0">
-      <stop offset="0" stop-color="#f87171"/>
-      <stop offset="0.5" stop-color="#fbbf24"/>
-      <stop offset="1" stop-color="#34d399"/>
+      <stop offset="0" stop-color="#a5b4fc"/>
+      <stop offset="0.5" stop-color="#c084fc"/>
+      <stop offset="1" stop-color="#f472b6"/>
     </linearGradient>
   </defs>
   <!-- dog-eared page: the "Folio" -->
   <path d="M0 14 Q0 0 14 0 L44 0 L64 20 L64 50 Q64 64 50 64 L14 64 Q0 64 0 50 Z" fill="url(#sf-page)"/>
   <!-- folded corner -->
-  <path d="M44 0 L64 20 L44 20 Z" fill="#3a4c74"/>
+  <path d="M44 0 L64 20 L44 20 Z" fill="#dcbdf5"/>
   <!-- readiness climb: not-ready -> ready -->
-  <circle cx="43" cy="21" r="8" fill="none" stroke="#34d399" stroke-opacity="0.28" stroke-width="2.4"/>
+  <circle cx="43" cy="21" r="8" fill="none" stroke="#f472b6" stroke-opacity="0.32" stroke-width="2.4"/>
   <path d="M13 48 C22 46 25 41 27.5 36 C31 29 37 24 43 21" fill="none" stroke="url(#sf-line)" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="13" cy="48" r="4" fill="#f87171"/>
-  <circle cx="27.5" cy="36" r="4" fill="#fbbf24"/>
-  <circle cx="43" cy="21" r="5.5" fill="#34d399"/>
+  <circle cx="13" cy="48" r="4" fill="#a5b4fc"/>
+  <circle cx="27.5" cy="36" r="4" fill="#c084fc"/>
+  <circle cx="43" cy="21" r="5.5" fill="#f472b6"/>
   <!-- AI spark on the fold -->
-  <path d="M53.5 8.5 L54.7 11.8 L58 13 L54.7 14.2 L53.5 17.5 L52.3 14.2 L49 13 L52.3 11.8 Z" fill="#eafff6"/>
+  <path d="M53.5 8.5 L54.7 11.8 L58 13 L54.7 14.2 L53.5 17.5 L52.3 14.2 L49 13 L52.3 11.8 Z" fill="#ffe1f1"/>
 </svg>
