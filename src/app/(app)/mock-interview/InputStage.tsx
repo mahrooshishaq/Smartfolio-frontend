@@ -69,7 +69,7 @@ export function InputStage({
               {progress!.summary.attempts} interview{progress!.summary.attempts > 1 ? 's' : ''}
             </span>
           </div>
-          <div className="grid grid-cols-3 gap-3 mb-4">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4">
             <Stat label="Latest" value={progress!.summary.latest} />
             <Stat label="Best" value={progress!.summary.best} />
             <Stat label="Average" value={progress!.summary.average} />
@@ -79,7 +79,7 @@ export function InputStage({
       )}
 
       {/* FORM */}
-      <div className="bg-white rounded-[2rem] shadow-sm border border-gray-50 p-10">
+      <div className="bg-white rounded-[2rem] shadow-sm border border-gray-50 p-5 md:p-10">
         {!sttSupported && (
           <div className="bg-amber-50 text-amber-700 rounded-xl px-4 py-3 mb-5 text-xs font-raleway">
             Voice input isn&apos;t supported in this browser (Chrome works best). You can still type every answer.

@@ -61,7 +61,7 @@ export function ResultsStage({ evaluation, questions, answers, onRestart }: Resu
   return (
     <div className="space-y-6 max-w-4xl mx-auto pb-10">
       {/* Overall Score */}
-      <div className="bg-white rounded-[2rem] shadow-sm border border-gray-50 p-10 text-center">
+      <div className="bg-white rounded-[2rem] shadow-sm border border-gray-50 p-6 md:p-10 text-center">
         <div className="relative inline-flex items-center justify-center mb-4">
           <svg className="w-44 h-44 -rotate-90">
             <circle cx="88" cy="88" r="78" stroke="#F1F5F9" strokeWidth="12" fill="none" />

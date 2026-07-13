@@ -19,6 +19,7 @@ import type {
 import {
   ROUND_META, ROUND_ORDER, TIER_OPTIONS, SENIORITY_OPTIONS, INTERVIEWER, fmtTime,
 } from './constants';
+import { useAppChrome } from '@/components/app-shell/AppShell';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
@@ -324,6 +325,14 @@ function MockInterviewContent() {
     return () => clearInterval(id);
   }, [stage]);
 
+  // Full-screen call on mobile: hide the shell's top bar and tab bar while live.
+  const { setImmersive } = useAppChrome();
+  useEffect(() => {
+    const inCall = stage === 'connecting' || stage === 'round_intro' || stage === 'round';
+    setImmersive(inCall);
+    return () => setImmersive(false);
+  }, [stage, setImmersive]);
+
   // Release the camera once the call is over.
   useEffect(() => {
     if (stage === 'results' || stage === 'input') stopCamera();
@@ -611,9 +620,9 @@ function MockInterviewContent() {
   return (
     <div>
           {/* HEADER */}
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-8">
             <div>
-              <h2 className="font-century text-3xl font-black text-slate-800">Mock Interview</h2>
+              <h2 className="font-century text-2xl md:text-3xl font-black text-slate-800">Mock Interview</h2>
               <p className="font-raleway text-sm text-gray-400 mt-1">
                 {stage === 'input' && 'Paste a job description to start a 3-round mock interview'}
                 {stage === 'connecting' && 'Connecting you to your interviewer…'}
@@ -623,7 +632,7 @@ function MockInterviewContent() {
               </p>
             </div>
             {stage !== 'input' && stage !== 'loading' && stage !== 'evaluating' && (
-              <button onClick={restart} className="font-raleway flex items-center gap-2 text-sm text-gray-400 hover:text-slate-600 transition-colors">
+              <button onClick={restart} className="font-raleway flex items-center gap-2 self-start py-2 text-sm text-gray-400 hover:text-slate-600 transition-colors">
                 <FiArrowLeft size={16} /> Start Over
               </button>
             )}
@@ -725,7 +734,7 @@ function MockInterviewContent() {
           {/* CONNECTING (call ceremony) */}
           {stage === 'connecting' && (
             <div className="max-w-4xl mx-auto">
-              <div className="relative overflow-hidden rounded-[2rem] bg-[#0A0E1A] border border-white/5 p-14 text-center shadow-2xl">
+              <div className="relative overflow-hidden rounded-[2rem] bg-[#0A0E1A] border border-white/5 p-8 md:p-14 text-center shadow-2xl">
                 <div className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-96 rounded-full bg-indigo-500/20 blur-3xl" />
                 <div className="relative z-10 flex flex-col items-center">
                   <div className="relative mb-6 grid place-items-center">
@@ -751,7 +760,7 @@ function MockInterviewContent() {
           {/* ROUND INTRO STAGE */}
           {stage === 'round_intro' && (
             <div className="max-w-3xl mx-auto">
-              <div className="bg-white rounded-[2rem] shadow-sm border border-gray-50 p-12 text-center">
+              <div className="bg-white rounded-[2rem] shadow-sm border border-gray-50 p-6 md:p-12 text-center">
                 <div className={`w-20 h-20 rounded-3xl ${ROUND_META[currentRound].bg} ${ROUND_META[currentRound].color} flex items-center justify-center mx-auto mb-6`}>
                   {(() => { const Icon = ROUND_META[currentRound].icon; return <Icon size={36} />; })()}
                 </div>
@@ -886,7 +895,7 @@ function MockInterviewContent() {
                   {/* Candidate self-view PiP — anchored top-right beside the interviewer
                       tile row, where nothing else renders, so it never covers the
                       question text (which is centered lower and can grow long). */}
-                  <div className="absolute right-4 top-2 w-32 md:w-48 aspect-[4/3] rounded-2xl overflow-hidden border border-white/15 bg-slate-900 shadow-xl">
+                  <div className="absolute right-3 top-3 w-24 sm:w-32 md:w-48 aspect-[4/3] rounded-2xl overflow-hidden border border-white/15 bg-slate-900 shadow-xl">
                     {/* scale-x-[-1] mirrors the self-view like every video-call app —
                         without it your movements appear reversed and feel wrong */}
                     <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
@@ -903,7 +912,7 @@ function MockInterviewContent() {
 
                 {/* CAPTIONS */}
                 {captionsOn && !resting && (
-                  <div className="relative z-10 mx-6 mb-3 rounded-2xl bg-black/30 border border-white/10 px-4 py-3 backdrop-blur-sm min-h-[52px] flex items-center">
+                  <div className="relative z-10 mx-3 md:mx-6 mb-3 rounded-2xl bg-black/30 border border-white/10 px-4 py-3 backdrop-blur-sm min-h-[52px] flex items-center">
                     {isSpeaking ? (
                       <p className="font-raleway text-sm text-slate-100"><span className="text-indigo-300 font-bold mr-2">{INTERVIEWER.name}:</span>{followUpQ ? followUpQ.question : activeQuestion.question}</p>
                     ) : transcript ? (
