@@ -29,7 +29,9 @@ import type { PublicQuestion } from './types';
 // time of the next (on the free-tier CPU a chunk synthesizes at ~0.75-1x
 // realtime plus ~1.3s network) — larger chunks open audible gaps between
 // sentences. Single sentences longer than the limit are sent whole.
-const FIRST_CHUNK_MAX = 120;
+// 60 keeps a fully cold first chunk within the between-question rest window
+// (~1x realtime synthesis + network), so the voice starts with the text.
+const FIRST_CHUNK_MAX = 60;
 const CHUNK_MAX = 160;
 export function splitForTts(text: string): string[] {
   const sentences = text.match(/[^.?!]+[.?!]+["')\]]*\s*|[^.?!]+$/g) ?? [text];
@@ -581,6 +583,16 @@ export function useSpeech(
     })().catch(() => { /* prefetch is best-effort */ });
   };
 
+  // Resolves once the first audio chunk of `text` is playable (cache hit or
+  // completed fetch), so callers can hold a reveal until voice and text can
+  // start together. Resolves immediately when neural TTS is off — browser TTS
+  // has no synthesis latency worth waiting for.
+  const waitForSpeechReady = (text: string): Promise<void> => {
+    if (!neuralRef.current || neuralDisabledRef.current) return Promise.resolve();
+    const [first] = splitForTts(text);
+    return getChunkBlob(first).then(() => undefined);
+  };
+
   const resetTranscript = () => {
     listenSeqRef.current++; // any in-flight transcription now belongs to a past question — discard it
     setTranscript('');
@@ -604,6 +616,7 @@ export function useSpeech(
     speak,
     speakMcq,
     prefetchSpeech,
+    waitForSpeechReady,
     preloadLiveCaptions,
     startListening,
     stopListening,

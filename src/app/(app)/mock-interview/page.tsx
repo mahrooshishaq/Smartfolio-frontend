@@ -10,7 +10,7 @@ import {
   FiLoader, FiCheckCircle, FiXCircle, FiAlertCircle,
   FiRefreshCw, FiSend, FiArrowLeft, FiUser, FiCpu, FiZap, FiArrowRight,
   FiStar, FiTrendingUp, FiVolume2, FiSquare, FiRotateCcw,
-  FiVideo, FiVideoOff, FiPhoneOff, FiMessageSquare, FiWifi, FiX
+  FiVideo, FiVideoOff, FiPhoneOff, FiMessageSquare, FiWifi, FiX, FiClock
 } from 'react-icons/fi';
 import { useSpeech, mcqSpeechText } from './useSpeech';
 import type {
@@ -18,6 +18,7 @@ import type {
 } from './types';
 import {
   ROUND_META, ROUND_ORDER, TIER_OPTIONS, SENIORITY_OPTIONS, INTERVIEWER, fmtTime,
+  PER_QUESTION_SECONDS, FOLLOW_UP_SECONDS,
 } from './constants';
 import { useAppChrome } from '@/components/app-shell/AppShell';
 
@@ -26,6 +27,15 @@ const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 // Breather between questions: long enough to reset (and for the next question's
 // audio to finish synthesizing in the background), short enough to keep pace.
 const REST_SECONDS = 5;
+
+// Per-question timer feature flag (Phase 1.4) — on by default; set
+// NEXT_PUBLIC_QUESTION_TIMER=off to disable without a code change.
+const QUESTION_TIMER_ENABLED = process.env.NEXT_PUBLIC_QUESTION_TIMER !== 'off';
+// Soft warning threshold — color/label change only (reduced-motion safe).
+const TIMER_WARN_SECONDS = 10;
+// Never hold the question reveal on audio longer than this — if synthesis is
+// this slow the voice will just start late rather than stalling the interview.
+const REST_HOLD_MAX_MS = 10_000;
 
 export default function MockInterviewPage() {
   return (
@@ -75,6 +85,13 @@ function MockInterviewContent() {
   const [restCountdown, setRestCountdown] = useState<number | null>(null);
   const [restMeta, setRestMeta] = useState<{ next: 'question' | 'followup' | 'round' | 'finish'; saved: boolean }>({ next: 'question', saved: true });
   const restActionRef = useRef<(() => void) | null>(null);
+  // True while the rest countdown has finished but we're holding the reveal
+  // until the next question's first audio chunk is ready — so the question
+  // text and the voice always start together.
+  const [restHolding, setRestHolding] = useState(false);
+  // Per-question countdown (Phase 1.4) — seconds left in the answer window,
+  // null when the timer is idle (flag off, resting, or between questions).
+  const [questionTimeLeft, setQuestionTimeLeft] = useState<number | null>(null);
 
   // Errors surface as a toast — auto-dismiss so they never linger over the call.
   useEffect(() => {
@@ -133,7 +150,7 @@ function MockInterviewContent() {
   // Speech (TTS + STT) — extracted into a hook (Phase 0.3), with neural TTS (Phase 3.4)
   const {
     isSpeaking, isListening, isTranscribing, transcript, transcriptRef, supported: sttSupported,
-    speak, speakMcq, prefetchSpeech, preloadLiveCaptions, startListening,
+    speak, speakMcq, prefetchSpeech, waitForSpeechReady, preloadLiveCaptions, startListening,
     finalizeListening, resetTranscript,
     cancel: cancelSpeech,
   } = useSpeech(neuralTts, transcribeAudio);
@@ -251,6 +268,7 @@ function MockInterviewContent() {
   };
 
   const finishRest = () => {
+    setRestHolding(false);
     setRestCountdown(null);
     const action = restActionRef.current;
     restActionRef.current = null;
@@ -268,10 +286,29 @@ function MockInterviewContent() {
     if (restCountdown === null) return;
     if (stage !== 'round') {
       setRestCountdown(null);
+      setRestHolding(false);
       restActionRef.current = null;
       return;
     }
-    if (restCountdown <= 0) { finishRest(); return; }
+    if (restCountdown <= 0) {
+      // The countdown is a blind timer, but the reveal is not: when the next
+      // thing to narrate is a question/follow-up, hold here until its first
+      // audio chunk is ready (capped) so text and voice start together.
+      // Round/finish transitions leave this screen — nothing to gate.
+      const gateText =
+        restMeta.next === 'followup' && followUpQ ? followUpQ.question
+        : restMeta.next === 'question' && activeQuestion
+          ? (activeQuestion.type === 'mcq' ? mcqSpeechText(activeQuestion) : activeQuestion.question)
+          : '';
+      if (!gateText) { finishRest(); return; }
+      let cancelled = false;
+      setRestHolding(true);
+      Promise.race([
+        waitForSpeechReady(gateText),
+        new Promise((r) => setTimeout(r, REST_HOLD_MAX_MS)),
+      ]).then(() => { if (!cancelled) finishRest(); });
+      return () => { cancelled = true; };
+    }
     const t = setTimeout(() => setRestCountdown((c) => (c === null ? null : c - 1)), 1000);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -379,6 +416,11 @@ function MockInterviewContent() {
       setCurrentRoundIdx(0);
       setCurrentQuestionIdx(0);
       setElapsed(0);
+      // Warm the very first question's audio NOW — the connect ceremony and
+      // round intro give synthesis a long head start, so the opening question
+      // speaks the moment it appears instead of paying cold-start latency.
+      const firstQ = (data.questions as PublicQuestion[]).filter((q) => q.round === ROUND_ORDER[0])[0];
+      if (firstQ) prefetchSpeech(firstQ.type === 'mcq' ? mcqSpeechText(firstQ) : firstQ.question);
       setStage('connecting');
     } catch (err: any) {
       setError(err.message || 'Something went wrong.');
@@ -509,6 +551,37 @@ function MockInterviewContent() {
     advanceQuestion(updatedAnswers);
   };
 
+  // ─── PER-QUESTION TIMER (Phase 1.4, flag default ON) ─────────────────────
+  // Arm the answer window whenever a new question or follow-up is revealed.
+  // The budget comes from the question type (mirrors TIER_CONFIG on the
+  // backend); follow-ups get a fixed short window.
+  useEffect(() => {
+    if (!QUESTION_TIMER_ENABLED || stage !== 'round' || resting || !activeQuestion) {
+      setQuestionTimeLeft(null);
+      return;
+    }
+    setQuestionTimeLeft(followUpQ ? FOLLOW_UP_SECONDS : PER_QUESTION_SECONDS[activeQuestion.type]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage, resting, currentRoundIdx, currentQuestionIdx, followUpQ, activeQuestion?.id]);
+
+  // Tick the window down — but only while it is actually the candidate's
+  // turn: paused while the interviewer speaks, while a follow-up is being
+  // fetched, and while an answer is transcribing. On expiry, auto-save and
+  // advance via handleNext, which finalizes the mic and keeps whatever the
+  // candidate said — the clock never discards an answer.
+  useEffect(() => {
+    if (!QUESTION_TIMER_ENABLED || stage !== 'round' || resting || questionTimeLeft === null) return;
+    if (isSpeaking || isTranscribing || awaitingFollowUp) return;
+    if (questionTimeLeft <= 0) {
+      setQuestionTimeLeft(null);
+      void handleNext();
+      return;
+    }
+    const t = setTimeout(() => setQuestionTimeLeft((s) => (s === null ? null : s - 1)), 1000);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [questionTimeLeft, stage, resting, isSpeaking, isTranscribing, awaitingFollowUp]);
+
   const goToNextRound = (
     finalAnswers: Record<number, string | number> = answers,
     finalFollowUps: Record<number, string> = followUpAnswers,
@@ -582,6 +655,8 @@ function MockInterviewContent() {
     setFollowUpAnswers({});
     setAwaitingFollowUp(false);
     setRestCountdown(null);
+    setRestHolding(false);
+    setQuestionTimeLeft(null);
     restActionRef.current = null;
     stopCamera();
     setElapsed(0);
@@ -802,6 +877,20 @@ function MockInterviewContent() {
                     {ROUND_META[currentRound].title}
                     <span className="text-slate-500">· Q{currentQuestionIdx + 1}/{currentRoundQuestions.length}</span>
                   </span>
+                  {QUESTION_TIMER_ENABLED && !resting && questionTimeLeft !== null && (
+                    <span
+                      role="timer"
+                      aria-label="Time left to answer"
+                      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-bold tabular-nums border ${
+                        questionTimeLeft <= TIMER_WARN_SECONDS
+                          ? 'bg-amber-500/15 border-amber-400/40 text-amber-300'
+                          : 'bg-white/5 border-white/10 text-slate-300'
+                      }`}
+                    >
+                      <FiClock size={12} /> {fmtTime(Math.max(0, questionTimeLeft))}
+                      {questionTimeLeft <= TIMER_WARN_SECONDS && <span className="font-semibold">· wrap up</span>}
+                    </span>
+                  )}
                   <div className="flex-1" />
                   <span className="inline-flex items-center gap-1.5 text-slate-400 text-[11px] font-semibold"><FiWifi size={13} /> Connected</span>
                 </div>
@@ -840,14 +929,15 @@ function MockInterviewContent() {
                       <div className="relative grid place-items-center mb-4">
                         <span className="absolute w-20 h-20 rounded-full bg-indigo-500/20 animate-ping" />
                         <div className="relative w-20 h-20 rounded-full grid place-items-center bg-white/5 border border-white/15">
-                          <span className="font-century text-3xl font-black text-white tabular-nums">{restCountdown}</span>
+                          <span className="font-century text-3xl font-black text-white tabular-nums">{restHolding ? '…' : restCountdown}</span>
                         </div>
                       </div>
                       <h3 className="font-century text-xl font-black text-white">
                         {restMeta.next === 'finish' ? 'That was the last question!' : 'Take a moment to rest'}
                       </h3>
                       <p className="font-raleway text-sm text-slate-400 mt-1.5">
-                        {restMeta.next === 'followup' ? <>Follow-up question in {restCountdown}s — {INTERVIEWER.name} is preparing it</>
+                        {restHolding ? <>{INTERVIEWER.name} is about to speak…</>
+                          : restMeta.next === 'followup' ? <>Follow-up question in {restCountdown}s — {INTERVIEWER.name} is preparing it</>
                           : restMeta.next === 'round' ? <>Round complete — next round in {restCountdown}s</>
                           : restMeta.next === 'finish' ? <>Your evaluation starts in {restCountdown}s</>
                           : <>Next question in {restCountdown}s — {INTERVIEWER.name} is preparing it</>}

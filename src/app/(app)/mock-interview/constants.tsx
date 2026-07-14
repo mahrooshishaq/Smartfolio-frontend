@@ -1,6 +1,6 @@
 import type { IconType } from 'react-icons';
 import { FiUser, FiCpu, FiZap } from 'react-icons/fi';
-import type { Round, LengthTier, Seniority } from './types';
+import type { Round, LengthTier, Seniority, QuestionType } from './types';
 
 export const ROUND_META: Record<Round, { title: string; subtitle: string; icon: IconType; color: string; bg: string }> = {
   hr: {
@@ -40,6 +40,19 @@ export const SENIORITY_OPTIONS: { id: Seniority; label: string }[] = [
   { id: 'senior', label: 'Senior' },
   { id: 'lead', label: 'Lead' },
 ];
+
+// Per-question answer windows (Phase 1.4) — mirrors PER_QUESTION_SECONDS in
+// Smartfolio-backend/src/modules/mock-interview/mock-interview.config.ts.
+// The countdown only runs while it's the candidate's turn to answer.
+export const PER_QUESTION_SECONDS: Record<QuestionType, number> = {
+  mcq: 30,
+  fill_in_the_blank: 40,
+  short_answer: 60,
+  behavioral: 90,
+  scenario: 120,
+};
+// Follow-ups are short probes — a fixed window regardless of parent type.
+export const FOLLOW_UP_SECONDS = 60;
 
 // The AI interviewer persona shown in the video-call UI (Phase 3.3).
 export const INTERVIEWER = { name: 'Folio', role: 'AI Interviewer' };
