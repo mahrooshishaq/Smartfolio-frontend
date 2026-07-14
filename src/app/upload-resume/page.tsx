@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { CloudUpload, FileText, X, Loader2, ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import AnimatedBackground from '@/components/AnimatedBackground';
@@ -10,17 +10,29 @@ const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 export default function ResumeUploadPage() {
   const [file, setFile] = useState<File | null>(null);
   const [jobDescription, setJobDescription] = useState('');
+  const [jobTitle, setJobTitle] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [targetRole, setTargetRole] = useState('');
   const router = useRouter();
   const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) return;
+    fetch(`${API}/onboarding/context`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(response => response.ok ? response.json() : null)
+      .then(context => setTargetRole(context?.targetRole || ''))
+      .catch(() => undefined);
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
-      const isPdf = selectedFile.type === 'application/pdf' || selectedFile.name.toLowerCase().endsWith('.pdf');
+      const lowerName = selectedFile.name.toLowerCase();
+      const isSupported = lowerName.endsWith('.pdf') || lowerName.endsWith('.docx');
 
-      if (!isPdf) {
-        alert('Only PDF files are allowed.');
+      if (!isSupported) {
+        alert('Only PDF and DOCX files are allowed.');
         setFile(null);
         e.target.value = '';
         return;
@@ -39,6 +51,15 @@ export default function ResumeUploadPage() {
 
   const handleUpload = async () => {
     if (!file) return;
+    const trimmedJobDescription = jobDescription.trim();
+    if (trimmedJobDescription.length > 0 && trimmedJobDescription.length < 50) {
+      alert('The target job description must be at least 50 characters.');
+      return;
+    }
+    if (trimmedJobDescription && !jobTitle.trim()) {
+      alert('Enter the job title so SmartFolio can label this evaluation correctly.');
+      return;
+    }
     setIsUploading(true);
 
     try {
@@ -81,9 +102,8 @@ export default function ResumeUploadPage() {
         },
         body: JSON.stringify({
           resumeId: actualResumeId,
-          jobDescription: jobDescription || undefined,
-          // Fallback title to ensure Lens A doesn't fail due to missing field
-          jobTitle: jobDescription ? "Target Role" : undefined, 
+          jobDescription: trimmedJobDescription || undefined,
+          jobTitle: trimmedJobDescription ? jobTitle.trim() || undefined : undefined,
         }),
       });
 
@@ -96,9 +116,9 @@ export default function ResumeUploadPage() {
       // Match the key 'resumeId' used in your Results page useEffect
       router.push(`/analysis-results?resumeId=${actualResumeId}`);
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Analysis Error:", error);
-      alert(error.message || 'Something went wrong during analysis.');
+      alert(error instanceof Error ? error.message : 'Something went wrong during analysis.');
     } finally {
       setIsUploading(false);
     }
@@ -127,7 +147,7 @@ export default function ResumeUploadPage() {
           <div className="relative border-2 border-dashed border-gray-200 rounded-2rem p-12 flex flex-col items-center justify-center transition-colors hover:border-blue-200 group">
             <input 
               type="file" 
-              accept=".pdf"
+              accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
               onChange={handleFileChange}
               disabled={isUploading}
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
@@ -136,7 +156,7 @@ export default function ResumeUploadPage() {
               <CloudUpload size={32} className="text-gray-400 group-hover:text-blue-500" />
             </div>
             <h2 className="font-century text-2xl text-slate-800 mb-1 text-center">Choose a file or drag & drop it here</h2>
-            <p className="font-raleway text-gray-400 text-sm">PDF and DOCX formats up to 5MB</p>
+            <p className="font-raleway text-gray-400 text-sm">PDF or DOCX files up to 5MB</p>
             
             <button className="font-raleway mt-8 bg-slate-200 text-gray-500 px-12 py-3 rounded-full font-bold text-sm tracking-wide">
               {file ? 'Change File' : 'Upload'}
@@ -146,15 +166,22 @@ export default function ResumeUploadPage() {
           {/* Optional Job Description Input */}
           <div className="mt-8 px-4">
             <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">
-              Target Job Description (Optional)
+              Target Job Description <span className="normal-case tracking-normal">— optional</span>
             </label>
             <textarea 
-              placeholder="Paste the job description here to get a tailored score..."
+              placeholder={`Paste at least 50 characters for a specific job match. Leave blank to analyze for ${targetRole || 'your career target'}.`}
               value={jobDescription}
               onChange={(e) => setJobDescription(e.target.value)}
               disabled={isUploading}
               className="font-raleway w-full h-32 p-4 bg-slate-50 border border-transparent rounded-2xl text-sm focus:bg-white focus:border-blue-100 outline-none transition-all resize-none disabled:opacity-50"
             />
+            {jobDescription.trim() && <div className="mt-4"><label className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-gray-400">Job title <span className="normal-case tracking-normal">— used to label this evaluation</span></label><input value={jobTitle} onChange={event => setJobTitle(event.target.value)} disabled={isUploading} placeholder="e.g. MLOps Engineer" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-indigo-200 focus:bg-white" /></div>}
+            <div className="mt-2 flex items-center justify-between px-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              <span>{jobDescription.trim() ? `Evaluating against: ${jobTitle.trim() || 'supplied job description'}` : targetRole ? `Career target: ${targetRole}` : 'General readiness analysis'}</span>
+              <span className={jobDescription.trim().length > 0 && jobDescription.trim().length < 50 ? 'text-orange-500' : ''}>
+                {jobDescription.trim().length}/10,000
+              </span>
+            </div>
           </div>
 
           {/* Selected File Progress / Preview */}

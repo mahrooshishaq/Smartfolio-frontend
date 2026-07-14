@@ -1,11 +1,11 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, type ComponentType } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   FiFileText, FiMic,
   FiBookOpen, FiFile, FiBriefcase,
   FiArrowRight, FiUpload, FiSearch,
-  FiMapPin, FiExternalLink, FiLoader,
+  FiExternalLink, FiLoader,
 } from 'react-icons/fi';
 import ScoreRing from '@/components/ScoreRing';
 
@@ -13,7 +13,9 @@ const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 // --- Sub-components ---
 
-const StatCard = ({ title, value, subtitle, icon: Icon, color, onClick }: { title: string; value: string | number; subtitle?: string; icon: any; color: string; onClick?: () => void }) => (
+type DashboardIcon = ComponentType<{ size?: number; className?: string }>;
+
+const StatCard = ({ title, value, subtitle, icon: Icon, color, onClick }: { title: string; value: string | number; subtitle?: string; icon: DashboardIcon; color: string; onClick?: () => void }) => (
   <div onClick={onClick} className={`bg-white p-6 rounded-[2rem] shadow-sm border border-gray-50 ${onClick ? 'cursor-pointer hover:shadow-md' : ''} transition-all`}>
     <div className="flex items-center gap-3 mb-3">
       <div className={`w-10 h-10 rounded-xl ${color} flex items-center justify-center`}>
@@ -26,7 +28,18 @@ const StatCard = ({ title, value, subtitle, icon: Icon, color, onClick }: { titl
   </div>
 );
 
-const EmptyState = ({ icon: Icon, title, description, buttonLabel, onClick }: { icon: any; title: string; description: string; buttonLabel: string; onClick: () => void }) => (
+const metricTones: Record<string, string> = { Uploaded: 'bg-[#f4f7f8] text-slate-800 ring-slate-100', Reviews: 'bg-[#f4f6f3] text-slate-800 ring-slate-100', Latest: 'bg-[#eef5f3] text-slate-800 ring-slate-100', Average: 'bg-[#f6f4ef] text-slate-800 ring-slate-100', Best: 'bg-[#435d68] text-white ring-slate-200' };
+const chartColors = ['#587985', '#6f8f92', '#879d91', '#9b9382', '#718699', '#817f91', '#6f8d7b', '#9a806d'];
+const categoryLabels: Record<string, string> = { ats_compatibility: 'ATS', content_quality: 'Content', experience_strength: 'Experience', skills_alignment: 'Skills', achievement_impact: 'Impact', formatting_clarity: 'Formatting' };
+
+const ResumeMetric = ({ label, value, accent = false }: { label: string; value: string | number; accent?: boolean }) => (
+  <div className={`rounded-2xl p-4 ring-1 ${metricTones[label] || (accent ? 'bg-indigo-600 text-white ring-indigo-200' : 'bg-slate-50 text-slate-800 ring-slate-100')}`}>
+    <p className={`font-raleway text-[10px] font-black uppercase tracking-widest ${accent ? 'text-slate-100' : 'opacity-60'}`}>{label}</p>
+    <p className="mt-1 font-century text-2xl font-black">{value}</p>
+  </div>
+);
+
+const EmptyState = ({ icon: Icon, title, description, buttonLabel, onClick }: { icon: DashboardIcon; title: string; description: string; buttonLabel: string; onClick: () => void }) => (
   <div className="flex flex-col items-center justify-center py-8 text-center">
     <Icon className="text-gray-200 mb-3" size={36} />
     <p className="font-century text-sm font-bold text-slate-700 mb-1">{title}</p>
@@ -34,24 +47,6 @@ const EmptyState = ({ icon: Icon, title, description, buttonLabel, onClick }: { 
     <button onClick={onClick} className="font-raleway bg-[#4F46E5] hover:bg-[#4338CA] text-white px-5 py-2 rounded-xl text-xs font-bold transition-all">
       {buttonLabel}
     </button>
-  </div>
-);
-
-const ScraperPulse = ({ label }: { label: string }) => (
-  <div className="flex flex-col items-center justify-center py-8 text-center">
-    <div className="relative mb-4">
-      <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center">
-        <FiSearch className="text-[#4F46E5]" size={20} />
-      </div>
-      <div className="absolute inset-0 w-12 h-12 rounded-full bg-indigo-200 animate-ping opacity-30" />
-    </div>
-    <p className="font-century text-sm font-bold text-slate-700 mb-1">{label}</p>
-    <p className="font-raleway text-xs text-gray-400">This may take a few minutes</p>
-    <div className="flex gap-1 mt-3">
-      <div className="w-1.5 h-1.5 rounded-full bg-[#4F46E5] animate-bounce" style={{ animationDelay: '0ms' }} />
-      <div className="w-1.5 h-1.5 rounded-full bg-[#4F46E5] animate-bounce" style={{ animationDelay: '150ms' }} />
-      <div className="w-1.5 h-1.5 rounded-full bg-[#4F46E5] animate-bounce" style={{ animationDelay: '300ms' }} />
-    </div>
   </div>
 );
 
@@ -69,11 +64,38 @@ interface UserContext {
 }
 
 interface ResumeAnalysis {
-  id: string;
+  analysisId: string;
+  resumeId: string;
   overallScore: number;
+  targetSource: 'job_description' | 'profile_target' | 'general';
+  targetRole?: string;
+  fileName?: string;
+  fileType?: 'pdf' | 'docx';
+  createdAt: string;
   categoryScores: Record<string, number>;
   interpretation: { band: string };
   remarks: { strengths: string[]; weaknesses: string[]; actionable: string[] };
+}
+
+interface ResumeDashboardData {
+  summary: {
+    totalResumes: number;
+    totalAnalyses: number;
+    latestScore: number | null;
+    averageScore: number | null;
+    bestScore: number | null;
+    scoreChange: number | null;
+    categoryAverages: Record<string, number | null>;
+  };
+  resumes: {
+    resumeId: string;
+    fileName: string;
+    fileType: 'pdf' | 'docx';
+    uploadedAt: string;
+    analysisCount: number;
+    latestAnalysis: ResumeAnalysis | null;
+  }[];
+  analyses: ResumeAnalysis[];
 }
 
 interface JobStats {
@@ -111,6 +133,21 @@ interface Course {
   course_url: string;
 }
 
+interface InterviewSession {
+  id: string;
+  overallScore?: number;
+  isSubmitted: boolean;
+  jobDescriptionPreview?: string;
+  createdAt: string;
+}
+
+interface GeneratedDocument {
+  id: string;
+  title: string;
+  documentType: string;
+  createdAt: string;
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -120,21 +157,19 @@ export default function DashboardPage() {
   // Data state
   const [userContext, setUserContext] = useState<UserContext | null>(null);
   const [resumeAnalyses, setResumeAnalyses] = useState<ResumeAnalysis[]>([]);
+  const [resumeDashboard, setResumeDashboard] = useState<ResumeDashboardData | null>(null);
   const [jobStats, setJobStats] = useState<JobStats | null>(null);
   const [courseStats, setCourseStats] = useState<CourseStats | null>(null);
-  const [recentJobs, setRecentJobs] = useState<Job[]>([]);
-  const [recentCourses, setRecentCourses] = useState<Course[]>([]);
-
   const [scraperRunning, setScraperRunning] = useState(false);
-  const [interviewSessions, setInterviewSessions] = useState<any[]>([]);
-  const [documentHistory, setDocumentHistory] = useState<any[]>([]);
+  const [interviewSessions, setInterviewSessions] = useState<InterviewSession[]>([]);
+  const [documentHistory, setDocumentHistory] = useState<GeneratedDocument[]>([]);
 
   const fetchData = useCallback(async (accessToken: string) => {
     const headers = { Authorization: `Bearer ${accessToken}` };
 
     const results = await Promise.allSettled([
       fetch(`${API}/onboarding/context`, { headers }).then(r => r.ok ? r.json() : null),
-      fetch(`${API}/resume/analyses`, { headers }).then(r => r.ok ? r.json() : []),
+      fetch(`${API}/resume/dashboard`, { headers }).then(r => r.ok ? r.json() : null),
       fetch(`${API}/jobs/me/stats`, { headers }).then(r => r.ok ? r.json() : null),
       fetch(`${API}/courses/me/stats`, { headers }).then(r => r.ok ? r.json() : null),
       fetch(`${API}/jobs/me?page=1&limit=5`, { headers }).then(r => r.ok ? r.json() : { data: [] }),
@@ -143,28 +178,28 @@ export default function DashboardPage() {
       fetch(`${API}/document-generation/history`, { headers }).then(r => r.ok ? r.json() : []),
     ]);
 
-    const getValue = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' ? r.value : null;
+    const getValue = (r: PromiseSettledResult<unknown>): unknown => r.status === 'fulfilled' ? r.value : null;
 
-    const ctx = getValue(results[0]);
-    const stats = getValue(results[2]);
-    const cStats = getValue(results[3]);
-    const jobs = getValue(results[4])?.data || [];
-    const courses = getValue(results[5])?.data || [];
-    const interviews = getValue(results[6]) || [];
-    const docs = getValue(results[7]) || [];
+    const ctx = getValue(results[0]) as UserContext | null;
+    const stats = getValue(results[2]) as JobStats | null;
+    const cStats = getValue(results[3]) as CourseStats | null;
+    const jobs = (getValue(results[4]) as { data: Job[] } | null)?.data || [];
+    const courses = (getValue(results[5]) as { data: Course[] } | null)?.data || [];
+    const interviews = (getValue(results[6]) as InterviewSession[] | null) || [];
+    const docs = (getValue(results[7]) as GeneratedDocument[] | null) || [];
 
     setUserContext(ctx);
-    setResumeAnalyses(getValue(results[1]) || []);
+    const resumeData = getValue(results[1]) as ResumeDashboardData | null;
+    setResumeDashboard(resumeData);
+    setResumeAnalyses(resumeData?.analyses || []);
     setJobStats(stats);
     setCourseStats(cStats);
-    setRecentJobs(jobs);
-    setRecentCourses(courses);
     setInterviewSessions(interviews);
     setDocumentHistory(docs);
     setLoading(false);
 
     // If onboarded but no data yet, scraper is likely still running
-    const hasData = (stats?.total_jobs > 0) || (cStats?.total_courses > 0) || jobs.length > 0 || courses.length > 0;
+    const hasData = ((stats?.total_jobs ?? 0) > 0) || ((cStats?.total_courses ?? 0) > 0) || jobs.length > 0 || courses.length > 0;
     if (ctx?.hasCompletedOnboarding && !hasData) {
       setScraperRunning(true);
     } else {
@@ -196,7 +231,7 @@ export default function DashboardPage() {
     return () => clearInterval(interval);
   }, [scraperRunning, token, fetchData]);
 
-  const latestAnalysis = resumeAnalyses.length > 0 ? resumeAnalyses[resumeAnalyses.length - 1] : null;
+  const latestAnalysis = resumeAnalyses.length > 0 ? resumeAnalyses[0] : null;
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return 'text-emerald-500';
@@ -337,6 +372,87 @@ export default function DashboardPage() {
               onClick={() => router.push('/courses')}
             />
           </div>
+
+          {/* Resume progress and history */}
+          {resumeDashboard && resumeDashboard.summary.totalResumes > 0 && (
+            <div className="mb-8 rounded-[2rem] border border-gray-100 bg-white p-5 shadow-sm md:p-6">
+              <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="font-century text-xl font-black text-slate-800">Resume progress</h3>
+                  <p className="font-raleway text-xs text-gray-400">Every upload and review, measured against the career target used at that time.</p>
+                </div>
+                <button onClick={() => router.push('/upload-resume')} className="font-raleway text-xs font-bold text-[#4F46E5]">Run a new analysis →</button>
+              </div>
+
+              <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-5">
+                <ResumeMetric label="Uploaded" value={resumeDashboard.summary.totalResumes} />
+                <ResumeMetric label="Reviews" value={resumeDashboard.summary.totalAnalyses} />
+                <ResumeMetric label="Latest" value={resumeDashboard.summary.latestScore == null ? '—' : `${resumeDashboard.summary.latestScore}%`} />
+                <ResumeMetric label="Average" value={resumeDashboard.summary.averageScore == null ? '—' : `${resumeDashboard.summary.averageScore}%`} />
+                <ResumeMetric label="Best" value={resumeDashboard.summary.bestScore == null ? '—' : `${resumeDashboard.summary.bestScore}%`} accent />
+              </div>
+
+              <div className="grid gap-5 lg:grid-cols-2">
+                <div>
+                  <div className="mb-4 flex items-center justify-between">
+                    <h4 className="font-raleway text-[10px] font-bold uppercase tracking-widest text-gray-400">Score history</h4>
+                    {resumeDashboard.summary.scoreChange != null && (
+                      <span className={`rounded-full px-2.5 py-1 text-[10px] font-black ${resumeDashboard.summary.scoreChange >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-500'}`}>
+                        {resumeDashboard.summary.scoreChange >= 0 ? '+' : ''}{resumeDashboard.summary.scoreChange} since previous
+                      </span>
+                    )}
+                  </div>
+                  <div className="rounded-2xl border border-slate-100 bg-gradient-to-b from-white to-slate-50 p-4">
+                    <div className="flex h-24 items-end gap-2 border-b border-slate-200 px-1 pt-5">
+                      {[...resumeDashboard.analyses].slice(0, 8).reverse().map((analysis, index) => (
+                        <button key={analysis.analysisId} title={`${analysis.fileName || 'Resume'}: ${analysis.overallScore}%`} onClick={() => router.push(`/analysis-results?resumeId=${analysis.resumeId}&analysisId=${analysis.analysisId}`)} className="group flex h-full min-w-0 flex-1 items-end">
+                          <span className="relative w-full rounded-t-xl shadow-sm transition duration-200 group-hover:-translate-y-1 group-hover:brightness-95" style={{ height: `${Math.max(8, analysis.overallScore)}%`, backgroundColor: chartColors[index % chartColors.length] }}>
+                            <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-black text-slate-600">{analysis.overallScore}</span>
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                    <div className="mt-2 flex gap-2 px-1">{[...resumeDashboard.analyses].slice(0, 8).reverse().map((analysis) => <span key={analysis.analysisId} className="min-w-0 flex-1 truncate text-center text-[10px] font-bold text-slate-400">{new Date(analysis.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>)}</div>
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {Object.entries(resumeDashboard.summary.categoryAverages).map(([key, score], index) => <div key={key} className="rounded-xl bg-slate-50 p-2.5"><div className="mb-1.5 flex items-center justify-between gap-2"><span className="truncate text-[10px] font-bold text-slate-500">{categoryLabels[key] || key}</span><span className="text-[10px] font-black text-slate-700">{score ?? '—'}%</span></div><div className="h-1.5 overflow-hidden rounded-full bg-slate-200"><div className="h-full rounded-full" style={{ width: `${score || 0}%`, backgroundColor: chartColors[index % chartColors.length] }} /></div></div>)}
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="mb-4 font-raleway text-[10px] font-bold uppercase tracking-widest text-gray-400">Resume library</h4>
+                  <div className="max-h-52 space-y-2 overflow-auto pr-1">
+                    {resumeDashboard.resumes.map((resume) => (
+                      <button key={resume.resumeId} onClick={() => resume.latestAnalysis ? router.push(`/analysis-results?resumeId=${resume.resumeId}`) : router.push('/upload-resume')} className="flex w-full items-center gap-3 rounded-2xl border border-slate-100 p-3 text-left transition hover:border-indigo-100 hover:bg-indigo-50/40">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-500"><FiFileText size={16} /></div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate font-century text-sm font-bold text-slate-700">{resume.fileName}</p>
+                          <p className="font-raleway text-[10px] text-gray-400">{new Date(resume.uploadedAt).toLocaleDateString()} · {resume.analysisCount} {resume.analysisCount === 1 ? 'review' : 'reviews'}{resume.latestAnalysis?.targetRole ? ` · ${resume.latestAnalysis.targetRole}` : ''}</p>
+                        </div>
+                        <span className="font-century text-sm font-black text-[#4F46E5]">{resume.latestAnalysis ? `${resume.latestAnalysis.overallScore}%` : '—'}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {resumeDashboard.analyses.length > 0 && (
+                <div className="mt-7 border-t border-slate-100 pt-6">
+                  <h4 className="mb-4 font-raleway text-[10px] font-bold uppercase tracking-widest text-gray-400">Complete review history</h4>
+                  <div className="max-h-72 space-y-2 overflow-auto pr-1">
+                    {resumeDashboard.analyses.map((analysis) => (
+                      <button key={analysis.analysisId} onClick={() => router.push(`/analysis-results?resumeId=${analysis.resumeId}&analysisId=${analysis.analysisId}`)} className="grid w-full grid-cols-[1fr_auto] items-center gap-3 rounded-xl bg-slate-50 px-4 py-3 text-left transition hover:bg-indigo-50 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto]">
+                        <span className="truncate font-century text-sm font-bold text-slate-700">{analysis.fileName || 'Resume'}</span>
+                        <span className="hidden truncate font-raleway text-xs font-semibold text-slate-500 sm:block">{analysis.targetSource === 'job_description' ? `Job: ${analysis.targetRole || 'Supplied job description'}` : analysis.targetSource === 'profile_target' ? `Target: ${analysis.targetRole || 'Profile role'}` : 'General readiness'}</span>
+                        <span className="hidden font-raleway text-xs text-slate-400 sm:block">{new Date(analysis.createdAt).toLocaleDateString()}</span>
+                        <span className="font-century text-sm font-black text-indigo-600">{analysis.overallScore}%</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Row 3: Jobs by Type + Courses by Level */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
