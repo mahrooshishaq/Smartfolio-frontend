@@ -2,9 +2,11 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  FiBookOpen, FiSearch, FiExternalLink, FiStar,
-  FiChevronLeft, FiChevronRight, FiFilter, FiX, FiLoader, FiClock
+  FiBookOpen, FiSearch, FiExternalLink,
+  FiChevronLeft, FiChevronRight, FiFilter, FiX, FiLoader, FiClock,
+  FiPlayCircle, FiEye, FiCalendar, FiTarget
 } from 'react-icons/fi';
+import { FaStar, FaStarHalfAlt, FaRegStar } from 'react-icons/fa';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
@@ -25,6 +27,39 @@ interface Course {
   thumbnail: string;
   scraped_at: string;
   source: string;
+  // Enriched fields from the pooled/ranked backend
+  star_rating: number;
+  match_score: number;
+  total_videos: number;
+  total_duration_minutes: number;
+  avg_video_minutes: number;
+  view_count: number;
+  like_count: number;
+  last_updated_at: string;
+  video_stats_label: string;
+  updated_label: string;
+  views_label: string;
+  commitment_label: string;
+  why_recommended: string;
+  saved: boolean;
+  completed: boolean;
+}
+
+/** 5-star display driven by the backend's 0–5 star_rating (0.5 steps). */
+function StarRating({ value }: { value: number }) {
+  if (!value || value <= 0) return null;
+  return (
+    <span className="flex items-center gap-1" title={`${value.toFixed(1)} / 5`}>
+      <span className="flex items-center gap-0.5 text-amber-400">
+        {[1, 2, 3, 4, 5].map((i) =>
+          value >= i ? <FaStar key={i} size={12} />
+          : value >= i - 0.5 ? <FaStarHalfAlt key={i} size={12} />
+          : <FaRegStar key={i} size={12} className="text-gray-200" />
+        )}
+      </span>
+      <span className="font-raleway text-xs font-semibold text-gray-500">{value.toFixed(1)}</span>
+    </span>
+  );
 }
 
 interface Filters {
@@ -112,7 +147,7 @@ export default function CoursesPage() {
   }, [token]);
 
   /** Poll scrape-run history until a run newer than `startedAt` completes —
-   *  the scrape outlives proxy timeouts, so the POST is only a trigger. */
+   *  used for the profile scrape (POST /scraper/run outlives proxy timeouts). */
   const waitForScrapeRun = async (startedAt: number): Promise<boolean> => {
     const deadline = Date.now() + 7 * 60 * 1000;
     while (Date.now() < deadline) {
@@ -130,37 +165,61 @@ export default function CoursesPage() {
     return false;
   };
 
+  /** Poll the async custom-search job (POST /scraper/search returns a jobId
+   *  immediately; the scrape runs in the background). */
+  const waitForCustomSearch = async (jobId: string): Promise<boolean> => {
+    const deadline = Date.now() + 7 * 60 * 1000;
+    while (Date.now() < deadline) {
+      await new Promise(r => setTimeout(r, 6000));
+      try {
+        const res = await fetch(`${API}/scraper/search/${jobId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) continue;
+        const job = await res.json();
+        if (job.status === 'done') return true;
+        if (job.status === 'failed' || job.status === 'not_found') return false;
+      } catch { /* transient — keep polling */ }
+    }
+    return false;
+  };
+
   const runScraper = async () => {
     if (!token) return;
     setScraping(true);
     setError('');
     const startedAt = Date.now() - 5000;
     try {
-      let res: Response | null = null;
-      try {
-        if (search.trim()) {
-          // Custom search: scrape for the user's query and ADD to existing courses
-          res = await fetch(`${API}/scraper/search`, {
+      let completed = false;
+      if (search.trim()) {
+        // Custom search is async: kick it off, get a jobId, then poll it.
+        let jobId = '';
+        try {
+          const res = await fetch(`${API}/scraper/search`, {
             method: 'POST',
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ query: search.trim(), type: 'both' }),
           });
-        } else {
-          // Profile-based scrape
+          if (res.status === 401) { router.push('/login'); return; }
+          if (res.ok) jobId = (await res.json()).jobId;
+        } catch { /* proxy cut the trigger — fall back to run-history polling */ }
+
+        completed = jobId
+          ? await waitForCustomSearch(jobId)
+          : await waitForScrapeRun(startedAt);
+      } else {
+        // Profile-based scrape (synchronous but long; may outlive the proxy).
+        let res: Response | null = null;
+        try {
           res = await fetch(`${API}/scraper/run`, {
             method: 'POST',
             headers: { Authorization: `Bearer ${token}` },
           });
-        }
-      } catch {
-        res = null; // proxy/connection cut the request — backend is still scraping
+        } catch { res = null; }
+        if (res?.status === 401) { router.push('/login'); return; }
+        completed = res?.ok ? true : await waitForScrapeRun(startedAt);
       }
-      if (res?.status === 401) { router.push('/login'); return; }
 
-      const completed = res?.ok ? true : await waitForScrapeRun(startedAt);
       await fetchCourses(1);
       await fetchFilters();
       if (!completed) {
@@ -319,23 +378,43 @@ export default function CoursesPage() {
                         {course.platform}
                       </span>
                     </div>
-                    {course.price && (
-                      <div className="absolute top-3 right-3">
+                    <div className="absolute top-3 right-3 flex items-center gap-2">
+                      {course.match_score > 0 && (
+                        <span className="font-raleway text-[11px] font-bold px-3 py-1 rounded-lg bg-[#4F46E5] text-white shadow-sm">
+                          {course.match_score}% match
+                        </span>
+                      )}
+                      {course.price && (
                         <span className={`font-raleway text-[11px] font-bold px-3 py-1 rounded-lg ${course.price === 'Free' ? 'bg-emerald-500 text-white' : 'bg-white/90 backdrop-blur-sm text-slate-700'}`}>
                           {course.price}
                         </span>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
 
                   {/* Content */}
                   <div className="p-6 flex-1 flex flex-col">
-                    <h3 className="font-century text-base font-bold text-slate-800 line-clamp-2 group-hover:text-[#4F46E5] transition-colors mb-2">{course.title}</h3>
-                    {course.instructor && (
-                      <p className="font-raleway text-xs text-gray-400 mb-3">{course.instructor}</p>
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <StarRating value={course.star_rating} />
+                      {course.updated_label && (
+                        <span className="font-raleway text-[11px] text-gray-400 flex items-center gap-1">
+                          <FiCalendar size={11} /> {course.updated_label.replace('Updated ', '')}
+                        </span>
+                      )}
+                    </div>
+
+                    <h3 className="font-century text-base font-bold text-slate-800 line-clamp-2 group-hover:text-[#4F46E5] transition-colors mb-1">{course.title}</h3>
+                    {course.instructor && course.instructor !== 'Not specified' && (
+                      <p className="font-raleway text-xs text-gray-400 mb-2">{course.instructor}</p>
                     )}
 
-                    <div className="flex flex-wrap items-center gap-2 mb-4">
+                    {course.why_recommended && (
+                      <p className="font-raleway text-[11px] text-[#4F46E5] flex items-start gap-1 mb-3">
+                        <FiTarget size={12} className="mt-0.5 flex-shrink-0" /> <span className="line-clamp-1">{course.why_recommended}</span>
+                      </p>
+                    )}
+
+                    <div className="flex flex-wrap items-center gap-2 mb-3">
                       {course.level && course.level !== 'Not specified' && (
                         <span className={`font-raleway text-[11px] font-bold px-3 py-1 rounded-lg ${getLevelBadgeColor(course.level)}`}>{course.level}</span>
                       )}
@@ -344,23 +423,33 @@ export default function CoursesPage() {
                       )}
                     </div>
 
-                    {course.description && (
+                    {/* Video / duration / reach stats */}
+                    {(course.video_stats_label || course.views_label) && (
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-3">
+                        {course.video_stats_label && (
+                          <span className="font-raleway text-[11px] text-gray-500 flex items-center gap-1">
+                            <FiPlayCircle size={12} /> {course.video_stats_label}
+                          </span>
+                        )}
+                        {course.views_label && (
+                          <span className="font-raleway text-[11px] text-gray-400 flex items-center gap-1">
+                            <FiEye size={12} /> {course.views_label}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {course.description && course.description !== 'Not specified' && (
                       <p className="font-raleway text-xs text-gray-400 line-clamp-2 mb-4">{course.description}</p>
                     )}
 
                     <div className="mt-auto flex items-center justify-between pt-4 border-t border-gray-50">
-                      <div className="flex items-center gap-3">
-                        {course.rating && course.rating !== '0' && (
-                          <span className="font-raleway text-xs text-gray-500 flex items-center gap-1">
-                            <FiStar size={12} className="text-yellow-400 fill-yellow-400" /> {course.rating}
-                          </span>
-                        )}
-                        {course.duration && (
-                          <span className="font-raleway text-xs text-gray-400 flex items-center gap-1">
-                            <FiClock size={12} /> {course.duration}
-                          </span>
-                        )}
-                      </div>
+                      <span className="font-raleway text-xs text-gray-400 flex items-center gap-1 min-w-0">
+                        <FiClock size={12} className="flex-shrink-0" />
+                        <span className="truncate">
+                          {course.commitment_label || (course.duration !== 'Not specified' ? course.duration : 'Self-paced')}
+                        </span>
+                      </span>
                       <a
                         href={course.course_url}
                         target="_blank"
