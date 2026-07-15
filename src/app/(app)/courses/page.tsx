@@ -111,35 +111,65 @@ export default function CoursesPage() {
     } catch {}
   }, [token]);
 
+  /** Poll scrape-run history until a run newer than `startedAt` completes —
+   *  the scrape outlives proxy timeouts, so the POST is only a trigger. */
+  const waitForScrapeRun = async (startedAt: number): Promise<boolean> => {
+    const deadline = Date.now() + 7 * 60 * 1000;
+    while (Date.now() < deadline) {
+      await new Promise(r => setTimeout(r, 8000));
+      try {
+        const res = await fetch(`${API}/scraper/runs?limit=1`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) continue;
+        const runs = await res.json();
+        const latest = Array.isArray(runs) ? runs[0] : null;
+        if (latest && new Date(latest.createdAt).getTime() >= startedAt) return true;
+      } catch { /* transient — keep polling */ }
+    }
+    return false;
+  };
+
   const runScraper = async () => {
     if (!token) return;
     setScraping(true);
     setError('');
+    const startedAt = Date.now() - 5000;
     try {
-      let res: Response;
-      if (search.trim()) {
-        // Custom search: scrape for the user's query and ADD to existing courses
-        res = await fetch(`${API}/scraper/search`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ query: search.trim(), type: 'both' }),
-        });
-      } else {
-        // Profile-based scrape
-        res = await fetch(`${API}/scraper/run`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
-        });
+      let res: Response | null = null;
+      try {
+        if (search.trim()) {
+          // Custom search: scrape for the user's query and ADD to existing courses
+          res = await fetch(`${API}/scraper/search`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ query: search.trim(), type: 'both' }),
+          });
+        } else {
+          // Profile-based scrape
+          res = await fetch(`${API}/scraper/run`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+          });
+        }
+      } catch {
+        res = null; // proxy/connection cut the request — backend is still scraping
       }
-      if (res.status === 401) { router.push('/login'); return; }
-      if (!res.ok) throw new Error('Scraper failed');
+      if (res?.status === 401) { router.push('/login'); return; }
+
+      const completed = res?.ok ? true : await waitForScrapeRun(startedAt);
       await fetchCourses(1);
       await fetchFilters();
+      if (!completed) {
+        setError('The course search is taking longer than usual. Results will keep arriving — refresh in a couple of minutes.');
+      }
     } catch (err: any) {
-      setError(err.message || 'Scraper failed');
+      setError(err?.message === 'Failed to fetch'
+        ? 'Can’t reach the server right now. Check your connection and try again.'
+        : err?.message || 'Course search failed. Please try again.');
     } finally {
       setScraping(false);
     }

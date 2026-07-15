@@ -117,36 +117,73 @@ export default function JobsPage() {
     } catch {}
   }, [token]);
 
+  /** Poll the scrape-run history until a run newer than `startedAt` completes.
+   *  The scrape takes 1–5 minutes and outlives proxy timeouts, so the initial
+   *  POST is only a trigger — completion is detected from /scraper/runs. */
+  const waitForScrapeRun = async (startedAt: number): Promise<boolean> => {
+    const deadline = Date.now() + 7 * 60 * 1000;
+    while (Date.now() < deadline) {
+      await new Promise(r => setTimeout(r, 8000));
+      try {
+        const res = await fetch(`${API}/scraper/runs?limit=1`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) continue;
+        const runs = await res.json();
+        const latest = Array.isArray(runs) ? runs[0] : null;
+        if (latest && new Date(latest.createdAt).getTime() >= startedAt) return true;
+      } catch { /* transient — keep polling */ }
+    }
+    return false;
+  };
+
   const runScraper = async () => {
     if (!token) return;
     setScraping(true);
     setError('');
+    const startedAt = Date.now() - 5000; // small clock-skew allowance
+    let completed = false;
     try {
-      let res: Response;
-      if (search.trim()) {
-        // Custom search: scrape for the user's query and ADD to existing jobs
-        res = await fetch(`${API}/scraper/search`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ query: search.trim(), type: 'both' }),
-        });
-      } else {
-        // Profile-based scrape
-        res = await fetch(`${API}/scraper/run`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
-        });
+      let res: Response | null = null;
+      try {
+        if (search.trim()) {
+          // Custom search: scrape for the user's query and ADD to existing jobs
+          res = await fetch(`${API}/scraper/search`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ query: search.trim(), type: 'both' }),
+          });
+        } else {
+          // Profile-based scrape
+          res = await fetch(`${API}/scraper/run`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+          });
+        }
+      } catch {
+        // Proxy/connection cut the request — the backend is still scraping.
+        res = null;
       }
-      if (res.status === 401) { router.push('/login'); return; }
-      if (!res.ok) throw new Error('Job search didn’t finish. Please try again in a minute.');
+      if (res?.status === 401) { router.push('/login'); return; }
+
+      if (res?.ok) {
+        completed = true; // backend finished within the request
+      } else {
+        // Request died or errored — wait for the run to appear in history instead
+        completed = await waitForScrapeRun(startedAt);
+      }
+
       await fetchJobs(1);
       await fetchFilters();
+      if (!completed) {
+        setError('The job search is taking longer than usual. Results will keep arriving — refresh in a couple of minutes.');
+      }
     } catch (err: any) {
       setError(err?.message === 'Failed to fetch'
-        ? 'The job search took too long or the connection dropped. Your results may still be processing — try refreshing in a minute.'
+        ? 'Can’t reach the server right now. Check your connection and try again.'
         : err?.message || 'Job search failed. Please try again.');
     } finally {
       setScraping(false);
