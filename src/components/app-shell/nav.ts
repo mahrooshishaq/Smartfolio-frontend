@@ -32,7 +32,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: '/courses', label: 'Courses', icon: FiBookOpen, placement: 'tab' },
   { href: '/document-generation', label: 'Document Generation', icon: FiFile, placement: 'more' },
   { href: '/jobs', label: 'Jobs', icon: FiBriefcase, placement: 'tab' },
-  { href: '/applications', label: 'Job Tracker', tabLabel: 'Tracker', icon: FiClipboard, placement: 'more' },
+  { href: '/tracker', label: 'Job Tracker', tabLabel: 'Tracker', icon: FiClipboard, placement: 'more' },
 ];
 
 export const SUPPORT_ITEMS: NavItem[] = [

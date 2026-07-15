@@ -89,14 +89,16 @@ export default function JobsPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.status === 401) { router.push('/login'); return; }
-      if (!res.ok) throw new Error('Failed to fetch jobs');
+      if (!res.ok) throw new Error(`Couldn’t load jobs (server said ${res.status}). Please try again.`);
       const data: JobsResponse = await res.json();
       setJobs(data.data);
       setTotal(data.total);
       setTotalPages(data.totalPages);
       setPage(data.page);
     } catch (err: any) {
-      setError(err.message || 'Something went wrong');
+      setError(err?.message === 'Failed to fetch'
+        ? 'Can’t reach the server right now. Check your connection and try again.'
+        : err?.message || 'Something went wrong loading jobs.');
     } finally {
       setLoading(false);
     }
@@ -139,11 +141,13 @@ export default function JobsPage() {
         });
       }
       if (res.status === 401) { router.push('/login'); return; }
-      if (!res.ok) throw new Error('Scraper failed');
+      if (!res.ok) throw new Error('Job search didn’t finish. Please try again in a minute.');
       await fetchJobs(1);
       await fetchFilters();
     } catch (err: any) {
-      setError(err.message || 'Scraper failed');
+      setError(err?.message === 'Failed to fetch'
+        ? 'The job search took too long or the connection dropped. Your results may still be processing — try refreshing in a minute.'
+        : err?.message || 'Job search failed. Please try again.');
     } finally {
       setScraping(false);
     }
@@ -171,8 +175,15 @@ export default function JobsPage() {
       if (res.ok || res.status === 400) {
         // 400 = already tracked — treat as saved either way
         setSavedJobs(prev => ({ ...prev, [jobId]: true }));
+      } else {
+        throw new Error(`Couldn’t save this job (server said ${res.status}). Please try again.`);
       }
-    } catch {}
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '';
+      setError(msg === 'Failed to fetch'
+        ? 'Can’t reach the server right now. Check your connection and try again.'
+        : msg || 'Couldn’t save this job. Please try again.');
+    }
   };
 
   const clearFilters = () => {
@@ -267,7 +278,12 @@ export default function JobsPage() {
           </div>
 
           {error && (
-            <div className="font-raleway bg-red-50 text-red-600 px-6 py-4 rounded-2xl mb-6 text-sm">{error}</div>
+            <div className="font-raleway bg-red-50 text-red-600 px-6 py-4 rounded-2xl mb-6 text-sm flex items-center justify-between gap-4">
+              <span>{error}</span>
+              <button onClick={() => setError('')} className="flex-shrink-0 text-red-400 hover:text-red-600" aria-label="Dismiss">
+                <FiX size={16} />
+              </button>
+            </div>
           )}
 
           {/* Results count + sort toggle */}

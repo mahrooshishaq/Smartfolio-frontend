@@ -18,6 +18,8 @@ const nextConfig: NextConfig = {
       { source: '/mock-interview/:path*', destination: `${backendUrl}/mock-interview/:path*` },
       { source: '/document-generation/:path*', destination: `${backendUrl}/document-generation/:path*` },
       { source: '/scraper/:path*', destination: `${backendUrl}/scraper/:path*` },
+      { source: '/applications', destination: `${backendUrl}/applications` },
+      { source: '/applications/:path*', destination: `${backendUrl}/applications/:path*` },
       { source: '/api/:path*', destination: `${backendUrl}/:path*` },
     ];
   },

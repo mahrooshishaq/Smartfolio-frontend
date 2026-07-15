@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   FiClipboard, FiExternalLink, FiLoader, FiMapPin, FiTrash2,
-  FiEdit3, FiCheck, FiX, FiPlus,
+  FiEdit3, FiCheck, FiX, FiPlus, FiWifiOff, FiRefreshCw,
 } from 'react-icons/fi';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
@@ -54,13 +54,23 @@ interface ApplicationsResponse {
   data: Application[];
 }
 
+/** Turn raw fetch/HTTP failures into messages a person can act on. */
+function friendlyError(err: unknown, fallback: string): string {
+  const msg = err instanceof Error ? err.message : String(err);
+  if (msg === 'Failed to fetch' || msg.includes('NetworkError') || msg.includes('Load failed')) {
+    return 'Can’t reach the server right now. Check your connection and try again.';
+  }
+  return msg || fallback;
+}
+
 export default function ApplicationsPage() {
   const router = useRouter();
   const [apps, setApps] = useState<Application[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState('');       // action errors (update/delete/add) — dismissible banner
+  const [loadFailed, setLoadFailed] = useState(''); // list fetch failed — full retry card, not fake "empty"
   const [editingNotes, setEditingNotes] = useState<string | null>(null);
   const [noteDraft, setNoteDraft] = useState('');
   const [showManualForm, setShowManualForm] = useState(false);
@@ -74,19 +84,19 @@ export default function ApplicationsPage() {
   const fetchApps = useCallback(async (status = statusFilter) => {
     if (!token) return;
     setLoading(true);
-    setError('');
+    setLoadFailed('');
     try {
       const params = status ? `?status=${status}` : '';
       const res = await fetch(`${API}/applications${params}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.status === 401) { router.push('/login'); return; }
-      if (!res.ok) throw new Error('Failed to load applications');
+      if (!res.ok) throw new Error(`Couldn’t load your tracker (server said ${res.status}). Please try again.`);
       const data: ApplicationsResponse = await res.json();
       setApps(data.data);
       setCounts(data.counts_by_status);
-    } catch (err: any) {
-      setError(err.message || 'Something went wrong');
+    } catch (err) {
+      setLoadFailed(friendlyError(err, 'Couldn’t load your tracker.'));
     } finally {
       setLoading(false);
     }
@@ -106,10 +116,10 @@ export default function ApplicationsPage() {
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
       });
-      if (!res.ok) throw new Error('Failed to update status');
+      if (!res.ok) throw new Error('Couldn’t update the status. Please try again.');
       await fetchApps();
-    } catch (err: any) {
-      setError(err.message || 'Update failed');
+    } catch (err) {
+      setError(friendlyError(err, 'Couldn’t update the status.'));
     }
   };
 
@@ -121,11 +131,11 @@ export default function ApplicationsPage() {
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ notes: noteDraft }),
       });
-      if (!res.ok) throw new Error('Failed to save notes');
+      if (!res.ok) throw new Error('Couldn’t save your notes. Please try again.');
       setEditingNotes(null);
       await fetchApps();
-    } catch (err: any) {
-      setError(err.message || 'Save failed');
+    } catch (err) {
+      setError(friendlyError(err, 'Couldn’t save your notes.'));
     }
   };
 
@@ -137,10 +147,10 @@ export default function ApplicationsPage() {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error('Failed to delete');
+      if (!res.ok) throw new Error('Couldn’t remove this job. Please try again.');
       await fetchApps();
-    } catch (err: any) {
-      setError(err.message || 'Delete failed');
+    } catch (err) {
+      setError(friendlyError(err, 'Couldn’t remove this job.'));
     }
   };
 
@@ -160,13 +170,14 @@ export default function ApplicationsPage() {
       });
       if (!res.ok) {
         const body = await res.json().catch(() => null);
-        throw new Error(body?.message || 'Failed to add job');
+        const msg = Array.isArray(body?.message) ? body.message.join(', ') : body?.message;
+        throw new Error(msg || 'Couldn’t add this job. Please check the details and try again.');
       }
       setManualTitle(''); setManualCompany(''); setManualUrl('');
       setShowManualForm(false);
       await fetchApps();
-    } catch (err: any) {
-      setError(err.message || 'Failed to add job');
+    } catch (err) {
+      setError(friendlyError(err, 'Couldn’t add this job.'));
     } finally {
       setSaving(false);
     }
@@ -231,7 +242,8 @@ export default function ApplicationsPage() {
         </div>
       )}
 
-      {/* Status filter chips */}
+      {/* Status filter chips — hidden while the list can't load (counts would be misleading) */}
+      {!loadFailed && (
       <div className="flex flex-wrap items-center gap-2 mb-8">
         <button
           onClick={() => setStatusFilter('')}
@@ -249,15 +261,33 @@ export default function ApplicationsPage() {
           </button>
         ))}
       </div>
+      )}
 
       {error && (
-        <div className="font-raleway bg-red-50 text-red-600 px-6 py-4 rounded-2xl mb-6 text-sm">{error}</div>
+        <div className="font-raleway bg-red-50 text-red-600 px-6 py-4 rounded-2xl mb-6 text-sm flex items-center justify-between gap-4">
+          <span>{error}</span>
+          <button onClick={() => setError('')} className="flex-shrink-0 text-red-400 hover:text-red-600" aria-label="Dismiss">
+            <FiX size={16} />
+          </button>
+        </div>
       )}
 
       {/* Applications list */}
       {loading ? (
         <div className="flex items-center justify-center py-32">
           <FiLoader className="animate-spin text-gray-300" size={32} />
+        </div>
+      ) : loadFailed ? (
+        <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-50 p-16 text-center">
+          <FiWifiOff className="mx-auto text-gray-200 mb-4" size={48} />
+          <h3 className="font-century text-xl font-bold text-slate-700 mb-2">Couldn&apos;t load your tracker</h3>
+          <p className="font-raleway text-sm text-gray-400 mb-6 max-w-md mx-auto">{loadFailed}</p>
+          <button
+            onClick={() => fetchApps()}
+            className="font-raleway inline-flex items-center gap-2 bg-[#4F46E5] hover:bg-[#4338CA] text-white px-8 py-3 rounded-2xl font-semibold text-sm transition-all"
+          >
+            <FiRefreshCw size={14} /> Try Again
+          </button>
         </div>
       ) : apps.length === 0 ? (
         <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-50 p-16 text-center">
