@@ -499,6 +499,9 @@ function MockInterviewContent() {
   };
 
   const handleNextInner = async () => {
+    // The candidate has moved on — cut off any narration still playing, or it
+    // would keep talking over the rest screen and into the next question.
+    cancelSpeech();
     // Finish capturing first: stop the mic and wait for the accurate (Whisper)
     // transcript — or the browser transcript if transcription is unavailable.
     const spoken = (isListening || isTranscribing)
