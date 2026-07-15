@@ -24,6 +24,7 @@ interface Job {
   source: string;
   source_logo: string;
   description: string;
+  geo_restriction: string;
   match_score: number;
   apply_url: string;
   scraped_at: string;
@@ -36,6 +37,7 @@ interface Filters {
   experience_levels: string[];
   categories: string[];
   sources: string[];
+  geo_restrictions?: string[];
 }
 
 interface JobsResponse {
@@ -67,6 +69,7 @@ export default function JobsPage() {
   const [category, setCategory] = useState('');
   const [experienceLevel, setExperienceLevel] = useState('');
   const [source, setSource] = useState('');
+  const [geoRestriction, setGeoRestriction] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [sort, setSort] = useState<'match' | 'newest'>('match');
   const [savedJobs, setSavedJobs] = useState<Record<string, boolean>>({});
@@ -86,6 +89,7 @@ export default function JobsPage() {
       if (category) params.set('category', category);
       if (experienceLevel) params.set('experience_level', experienceLevel);
       if (source) params.set('source', source);
+      if (geoRestriction) params.set('geo_restriction', geoRestriction);
 
       const res = await fetch(`${API}/jobs/me?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -104,7 +108,7 @@ export default function JobsPage() {
     } finally {
       setLoading(false);
     }
-  }, [token, search, jobType, country, category, experienceLevel, source, sort, router]);
+  }, [token, search, jobType, country, category, experienceLevel, source, geoRestriction, sort, router]);
 
   const fetchFilters = useCallback(async () => {
     if (!token) return;
@@ -201,7 +205,7 @@ export default function JobsPage() {
   useEffect(() => {
     const timer = setTimeout(() => { fetchJobs(1); }, 400);
     return () => clearTimeout(timer);
-  }, [search, jobType, country, category, experienceLevel, source, sort]);
+  }, [search, jobType, country, category, experienceLevel, source, geoRestriction, sort]);
 
   const saveJob = async (jobId: string) => {
     if (!token || savedJobs[jobId]) return;
@@ -226,10 +230,10 @@ export default function JobsPage() {
   };
 
   const clearFilters = () => {
-    setSearch(''); setJobType(''); setCountry(''); setCategory(''); setExperienceLevel(''); setSource('');
+    setSearch(''); setJobType(''); setCountry(''); setCategory(''); setExperienceLevel(''); setSource(''); setGeoRestriction('');
   };
 
-  const hasActiveFilters = jobType || country || category || experienceLevel || source;
+  const hasActiveFilters = jobType || country || category || experienceLevel || source || geoRestriction;
 
   const sourceLabel = (s: string) =>
     s === 'jsearch' ? 'JSearch (mixed boards)' : s.charAt(0).toUpperCase() + s.slice(1);
@@ -298,7 +302,7 @@ export default function JobsPage() {
             </div>
 
             {showFilters && filters && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4 mt-5 pt-5 border-t border-gray-50">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 mt-5 pt-5 border-t border-gray-50">
                 <select value={jobType} onChange={(e) => setJobType(e.target.value)} className="font-raleway text-sm bg-gray-50 rounded-xl px-4 py-3 text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-100">
                   <option value="">All Job Types</option>
                   {filters.job_types.map(t => <option key={t} value={t}>{t}</option>)}
@@ -318,6 +322,13 @@ export default function JobsPage() {
                 <select value={source} onChange={(e) => setSource(e.target.value)} className="font-raleway text-sm bg-gray-50 rounded-xl px-4 py-3 text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-100">
                   <option value="">All Platforms</option>
                   {filters.sources.map(s => <option key={s} value={s}>{sourceLabel(s)}</option>)}
+                </select>
+                <select value={geoRestriction} onChange={(e) => setGeoRestriction(e.target.value)} className="font-raleway text-sm bg-gray-50 rounded-xl px-4 py-3 text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-100">
+                  <option value="">Any Eligibility</option>
+                  <option value="Anywhere">🌍 Work from anywhere</option>
+                  <option value="Country-restricted">📍 In-country only</option>
+                  <option value="Citizenship/visa required">🛂 Citizenship/visa required</option>
+                  <option value="Not specified">Eligibility not stated</option>
                 </select>
               </div>
             )}
@@ -411,6 +422,15 @@ export default function JobsPage() {
                     )}
                     {job.job_type && (
                       <span className={`font-raleway text-[11px] font-bold px-3 py-1 rounded-lg ${getTypeBadgeColor(job.job_type)}`}>{job.job_type}</span>
+                    )}
+                    {job.geo_restriction === 'Citizenship/visa required' && (
+                      <span className="font-raleway text-[11px] font-bold px-3 py-1 rounded-lg bg-red-50 text-red-500">🛂 Citizenship/visa required</span>
+                    )}
+                    {job.geo_restriction === 'Country-restricted' && (
+                      <span className="font-raleway text-[11px] font-bold px-3 py-1 rounded-lg bg-amber-50 text-amber-600">📍 In-country only</span>
+                    )}
+                    {job.geo_restriction === 'Anywhere' && (
+                      <span className="font-raleway text-[11px] font-bold px-3 py-1 rounded-lg bg-emerald-50 text-emerald-600">🌍 Anywhere</span>
                     )}
                     {job.experience_level && (
                       <span className="font-raleway text-[11px] font-bold px-3 py-1 rounded-lg bg-gray-50 text-gray-500">{job.experience_level}</span>
