@@ -66,6 +66,7 @@ export default function JobsPage() {
   const [country, setCountry] = useState('');
   const [category, setCategory] = useState('');
   const [experienceLevel, setExperienceLevel] = useState('');
+  const [source, setSource] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [sort, setSort] = useState<'match' | 'newest'>('match');
   const [savedJobs, setSavedJobs] = useState<Record<string, boolean>>({});
@@ -84,6 +85,7 @@ export default function JobsPage() {
       if (country) params.set('country', country);
       if (category) params.set('category', category);
       if (experienceLevel) params.set('experience_level', experienceLevel);
+      if (source) params.set('source', source);
 
       const res = await fetch(`${API}/jobs/me?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -102,7 +104,7 @@ export default function JobsPage() {
     } finally {
       setLoading(false);
     }
-  }, [token, search, jobType, country, category, experienceLevel, sort, router]);
+  }, [token, search, jobType, country, category, experienceLevel, source, sort, router]);
 
   const fetchFilters = useCallback(async () => {
     if (!token) return;
@@ -199,7 +201,7 @@ export default function JobsPage() {
   useEffect(() => {
     const timer = setTimeout(() => { fetchJobs(1); }, 400);
     return () => clearTimeout(timer);
-  }, [search, jobType, country, category, experienceLevel, sort]);
+  }, [search, jobType, country, category, experienceLevel, source, sort]);
 
   const saveJob = async (jobId: string) => {
     if (!token || savedJobs[jobId]) return;
@@ -224,10 +226,13 @@ export default function JobsPage() {
   };
 
   const clearFilters = () => {
-    setSearch(''); setJobType(''); setCountry(''); setCategory(''); setExperienceLevel('');
+    setSearch(''); setJobType(''); setCountry(''); setCategory(''); setExperienceLevel(''); setSource('');
   };
 
-  const hasActiveFilters = jobType || country || category || experienceLevel;
+  const hasActiveFilters = jobType || country || category || experienceLevel || source;
+
+  const sourceLabel = (s: string) =>
+    s === 'jsearch' ? 'JSearch (mixed boards)' : s.charAt(0).toUpperCase() + s.slice(1);
 
   const formatSalary = (min: string, max: string) => {
     if (!min && !max) return null;
@@ -293,7 +298,7 @@ export default function JobsPage() {
             </div>
 
             {showFilters && filters && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mt-5 pt-5 border-t border-gray-50">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4 mt-5 pt-5 border-t border-gray-50">
                 <select value={jobType} onChange={(e) => setJobType(e.target.value)} className="font-raleway text-sm bg-gray-50 rounded-xl px-4 py-3 text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-100">
                   <option value="">All Job Types</option>
                   {filters.job_types.map(t => <option key={t} value={t}>{t}</option>)}
@@ -309,6 +314,10 @@ export default function JobsPage() {
                 <select value={experienceLevel} onChange={(e) => setExperienceLevel(e.target.value)} className="font-raleway text-sm bg-gray-50 rounded-xl px-4 py-3 text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-100">
                   <option value="">All Levels</option>
                   {filters.experience_levels.map(l => <option key={l} value={l}>{l}</option>)}
+                </select>
+                <select value={source} onChange={(e) => setSource(e.target.value)} className="font-raleway text-sm bg-gray-50 rounded-xl px-4 py-3 text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-100">
+                  <option value="">All Platforms</option>
+                  {filters.sources.map(s => <option key={s} value={s}>{sourceLabel(s)}</option>)}
                 </select>
               </div>
             )}
