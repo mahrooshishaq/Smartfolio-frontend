@@ -426,8 +426,10 @@ export default function JobsPage() {
                     {job.geo_restriction === 'Citizenship/visa required' && (
                       <span className="font-raleway text-[11px] font-bold px-3 py-1 rounded-lg bg-red-50 text-red-500">🛂 Citizenship/visa required</span>
                     )}
-                    {job.geo_restriction === 'Country-restricted' && (
-                      <span className="font-raleway text-[11px] font-bold px-3 py-1 rounded-lg bg-amber-50 text-amber-600">📍 In-country only</span>
+                    {job.geo_restriction?.startsWith('Country-restricted') && (
+                      <span className="font-raleway text-[11px] font-bold px-3 py-1 rounded-lg bg-amber-50 text-amber-600">
+                        📍 {job.geo_restriction.includes('likely') ? 'Likely in-country only' : 'In-country only'}
+                      </span>
                     )}
                     {job.geo_restriction === 'Anywhere' && (
                       <span className="font-raleway text-[11px] font-bold px-3 py-1 rounded-lg bg-emerald-50 text-emerald-600">🌍 Anywhere</span>
