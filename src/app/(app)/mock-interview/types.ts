@@ -3,6 +3,8 @@ export type Round = 'hr' | 'technical' | 'problem_solving';
 export type QuestionType = 'mcq' | 'short_answer' | 'scenario' | 'fill_in_the_blank' | 'behavioral';
 export type LengthTier = 'quick' | 'standard' | 'full';
 export type Seniority = 'junior' | 'mid' | 'senior' | 'lead';
+// How the interviewer renders on the call stage — user's choice (Phase 5.1 slot).
+export type InterviewerStyle = 'orb' | 'avatar';
 
 export interface PublicQuestion {
   id: number;

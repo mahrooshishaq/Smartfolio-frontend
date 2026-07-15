@@ -1,6 +1,6 @@
-import { FiVolume2, FiMic, FiZap, FiSend } from 'react-icons/fi';
-import { TIER_OPTIONS, SENIORITY_OPTIONS } from './constants';
-import type { LengthTier, Seniority, ProgressPoint, ProgressSummary } from './types';
+import { FiVolume2, FiMic, FiZap, FiSend, FiVideo } from 'react-icons/fi';
+import { TIER_OPTIONS, SENIORITY_OPTIONS, INTERVIEWER_STYLE_OPTIONS, INTERVIEWER } from './constants';
+import type { LengthTier, Seniority, InterviewerStyle, ProgressPoint, ProgressSummary } from './types';
 
 function Stat({ label, value }: { label: string; value: number | null }) {
   return (
@@ -46,6 +46,8 @@ interface InputStageProps {
   setFocusInput: (v: string) => void;
   useResume: boolean;
   setUseResume: (v: boolean) => void;
+  interviewerStyle: InterviewerStyle;
+  setInterviewerStyle: (v: InterviewerStyle) => void;
   onStart: () => void;
   sttSupported: boolean;
   progress: { points: ProgressPoint[]; summary: ProgressSummary } | null;
@@ -54,6 +56,7 @@ interface InputStageProps {
 export function InputStage({
   jobDescription, setJobDescription, lengthTier, setLengthTier,
   seniority, setSeniority, focusInput, setFocusInput, useResume, setUseResume,
+  interviewerStyle, setInterviewerStyle,
   onStart, sttSupported, progress,
 }: InputStageProps) {
   const showProgress = progress && progress.summary.attempts >= 1;
@@ -118,6 +121,36 @@ export function InputStage({
                   </div>
                   <p className="font-raleway text-[11px] text-gray-500 mb-1">{t.count}</p>
                   <p className="font-raleway text-[11px] text-gray-400 leading-snug">{t.desc}</p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* INTERVIEWER STYLE — how Folio appears on the call (5.1 slot) */}
+        <div className="mt-6">
+          <label className="font-raleway block text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
+            Your interviewer
+          </label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" role="tablist" aria-label="Interviewer style">
+            {INTERVIEWER_STYLE_OPTIONS.map((s) => {
+              const selected = interviewerStyle === s.id;
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={selected}
+                  onClick={() => setInterviewerStyle(s.id)}
+                  className={`text-left rounded-2xl border p-4 transition-all ${selected ? 'border-indigo-500 bg-indigo-50 shadow-sm' : 'border-gray-200 bg-white hover:border-indigo-300'}`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className={`w-7 h-7 grid place-items-center rounded-lg ${selected ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-100 text-gray-400'}`}>
+                      {s.id === 'avatar' ? <FiVideo size={14} /> : <FiVolume2 size={14} />}
+                    </span>
+                    <span className="font-century text-sm font-bold text-slate-800">{s.label}</span>
+                  </div>
+                  <p className="font-raleway text-[11px] text-gray-400 leading-snug">{s.desc.replace('Folio', INTERVIEWER.name)}</p>
                 </button>
               );
             })}

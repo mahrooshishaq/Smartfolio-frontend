@@ -1,7 +1,6 @@
 'use client';
 import { useEffect, useState, useCallback, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import VoiceWave from '@/components/VoiceWave';
 import { useWebcam } from './useWebcam';
 import { ResultsStage } from './ResultsStage';
 import { InputStage } from './InputStage';
@@ -13,8 +12,9 @@ import {
   FiVideo, FiVideoOff, FiPhoneOff, FiMessageSquare, FiWifi, FiX, FiClock
 } from 'react-icons/fi';
 import { useSpeech, mcqSpeechText } from './useSpeech';
+import { InterviewerTile } from './InterviewerTile';
 import type {
-  Round, LengthTier, Seniority, PublicQuestion, Evaluation, ProgressPoint, ProgressSummary,
+  Round, LengthTier, Seniority, InterviewerStyle, PublicQuestion, Evaluation, ProgressPoint, ProgressSummary,
 } from './types';
 import {
   ROUND_META, ROUND_ORDER, TIER_OPTIONS, SENIORITY_OPTIONS, INTERVIEWER, fmtTime,
@@ -57,6 +57,17 @@ function MockInterviewContent() {
   const [seniority, setSeniority] = useState<Seniority | ''>('');
   const [focusInput, setFocusInput] = useState('');
   const [useResume, setUseResume] = useState(true);
+  // Interviewer look (orb vs animated avatar) — the user's choice, remembered
+  // across sessions. Read from localStorage after mount (SSR-safe).
+  const [interviewerStyle, setInterviewerStyle] = useState<InterviewerStyle>('avatar');
+  useEffect(() => {
+    const saved = localStorage.getItem('interviewerStyle');
+    if (saved === 'orb' || saved === 'avatar') setInterviewerStyle(saved);
+  }, []);
+  const chooseInterviewerStyle = (s: InterviewerStyle) => {
+    setInterviewerStyle(s);
+    localStorage.setItem('interviewerStyle', s);
+  };
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [questions, setQuestions] = useState<PublicQuestion[]>([]);
   const [answers, setAnswers] = useState<Record<number, string | number>>({});
@@ -791,6 +802,7 @@ function MockInterviewContent() {
               seniority={seniority} setSeniority={setSeniority}
               focusInput={focusInput} setFocusInput={setFocusInput}
               useResume={useResume} setUseResume={setUseResume}
+              interviewerStyle={interviewerStyle} setInterviewerStyle={chooseInterviewerStyle}
               onStart={generateTest}
               sttSupported={sttSupported}
               progress={progress}
@@ -899,16 +911,7 @@ function MockInterviewContent() {
                 <div className="relative z-10 px-6 pb-2 min-h-[300px] flex flex-col items-center justify-center">
                   {/* Interviewer tile */}
                   <div className="flex flex-col items-center gap-3 pt-2">
-                    <div className="relative grid place-items-center">
-                      {isSpeaking && <span className="absolute inset-0 m-auto w-28 h-28 rounded-full bg-indigo-500/25 animate-ping" />}
-                      {/* overflow-hidden keeps the equalizer bars clipped inside the
-                          circle — without it they spill past the tile edges */}
-                      <div className="relative w-28 h-28 rounded-full overflow-hidden grid place-items-center bg-gradient-to-br from-indigo-400 via-violet-500 to-blue-500 shadow-xl">
-                        {isSpeaking
-                          ? <span className="scale-75 grid place-items-center"><VoiceWave isActive mode="speaking" color="bg-white" /></span>
-                          : <FiUser className="text-white/90" size={44} />}
-                      </div>
-                    </div>
+                    <InterviewerTile style={interviewerStyle} isSpeaking={isSpeaking} />
                     <div className="text-center">
                       <p className="text-white font-century font-bold text-base">{INTERVIEWER.name}</p>
                       <p className="text-slate-400 text-xs font-raleway inline-flex items-center gap-2">

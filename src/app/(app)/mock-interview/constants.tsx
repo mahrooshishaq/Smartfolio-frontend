@@ -1,6 +1,6 @@
 import type { IconType } from 'react-icons';
 import { FiUser, FiCpu, FiZap } from 'react-icons/fi';
-import type { Round, LengthTier, Seniority, QuestionType } from './types';
+import type { Round, LengthTier, Seniority, QuestionType, InterviewerStyle } from './types';
 
 export const ROUND_META: Record<Round, { title: string; subtitle: string; icon: IconType; color: string; bg: string }> = {
   hr: {
@@ -56,6 +56,12 @@ export const FOLLOW_UP_SECONDS = 60;
 
 // The AI interviewer persona shown in the video-call UI (Phase 3.3).
 export const INTERVIEWER = { name: 'Folio', role: 'AI Interviewer' };
+
+// The two interviewer looks the user can pick on the input screen (5.1 slot).
+export const INTERVIEWER_STYLE_OPTIONS: { id: InterviewerStyle; label: string; desc: string }[] = [
+  { id: 'avatar', label: 'Video avatar', desc: 'Face-to-face — Folio appears on camera and speaks to you' },
+  { id: 'orb', label: 'Voice orb', desc: 'Minimal — a calm voice-reactive tile, no face' },
+];
 
 export const fmtTime = (secs: number) => {
   const m = Math.floor(secs / 60);
