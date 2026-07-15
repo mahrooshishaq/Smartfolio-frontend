@@ -439,8 +439,23 @@ function MockInterviewContent() {
     }
   };
 
-  const startCurrentRound = () => {
+  // Entering a round gets the same audio gate as the rest interstitial: hold
+  // on the intro (button shows a brief "getting ready") until the first
+  // question's opening chunk is playable, so its text and voice start
+  // together. Capped so a dead TTS server can't block the interview.
+  const [startingRound, setStartingRound] = useState(false);
+  const startCurrentRound = async () => {
+    if (startingRound) return;
     setError('');
+    const first = currentRoundQuestions[0];
+    if (first) {
+      setStartingRound(true);
+      await Promise.race([
+        waitForSpeechReady(first.type === 'mcq' ? mcqSpeechText(first) : first.question),
+        new Promise((r) => setTimeout(r, REST_HOLD_MAX_MS)),
+      ]);
+      setStartingRound(false);
+    }
     setCurrentQuestionIdx(0);
     setStage('round');
   };
@@ -866,9 +881,12 @@ function MockInterviewContent() {
                 </p>
                 <button
                   onClick={startCurrentRound}
-                  className="font-raleway inline-flex items-center gap-2 bg-[#4F46E5] hover:bg-[#4338CA] text-white px-10 py-4 rounded-2xl font-semibold text-sm transition-all"
+                  disabled={startingRound}
+                  className="font-raleway inline-flex items-center gap-2 bg-[#4F46E5] hover:bg-[#4338CA] text-white px-10 py-4 rounded-2xl font-semibold text-sm transition-all disabled:opacity-70 disabled:cursor-wait"
                 >
-                  Begin Round <FiArrowRight size={16} />
+                  {startingRound
+                    ? <>{INTERVIEWER.name} is getting ready… <FiLoader className="animate-spin" size={16} /></>
+                    : <>Begin Round <FiArrowRight size={16} /></>}
                 </button>
               </div>
             </div>
