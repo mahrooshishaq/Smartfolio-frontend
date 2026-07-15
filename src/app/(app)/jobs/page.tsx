@@ -3,7 +3,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   FiBriefcase, FiSearch, FiMapPin, FiExternalLink,
-  FiChevronLeft, FiChevronRight, FiFilter, FiX, FiLoader
+  FiChevronLeft, FiChevronRight, FiFilter, FiX, FiLoader,
+  FiBookmark, FiCheck, FiTrendingUp, FiClock
 } from 'react-icons/fi';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
@@ -22,6 +23,8 @@ interface Job {
   category: string;
   source: string;
   source_logo: string;
+  description: string;
+  match_score: number;
   apply_url: string;
   scraped_at: string;
 }
@@ -64,6 +67,8 @@ export default function JobsPage() {
   const [category, setCategory] = useState('');
   const [experienceLevel, setExperienceLevel] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [sort, setSort] = useState<'match' | 'newest'>('match');
+  const [savedJobs, setSavedJobs] = useState<Record<string, boolean>>({});
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
 
@@ -73,6 +78,7 @@ export default function JobsPage() {
     setError('');
     try {
       const params = new URLSearchParams({ page: String(p), limit: '20' });
+      if (sort === 'newest') params.set('sort', 'newest');
       if (search) params.set('search', search);
       if (jobType) params.set('job_type', jobType);
       if (country) params.set('country', country);
@@ -94,7 +100,7 @@ export default function JobsPage() {
     } finally {
       setLoading(false);
     }
-  }, [token, search, jobType, country, category, experienceLevel, router]);
+  }, [token, search, jobType, country, category, experienceLevel, sort, router]);
 
   const fetchFilters = useCallback(async () => {
     if (!token) return;
@@ -152,7 +158,22 @@ export default function JobsPage() {
   useEffect(() => {
     const timer = setTimeout(() => { fetchJobs(1); }, 400);
     return () => clearTimeout(timer);
-  }, [search, jobType, country, category, experienceLevel]);
+  }, [search, jobType, country, category, experienceLevel, sort]);
+
+  const saveJob = async (jobId: string) => {
+    if (!token || savedJobs[jobId]) return;
+    try {
+      const res = await fetch(`${API}/applications`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jobId }),
+      });
+      if (res.ok || res.status === 400) {
+        // 400 = already tracked — treat as saved either way
+        setSavedJobs(prev => ({ ...prev, [jobId]: true }));
+      }
+    } catch {}
+  };
 
   const clearFilters = () => {
     setSearch(''); setJobType(''); setCountry(''); setCategory(''); setExperienceLevel('');
@@ -249,9 +270,23 @@ export default function JobsPage() {
             <div className="font-raleway bg-red-50 text-red-600 px-6 py-4 rounded-2xl mb-6 text-sm">{error}</div>
           )}
 
-          {/* Results count */}
+          {/* Results count + sort toggle */}
           <div className="font-raleway flex items-center justify-between mb-6">
             <p className="text-sm text-gray-400">{total} jobs found</p>
+            <div className="flex items-center gap-1 bg-white border border-gray-100 rounded-xl p-1">
+              <button
+                onClick={() => setSort('match')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${sort === 'match' ? 'bg-[#4F46E5] text-white' : 'text-gray-400 hover:text-gray-600'}`}
+              >
+                <FiTrendingUp size={12} /> Best Match
+              </button>
+              <button
+                onClick={() => setSort('newest')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${sort === 'newest' ? 'bg-[#4F46E5] text-white' : 'text-gray-400 hover:text-gray-600'}`}
+              >
+                <FiClock size={12} /> Newest
+              </button>
+            </div>
           </div>
 
           {/* Job Cards */}
@@ -283,17 +318,35 @@ export default function JobsPage() {
                       <h3 className="font-century text-base font-bold text-slate-800 truncate group-hover:text-[#4F46E5] transition-colors">{job.title}</h3>
                       <p className="font-raleway text-sm text-gray-400 mt-0.5">{job.company}</p>
                     </div>
-                    <a
-                      href={job.apply_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-shrink-0 bg-[#4F46E5] hover:bg-[#4338CA] text-white px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all"
-                    >
-                      Apply <FiExternalLink size={12} />
-                    </a>
+                    <div className="flex-shrink-0 flex items-center gap-2">
+                      <button
+                        onClick={() => saveJob(job.id)}
+                        title={savedJobs[job.id] ? 'Saved to Job Tracker' : 'Save to Job Tracker'}
+                        className={`p-2.5 rounded-xl text-xs font-bold flex items-center transition-all ${savedJobs[job.id] ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-50 text-gray-400 hover:bg-indigo-50 hover:text-[#4F46E5]'}`}
+                      >
+                        {savedJobs[job.id] ? <FiCheck size={14} /> : <FiBookmark size={14} />}
+                      </button>
+                      <a
+                        href={job.apply_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="bg-[#4F46E5] hover:bg-[#4338CA] text-white px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all"
+                      >
+                        Apply <FiExternalLink size={12} />
+                      </a>
+                    </div>
                   </div>
 
+                  {job.description && (
+                    <p className="font-raleway text-xs text-gray-400 mt-3 line-clamp-2 leading-relaxed">{job.description}</p>
+                  )}
+
                   <div className="flex flex-wrap items-center gap-2 mt-4">
+                    {job.match_score > 0 && (
+                      <span className="font-raleway text-[11px] font-bold px-3 py-1 rounded-lg bg-indigo-50 text-[#4F46E5] flex items-center gap-1">
+                        <FiTrendingUp size={10} /> {Math.round(job.match_score)}% match
+                      </span>
+                    )}
                     {job.job_type && (
                       <span className={`font-raleway text-[11px] font-bold px-3 py-1 rounded-lg ${getTypeBadgeColor(job.job_type)}`}>{job.job_type}</span>
                     )}
