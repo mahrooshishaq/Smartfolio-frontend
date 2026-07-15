@@ -94,7 +94,7 @@ function MockInterviewContent() {
   // whether an answer was saved); restActionRef runs when the countdown ends
   // (or is skipped) for transitions beyond "speak the current question".
   const [restCountdown, setRestCountdown] = useState<number | null>(null);
-  const [restMeta, setRestMeta] = useState<{ next: 'question' | 'followup' | 'round' | 'finish'; saved: boolean }>({ next: 'question', saved: true });
+  const [restMeta, setRestMeta] = useState<{ next: 'start' | 'question' | 'followup' | 'round' | 'finish'; saved: boolean }>({ next: 'question', saved: true });
   const restActionRef = useRef<(() => void) | null>(null);
   // True while the rest countdown has finished but we're holding the reveal
   // until the next question's first audio chunk is ready — so the question
@@ -269,7 +269,7 @@ function MockInterviewContent() {
   // runs when the countdown ends or is skipped; without one, clearing the
   // countdown lets the speak effect narrate the pending question/follow-up.
   const beginRest = (
-    next: 'question' | 'followup' | 'round' | 'finish',
+    next: 'start' | 'question' | 'followup' | 'round' | 'finish',
     saved: boolean,
     action?: () => void,
   ) => {
@@ -308,7 +308,7 @@ function MockInterviewContent() {
       // Round/finish transitions leave this screen — nothing to gate.
       const gateText =
         restMeta.next === 'followup' && followUpQ ? followUpQ.question
-        : restMeta.next === 'question' && activeQuestion
+        : (restMeta.next === 'question' || restMeta.next === 'start') && activeQuestion
           ? (activeQuestion.type === 'mcq' ? mcqSpeechText(activeQuestion) : activeQuestion.question)
           : '';
       if (!gateText) { finishRest(); return; }
@@ -439,25 +439,15 @@ function MockInterviewContent() {
     }
   };
 
-  // Entering a round gets the same audio gate as the rest interstitial: hold
-  // on the intro (button shows a brief "getting ready") until the first
-  // question's opening chunk is playable, so its text and voice start
-  // together. Capped so a dead TTS server can't block the interview.
-  const [startingRound, setStartingRound] = useState(false);
-  const startCurrentRound = async () => {
-    if (startingRound) return;
+  // Entering a round drops straight into the call stage behind a "starting
+  // in 5…" countdown card — the same rest interstitial (and its audio gate)
+  // used between questions, so the first question's TTS synthesizes during
+  // the countdown and its text and voice start together.
+  const startCurrentRound = () => {
     setError('');
-    const first = currentRoundQuestions[0];
-    if (first) {
-      setStartingRound(true);
-      await Promise.race([
-        waitForSpeechReady(first.type === 'mcq' ? mcqSpeechText(first) : first.question),
-        new Promise((r) => setTimeout(r, REST_HOLD_MAX_MS)),
-      ]);
-      setStartingRound(false);
-    }
     setCurrentQuestionIdx(0);
     setStage('round');
+    beginRest('start', true);
   };
 
   // Advance to the next question (or next round / submit) — the plain forward move.
@@ -881,12 +871,9 @@ function MockInterviewContent() {
                 </p>
                 <button
                   onClick={startCurrentRound}
-                  disabled={startingRound}
-                  className="font-raleway inline-flex items-center gap-2 bg-[#4F46E5] hover:bg-[#4338CA] text-white px-10 py-4 rounded-2xl font-semibold text-sm transition-all disabled:opacity-70 disabled:cursor-wait"
+                  className="font-raleway inline-flex items-center gap-2 bg-[#4F46E5] hover:bg-[#4338CA] text-white px-10 py-4 rounded-2xl font-semibold text-sm transition-all"
                 >
-                  {startingRound
-                    ? <>{INTERVIEWER.name} is getting ready… <FiLoader className="animate-spin" size={16} /></>
-                    : <>Begin Round <FiArrowRight size={16} /></>}
+                  Begin Round <FiArrowRight size={16} />
                 </button>
               </div>
             </div>
@@ -947,8 +934,8 @@ function MockInterviewContent() {
                       next question's audio synthesizes in the background */}
                   {resting && (
                     <div className="mt-6 text-center max-w-2xl flex flex-col items-center">
-                      <span className={`inline-block font-raleway text-[10px] font-bold uppercase tracking-[0.2em] px-3 py-1 rounded-full mb-4 ${restMeta.saved ? 'bg-emerald-500/15 text-emerald-300' : 'bg-white/10 text-slate-300'}`}>
-                        {restMeta.saved ? 'Answer saved' : 'Question skipped'}
+                      <span className={`inline-block font-raleway text-[10px] font-bold uppercase tracking-[0.2em] px-3 py-1 rounded-full mb-4 ${restMeta.next === 'start' ? 'bg-indigo-500/15 text-indigo-300' : restMeta.saved ? 'bg-emerald-500/15 text-emerald-300' : 'bg-white/10 text-slate-300'}`}>
+                        {restMeta.next === 'start' ? `Round ${currentRoundIdx + 1} · ${ROUND_META[currentRound].title}` : restMeta.saved ? 'Answer saved' : 'Question skipped'}
                       </span>
                       <div className="relative grid place-items-center mb-4">
                         <span className="absolute w-20 h-20 rounded-full bg-indigo-500/20 animate-ping" />
@@ -957,10 +944,13 @@ function MockInterviewContent() {
                         </div>
                       </div>
                       <h3 className="font-century text-xl font-black text-white">
-                        {restMeta.next === 'finish' ? 'That was the last question!' : 'Take a moment to rest'}
+                        {restMeta.next === 'finish' ? 'That was the last question!'
+                          : restMeta.next === 'start' ? 'Starting…'
+                          : 'Take a moment to rest'}
                       </h3>
                       <p className="font-raleway text-sm text-slate-400 mt-1.5">
                         {restHolding ? <>{INTERVIEWER.name} is about to speak…</>
+                          : restMeta.next === 'start' ? <>First question in {restCountdown}s — {INTERVIEWER.name} is preparing it</>
                           : restMeta.next === 'followup' ? <>Follow-up question in {restCountdown}s — {INTERVIEWER.name} is preparing it</>
                           : restMeta.next === 'round' ? <>Round complete — next round in {restCountdown}s</>
                           : restMeta.next === 'finish' ? <>Your evaluation starts in {restCountdown}s</>
