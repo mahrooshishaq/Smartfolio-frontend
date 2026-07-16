@@ -68,31 +68,63 @@ export default function ResumeProfileReview({
         if (!r.ok) throw new Error('Could not read details from your resume.');
         return r.json();
       })
-      .then((d: Suggestions) => {
-        setData(d);
-        // Pre-select every field the resume offered a value for.
-        const init: Record<string, boolean> = {};
-        (Object.keys(d.suggested) as (keyof ProfileFields)[]).forEach((k) => {
-          if (d.suggested[k] != null) init[k] = true;
-        });
-        setSelected(init);
-      })
+      .then((d: Suggestions) => setData(d))
       .catch((e) => setError(e.message));
   }, [resumeId]);
 
-  // Fields worth showing: the resume proposed a value. We flag which are new vs. a change.
+  // Only show fields the resume would actually CHANGE. A suggestion equal to the
+  // current value is a no-op and is dropped — so re-uploading the same CV shows
+  // "nothing new" instead of re-offering the same values. Array fields (skills,
+  // interests) are UNIONed with the current list, never replaced, so we never
+  // silently drop skills the user already had; the row appears only when the
+  // resume adds items that aren't there yet.
   const rows = useMemo(() => {
     if (!data) return [];
+    const toList = (v: unknown): string[] =>
+      Array.isArray(v) ? v.map((x) => String(x).trim().toLowerCase()).filter(Boolean) : [];
+    const scalarEq = (a: unknown, b: unknown) =>
+      a != null && b != null && String(a).trim().toLowerCase() === String(b).trim().toLowerCase();
+
     return (Object.keys(FIELD_LABELS) as (keyof ProfileFields)[])
-      .filter((k) => data.suggested[k] != null)
       .map((k) => {
         const suggestedVal = data.suggested[k];
         const currentVal = data.current[k];
-        const hasCurrent =
-          currentVal != null && (!Array.isArray(currentVal) || currentVal.length > 0);
-        return { key: k, suggestedVal, currentVal, isNew: !hasCurrent };
-      });
+        if (suggestedVal == null) return null;
+
+        if (k === 'skills' || k === 'interests') {
+          const current = toList(currentVal);
+          const added = toList(suggestedVal).filter((x) => !current.includes(x));
+          if (added.length === 0) return null; // resume adds nothing new
+          return {
+            key: k,
+            applyValue: [...current, ...added], // union — preserves existing items
+            display: added.join(', '),
+            currentDisplay: current.length ? current.join(', ') : null,
+            isNew: current.length === 0,
+            label: current.length ? `Adds ${added.length}` : 'New',
+          };
+        }
+
+        if (scalarEq(suggestedVal, currentVal)) return null; // no-op
+        const hasCurrent = currentVal != null && String(currentVal).trim() !== '';
+        return {
+          key: k,
+          applyValue: suggestedVal,
+          display: prettify(suggestedVal),
+          currentDisplay: hasCurrent ? prettify(currentVal) : null,
+          isNew: !hasCurrent,
+          label: hasCurrent ? 'Update' : 'New',
+        };
+      })
+      .filter((r): r is NonNullable<typeof r> => r !== null);
   }, [data]);
+
+  // Pre-select every actionable row once they're computed.
+  useEffect(() => {
+    const init: Record<string, boolean> = {};
+    rows.forEach((r) => (init[r.key] = true));
+    setSelected(init);
+  }, [rows]);
 
   const toggle = (key: string) =>
     setSelected((s) => ({ ...s, [key]: !s[key] }));
@@ -101,8 +133,8 @@ export default function ResumeProfileReview({
     if (!data) return;
     setSaving(true);
     const payload: Record<string, unknown> = {};
-    rows.forEach(({ key }) => {
-      if (selected[key]) payload[key] = data.suggested[key];
+    rows.forEach((r) => {
+      if (selected[r.key]) payload[r.key] = r.applyValue;
     });
 
     // Nothing chosen → behave like Skip.
@@ -166,7 +198,7 @@ export default function ResumeProfileReview({
           )}
 
           <div className="space-y-2">
-            {rows.map(({ key, suggestedVal, currentVal, isNew }) => (
+            {rows.map(({ key, display, currentDisplay, isNew, label }) => (
               <button
                 key={key}
                 type="button"
@@ -194,13 +226,13 @@ export default function ResumeProfileReview({
                         isNew ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'
                       }`}
                     >
-                      {isNew ? 'New' : 'Update'}
+                      {label}
                     </span>
                   </div>
-                  <p className="text-sm text-slate-700 mt-0.5 break-words">{prettify(suggestedVal)}</p>
-                  {!isNew && (
+                  <p className="text-sm text-slate-700 mt-0.5 break-words">{display}</p>
+                  {currentDisplay && (
                     <p className="text-xs text-gray-400 mt-0.5 break-words">
-                      Currently: {prettify(currentVal)}
+                      Currently: {currentDisplay}
                     </p>
                   )}
                 </div>
