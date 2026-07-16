@@ -4,6 +4,7 @@ import { CloudUpload, FileText, X, Loader2, ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import AnimatedBackground from '@/components/AnimatedBackground';
 import BrandMark from '@/components/BrandMark';
+import ResumeProfileReview from '@/components/ResumeProfileReview';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
@@ -13,6 +14,9 @@ export default function ResumeUploadPage() {
   const [jobTitle, setJobTitle] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [targetRole, setTargetRole] = useState('');
+  // When set, the profile-review step is shown for this uploaded resume before
+  // analysis runs. Cleared once the user confirms or skips.
+  const [reviewResumeId, setReviewResumeId] = useState<string | null>(null);
   const router = useRouter();
   const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 
@@ -92,8 +96,28 @@ export default function ResumeUploadPage() {
         throw new Error("No Resume ID received from server.");
       }
 
-      // 2. Trigger Analysis
-      // Lens A if jobDescription exists, Lens B if not.
+      // 2. Profile-enrichment review step. We pause here and let the user
+      //    confirm details we pulled from their resume (this improves job/course
+      //    matching). Analysis runs afterwards, from the review component.
+      setReviewResumeId(actualResumeId);
+
+    } catch (error: unknown) {
+      console.error("Upload Error:", error);
+      alert(error instanceof Error ? error.message : 'Something went wrong during upload.');
+      setIsUploading(false);
+    }
+  };
+
+  // Runs the resume analysis (Lens A/B) and navigates to the results page.
+  // Called by the review step once the user has confirmed or skipped profile enrichment.
+  const runAnalysisAndRedirect = async (resumeId: string) => {
+    try {
+      const accessToken = localStorage.getItem('accessToken');
+      if (!accessToken) {
+        router.push('/login');
+        return;
+      }
+      const trimmedJobDescription = jobDescription.trim();
       const analyzeRes = await fetch(`${API}/resume/analyze`, {
         method: 'POST',
         headers: {
@@ -101,32 +125,34 @@ export default function ResumeUploadPage() {
           'Authorization': `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
-          resumeId: actualResumeId,
+          resumeId,
           jobDescription: trimmedJobDescription || undefined,
           jobTitle: trimmedJobDescription ? jobTitle.trim() || undefined : undefined,
         }),
       });
-
       if (!analyzeRes.ok) {
         const errorData = await analyzeRes.json();
         throw new Error(errorData.message || 'Analysis failed');
       }
-
-      // 3. Success Redirect
-      // Match the key 'resumeId' used in your Results page useEffect
-      router.push(`/analysis-results?resumeId=${actualResumeId}`);
-
+      router.push(`/analysis-results?resumeId=${resumeId}`);
     } catch (error: unknown) {
       console.error("Analysis Error:", error);
       alert(error instanceof Error ? error.message : 'Something went wrong during analysis.');
-    } finally {
       setIsUploading(false);
+      setReviewResumeId(null);
     }
   };
 
   return (
     <div className="relative min-h-screen overflow-hidden p-8 flex flex-col items-center font-raleway">
       <AnimatedBackground />
+
+      {reviewResumeId && (
+        <ResumeProfileReview
+          resumeId={reviewResumeId}
+          onDone={() => runAnalysisAndRedirect(reviewResumeId)}
+        />
+      )}
 
       <div className="relative z-10 w-full flex flex-col items-center">
         {/* Header */}
