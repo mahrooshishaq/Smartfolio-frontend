@@ -28,8 +28,14 @@ const StatCard = ({ title, value, subtitle, icon: Icon, color, onClick }: { titl
   </div>
 );
 
-const metricTones: Record<string, string> = { Uploaded: 'bg-[#f4f7f8] text-slate-800 ring-slate-100', Reviews: 'bg-[#f4f6f3] text-slate-800 ring-slate-100', Latest: 'bg-[#eef5f3] text-slate-800 ring-slate-100', Average: 'bg-[#f6f4ef] text-slate-800 ring-slate-100', Best: 'bg-[#435d68] text-white ring-slate-200' };
-const chartColors = ['#587985', '#6f8f92', '#879d91', '#9b9382', '#718699', '#817f91', '#6f8d7b', '#9a806d'];
+const metricTones: Record<string, string> = {
+  Uploaded: 'bg-pink-50 text-pink-700 ring-pink-100',
+  Reviews: 'bg-violet-50 text-violet-700 ring-violet-100',
+  Latest: 'bg-sky-50 text-sky-700 ring-sky-100',
+  Average: 'bg-amber-50 text-amber-700 ring-amber-100',
+  Best: 'bg-gradient-to-br from-indigo-500 to-violet-500 text-white ring-violet-200 shadow-sm shadow-violet-100',
+};
+const chartColors = ['#F472B6', '#A78BFA', '#60A5FA', '#FBBF24', '#34D399', '#FB7185', '#818CF8', '#2DD4BF'];
 const categoryLabels: Record<string, string> = { ats_compatibility: 'ATS', content_quality: 'Content', experience_strength: 'Experience', skills_alignment: 'Skills', achievement_impact: 'Impact', formatting_clarity: 'Formatting' };
 
 const ResumeMetric = ({ label, value, accent = false }: { label: string; value: string | number; accent?: boolean }) => (
@@ -375,7 +381,7 @@ export default function DashboardPage() {
 
           {/* Resume progress and history */}
           {resumeDashboard && resumeDashboard.summary.totalResumes > 0 && (
-            <div className="mb-8 rounded-[2rem] border border-gray-100 bg-white p-5 shadow-sm md:p-6">
+            <div className="mb-8 rounded-[2rem] border border-violet-100 bg-gradient-to-br from-white via-white to-violet-50/50 p-5 shadow-sm md:p-6">
               <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h3 className="font-century text-xl font-black text-slate-800">Resume progress</h3>
@@ -402,7 +408,7 @@ export default function DashboardPage() {
                       </span>
                     )}
                   </div>
-                  <div className="rounded-2xl border border-slate-100 bg-gradient-to-b from-white to-slate-50 p-4">
+                  <div className="rounded-2xl border border-violet-100 bg-gradient-to-b from-white via-pink-50/20 to-violet-50/50 p-4">
                     <div className="flex h-24 items-end gap-2 border-b border-slate-200 px-1 pt-5">
                       {[...resumeDashboard.analyses].slice(0, 8).reverse().map((analysis, index) => (
                         <button key={analysis.analysisId} title={`${analysis.fileName || 'Resume'}: ${analysis.overallScore}%`} onClick={() => router.push(`/analysis-results?resumeId=${analysis.resumeId}&analysisId=${analysis.analysisId}`)} className="group flex h-full min-w-0 flex-1 items-end">
@@ -415,7 +421,7 @@ export default function DashboardPage() {
                     <div className="mt-2 flex gap-2 px-1">{[...resumeDashboard.analyses].slice(0, 8).reverse().map((analysis) => <span key={analysis.analysisId} className="min-w-0 flex-1 truncate text-center text-[10px] font-bold text-slate-400">{new Date(analysis.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>)}</div>
                   </div>
                   <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    {Object.entries(resumeDashboard.summary.categoryAverages).map(([key, score], index) => <div key={key} className="rounded-xl bg-slate-50 p-2.5"><div className="mb-1.5 flex items-center justify-between gap-2"><span className="truncate text-[10px] font-bold text-slate-500">{categoryLabels[key] || key}</span><span className="text-[10px] font-black text-slate-700">{score ?? '—'}%</span></div><div className="h-1.5 overflow-hidden rounded-full bg-slate-200"><div className="h-full rounded-full" style={{ width: `${score || 0}%`, backgroundColor: chartColors[index % chartColors.length] }} /></div></div>)}
+                    {Object.entries(resumeDashboard.summary.categoryAverages).map(([key, score], index) => <div key={key} className="rounded-xl border border-white bg-white/80 p-2.5 shadow-sm"><div className="mb-1.5 flex items-center justify-between gap-2"><span className="truncate text-[10px] font-bold text-slate-500">{categoryLabels[key] || key}</span><span className="text-[10px] font-black" style={{ color: chartColors[index % chartColors.length] }}>{score ?? '—'}%</span></div><div className="h-1.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full" style={{ width: `${score || 0}%`, backgroundColor: chartColors[index % chartColors.length] }} /></div></div>)}
                   </div>
                 </div>
 
@@ -423,8 +429,8 @@ export default function DashboardPage() {
                   <h4 className="mb-4 font-raleway text-[10px] font-bold uppercase tracking-widest text-gray-400">Resume library</h4>
                   <div className="max-h-52 space-y-2 overflow-auto pr-1">
                     {resumeDashboard.resumes.map((resume) => (
-                      <button key={resume.resumeId} onClick={() => resume.latestAnalysis ? router.push(`/analysis-results?resumeId=${resume.resumeId}`) : router.push('/upload-resume')} className="flex w-full items-center gap-3 rounded-2xl border border-slate-100 p-3 text-left transition hover:border-indigo-100 hover:bg-indigo-50/40">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-500"><FiFileText size={16} /></div>
+                      <button key={resume.resumeId} onClick={() => resume.latestAnalysis ? router.push(`/analysis-results?resumeId=${resume.resumeId}`) : router.push('/upload-resume')} className="flex w-full items-center gap-3 rounded-2xl border border-violet-100 bg-white/70 p-3 text-left transition hover:border-violet-200 hover:bg-violet-50/60 hover:shadow-sm">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-pink-50 text-pink-500"><FiFileText size={16} /></div>
                         <div className="min-w-0 flex-1">
                           <p className="truncate font-century text-sm font-bold text-slate-700">{resume.fileName}</p>
                           <p className="font-raleway text-[10px] text-gray-400">{new Date(resume.uploadedAt).toLocaleDateString()} · {resume.analysisCount} {resume.analysisCount === 1 ? 'review' : 'reviews'}{resume.latestAnalysis?.targetRole ? ` · ${resume.latestAnalysis.targetRole}` : ''}</p>

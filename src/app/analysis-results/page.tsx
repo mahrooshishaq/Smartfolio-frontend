@@ -201,8 +201,8 @@ function ResultsContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#EFF6F2] p-4 md:p-10 font-raleway text-slate-900">
-      <div className="max-w-[1500px] mx-auto">
+    <div className="min-h-screen bg-[#EFF6F2] p-3 font-raleway text-slate-900 md:p-6 xl:p-8">
+      <div className="mx-auto w-full max-w-[1800px]">
         <div className="mb-6 flex items-center justify-between gap-4">
           <button onClick={() => router.back()} className="rounded-full bg-white p-2.5 shadow-sm transition hover:shadow-md" aria-label="Go back">
             <ArrowLeft size={20} className="text-gray-600" />
@@ -217,9 +217,9 @@ function ResultsContent() {
           </div>
         </div>
 
-        <div className="grid items-start gap-8 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-          <aside className="order-2 grid items-start gap-6 md:grid-cols-2 xl:order-2 xl:grid-cols-2">
-            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:col-span-2 md:p-8">
+        <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] 2xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+          <aside className="order-2 grid items-start gap-5 md:grid-cols-2 xl:order-2 xl:grid-cols-3">
+            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:col-span-2 md:p-8 xl:col-span-3">
               <div className="grid items-center gap-8 lg:grid-cols-[240px_1fr]">
               <div><div className="relative mx-auto mb-4 flex h-36 w-36 items-center justify-center">
                 <svg className="h-full w-full -rotate-90" aria-hidden="true">
@@ -248,7 +248,7 @@ function ResultsContent() {
               <FeedbackCard title="What you should do next" tone="blue" icon={<Sparkles size={21} />} items={data.remarks.actionable} numbered />
             )}
             {data.remarks.improvements?.length > 0 && (
-              <section className="rounded-3xl border border-indigo-100 bg-white p-7 shadow-lg md:col-span-2">
+              <section className="rounded-3xl border border-indigo-100 bg-white p-7 shadow-lg md:col-span-2 xl:col-span-3">
                 <div className="mb-5 flex items-center justify-between gap-3">
                   <h2 className="flex items-center gap-2 text-lg font-bold text-slate-800"><WandSparkles size={20} className="text-indigo-600" /> Improvement plan</h2>
                   <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600">{data.remarks.improvements.length} recommendations</span>
