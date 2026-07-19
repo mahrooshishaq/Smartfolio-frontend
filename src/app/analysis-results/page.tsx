@@ -201,8 +201,8 @@ function ResultsContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#EFF6F2] p-3 font-raleway text-slate-900 md:p-6 xl:p-8">
-      <div className="mx-auto w-full max-w-[1800px]">
+    <div className="min-h-screen bg-[#EFF6F2] p-3 font-raleway text-slate-900 md:p-5 xl:p-6">
+      <div className="w-full">
         <div className="mb-6 flex items-center justify-between gap-4">
           <button onClick={() => router.back()} className="rounded-full bg-white p-2.5 shadow-sm transition hover:shadow-md" aria-label="Go back">
             <ArrowLeft size={20} className="text-gray-600" />
@@ -217,7 +217,7 @@ function ResultsContent() {
           </div>
         </div>
 
-        <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] 2xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+        <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] 2xl:gap-6">
           <aside className="order-2 grid items-start gap-5 md:grid-cols-2 xl:order-2 xl:grid-cols-3">
             <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:col-span-2 md:p-8 xl:col-span-3">
               <div className="grid items-center gap-8 lg:grid-cols-[240px_1fr]">
@@ -264,7 +264,7 @@ function ResultsContent() {
 
           <main className="order-1 space-y-4 xl:sticky xl:top-6">
             <section className="overflow-hidden rounded-[2rem] border border-white bg-white shadow-2xl shadow-slate-200/70 ring-1 ring-slate-200/70">
-              <header className="flex flex-col gap-4 border-b border-slate-100 p-5 sm:flex-row sm:items-center sm:justify-between">
+              <header className="border-b border-slate-100 p-4 md:p-5">
                 <div className="flex min-w-0 items-center gap-3">
                   <div className="rounded-xl bg-red-50 p-2.5 text-red-500"><FileText size={20} /></div>
                   <div className="min-w-0">
@@ -273,17 +273,17 @@ function ResultsContent() {
                   </div>
                 </div>
                 {pdfUrl && (
-                  <div className="flex flex-wrap gap-2">
-                    <button onClick={() => setShowReanalysisWarning(true)} disabled={reanalyzing} className="inline-flex items-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-bold text-violet-700 hover:bg-violet-100 disabled:opacity-60">
+                  <div className="mt-4 grid grid-cols-2 gap-2 border-t border-slate-100 pt-4 sm:grid-cols-4">
+                    <button onClick={() => setShowReanalysisWarning(true)} disabled={reanalyzing} className="inline-flex min-w-0 items-center justify-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2.5 text-center text-xs font-bold text-violet-700 hover:bg-violet-100 disabled:opacity-60">
                       <RefreshCw size={14} className={reanalyzing ? 'animate-spin' : ''} /> {reanalyzing ? 'Analyzing…' : 'Re-analyze with current profile'}
                     </button>
-                    <button onClick={() => router.push(`/resume-editor?resumeId=${data.resumeId}&analysisId=${data.analysisId}`)} className="inline-flex items-center gap-2 rounded-xl bg-slate-800 px-3 py-2 text-xs font-bold text-white hover:bg-slate-900">
+                    <button onClick={() => router.push(`/resume-editor?resumeId=${data.resumeId}&analysisId=${data.analysisId}`)} className="inline-flex min-w-0 items-center justify-center gap-2 rounded-xl bg-slate-800 px-3 py-2.5 text-center text-xs font-bold text-white hover:bg-slate-900">
                       <WandSparkles size={14} /> Edit with SmartFolio
                     </button>
-                    <a href={pdfUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-200">
+                    <a href={pdfUrl} target="_blank" rel="noreferrer" className="inline-flex min-w-0 items-center justify-center gap-2 rounded-xl bg-slate-100 px-3 py-2.5 text-center text-xs font-bold text-slate-600 hover:bg-slate-200">
                       <ExternalLink size={14} /> {resumeContent?.fileType === 'docx' ? 'Original' : 'Open'}
                     </a>
-                    <a href={pdfUrl} download={fileName} className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-bold text-white hover:bg-indigo-700">
+                    <a href={pdfUrl} download={fileName} className="inline-flex min-w-0 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-3 py-2.5 text-center text-xs font-bold text-white hover:bg-indigo-700">
                       <Download size={14} /> Download
                     </a>
                   </div>
