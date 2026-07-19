@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import AnimatedBackground from '@/components/AnimatedBackground';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -99,7 +100,7 @@ export default function SignupPage() {
           <button
             type="button"
             className="w-full py-2.5 px-4 border border-gray-300 rounded-full flex items-center justify-center gap-3 text-gray-600 hover:bg-gray-200 hover:border-gray-400 active:bg-gray-800 active:text-white active:border-gray-800 transition-all duration-200"
-            onClick={() => { window.location.href = `${API}/auth/google`; }}
+            onClick={() => { window.location.href = `${BACKEND_URL}/auth/google`; }}
           >
             <FaGoogle className="text-xl" />
             <span className="text-lg font-medium">Sign up with Google</span>
