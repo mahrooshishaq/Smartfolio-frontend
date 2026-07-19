@@ -19,6 +19,8 @@ export type NavItem = {
   icon: IconType;
   /** Where the item lives on mobile: a bottom tab or the "More" sheet. */
   placement: 'tab' | 'more';
+  /** Position in the bottom tab bar (left to right); Home sits in the center. */
+  tabOrder?: number;
 };
 
 /**
@@ -26,12 +28,12 @@ export type NavItem = {
  * mobile drawer, the bottom tab bar, and the More sheet all render from here.
  */
 export const NAV_ITEMS: NavItem[] = [
-  { href: '/dashboard', label: 'Dashboard', tabLabel: 'Home', icon: FiLayout, placement: 'tab' },
+  { href: '/dashboard', label: 'Dashboard', tabLabel: 'Home', icon: FiLayout, placement: 'tab', tabOrder: 3 },
   { href: '/upload-resume', label: 'Resume Analysis', icon: FiFileText, placement: 'more' },
-  { href: '/mock-interview', label: 'Mock Interview', tabLabel: 'Interview', icon: FiMic, placement: 'tab' },
-  { href: '/courses', label: 'Courses', icon: FiBookOpen, placement: 'tab' },
+  { href: '/mock-interview', label: 'Mock Interview', tabLabel: 'Interview', icon: FiMic, placement: 'tab', tabOrder: 1 },
+  { href: '/courses', label: 'Courses', icon: FiBookOpen, placement: 'tab', tabOrder: 4 },
   { href: '/document-generation', label: 'Document Generation', icon: FiFile, placement: 'more' },
-  { href: '/jobs', label: 'Jobs', icon: FiBriefcase, placement: 'tab' },
+  { href: '/jobs', label: 'Jobs', icon: FiBriefcase, placement: 'tab', tabOrder: 2 },
   { href: '/tracker', label: 'Job Tracker', tabLabel: 'Tracker', icon: FiClipboard, placement: 'more' },
 ];
 

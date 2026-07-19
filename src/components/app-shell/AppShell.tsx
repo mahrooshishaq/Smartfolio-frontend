@@ -17,7 +17,9 @@ type AppChrome = {
 const AppChromeContext = createContext<AppChrome>({ immersive: false, setImmersive: () => {} });
 export const useAppChrome = () => useContext(AppChromeContext);
 
-const TAB_ITEMS = NAV_ITEMS.filter((i) => i.placement === 'tab');
+const TAB_ITEMS = NAV_ITEMS.filter((i) => i.placement === 'tab').sort(
+  (a, b) => (a.tabOrder ?? 99) - (b.tabOrder ?? 99),
+);
 const MORE_ITEMS = [...NAV_ITEMS.filter((i) => i.placement === 'more'), ...SUPPORT_ITEMS];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
@@ -147,46 +149,82 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 <p className="font-century text-sm font-bold text-slate-800">{userName || 'User'}</p>
                 <p className="font-raleway text-[11px] text-gray-400 truncate">SmartFolio User</p>
               </div>
-              <div className="space-y-1">
-                {MORE_ITEMS.map((item) => (
-                  <SidebarItem key={item.label} icon={item.icon} label={item.label} active={isActive(pathname, item.href)} onClick={() => go(item)} />
-                ))}
-                <button onClick={handleLogout} className="w-full">
-                  <SidebarItem icon={FiLogOut} label="Logout" />
-                </button>
+              <div className="grid grid-cols-3 gap-2 mb-3">
+                {MORE_ITEMS.map((item) => {
+                  const active = isActive(pathname, item.href);
+                  return (
+                    <button
+                      key={item.label}
+                      onClick={() => go(item)}
+                      className={`flex flex-col items-center gap-2 rounded-2xl px-2 py-4 transition-colors ${
+                        active ? 'bg-indigo-50' : 'bg-slate-50 hover:bg-gray-100'
+                      }`}
+                    >
+                      <span
+                        className={`flex h-10 w-10 items-center justify-center rounded-xl ${
+                          active ? 'bg-indigo-600 text-white' : 'bg-white text-slate-600 shadow-sm'
+                        }`}
+                      >
+                        <item.icon size={18} />
+                      </span>
+                      <span className={`font-raleway text-[11px] leading-tight text-center ${active ? 'font-bold text-indigo-700' : 'font-semibold text-slate-600'}`}>
+                        {item.label}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center justify-center gap-2 rounded-2xl border border-gray-100 py-3 font-raleway text-xs font-bold text-slate-600 hover:bg-gray-50 transition-colors"
+              >
+                <FiLogOut size={16} />
+                Logout
+              </button>
             </div>
           </div>
         )}
 
-        {/* Mobile bottom tab bar */}
+        {/* Mobile bottom tab bar — floating rounded bar with active pill */}
         {!immersive && (
-          <nav className="lg:hidden fixed bottom-0 inset-x-0 z-50 bg-white border-t border-gray-100 flex items-stretch h-16 pb-[env(safe-area-inset-bottom)]">
-            {TAB_ITEMS.map((item) => {
-              const active = isActive(pathname, item.href);
-              return (
-                <button
-                  key={item.label}
-                  onClick={() => go(item)}
-                  className={`font-raleway min-w-0 flex-1 flex flex-col items-center justify-center gap-1 transition-colors ${
-                    active ? 'text-blue-600' : 'text-gray-400'
+          <div className="lg:hidden fixed bottom-0 inset-x-0 z-50 px-3 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
+            <nav className="flex items-stretch h-16 rounded-3xl bg-white/90 backdrop-blur border border-gray-100 shadow-lg shadow-slate-900/5">
+              {TAB_ITEMS.map((item) => {
+                const active = isActive(pathname, item.href);
+                return (
+                  <button
+                    key={item.label}
+                    onClick={() => go(item)}
+                    className={`font-raleway min-w-0 flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors ${
+                      active ? 'text-indigo-600' : 'text-slate-500'
+                    }`}
+                  >
+                    <span className={`flex items-center justify-center h-7 px-4 rounded-full transition-colors ${active ? 'bg-indigo-50' : ''}`}>
+                      <item.icon size={21} strokeWidth={active ? 2.5 : 2} />
+                    </span>
+                    <span className={`text-[11px] truncate max-w-full px-1 ${active ? 'font-bold' : 'font-semibold'}`}>
+                      {item.tabLabel ?? item.label}
+                    </span>
+                  </button>
+                );
+              })}
+              <button
+                onClick={() => setMoreOpen(true)}
+                className={`font-raleway min-w-0 flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors ${
+                  moreOpen || MORE_ITEMS.some((i) => isActive(pathname, i.href)) ? 'text-indigo-600' : 'text-slate-500'
+                }`}
+              >
+                <span
+                  className={`flex items-center justify-center h-7 px-4 rounded-full transition-colors ${
+                    moreOpen || MORE_ITEMS.some((i) => isActive(pathname, i.href)) ? 'bg-indigo-50' : ''
                   }`}
                 >
-                  <item.icon size={22} />
-                  <span className="text-[10px] font-bold truncate max-w-full px-1">{item.tabLabel ?? item.label}</span>
-                </button>
-              );
-            })}
-            <button
-              onClick={() => setMoreOpen(true)}
-              className={`font-raleway min-w-0 flex-1 flex flex-col items-center justify-center gap-1 ${
-                moreOpen || MORE_ITEMS.some((i) => isActive(pathname, i.href)) ? 'text-blue-600' : 'text-gray-400'
-              }`}
-            >
-              <FiMoreHorizontal size={22} />
-              <span className="text-[10px] font-bold">More</span>
-            </button>
-          </nav>
+                  <FiMoreHorizontal size={21} />
+                </span>
+                <span className="text-[11px] font-semibold">More</span>
+              </button>
+            </nav>
+          </div>
         )}
       </div>
     </AppChromeContext.Provider>
