@@ -280,7 +280,7 @@ export default function DashboardPage() {
               </div>
               <div className="flex flex-wrap items-center gap-3">
                 <button onClick={() => router.push('/upload-resume')} className="font-raleway flex flex-1 sm:flex-none items-center justify-center gap-2 bg-[#4F46E5] hover:bg-[#4338CA] text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-all">
-                  <FiUpload size={14} /> Analyze Resume
+                  <FiUpload size={14} /> {resumeDashboard?.summary.totalResumes ? 'Analyze Resume' : 'Build a resume with Folio'}
                 </button>
                 <button onClick={() => router.push('/jobs')} className="font-raleway flex flex-1 sm:flex-none items-center justify-center gap-2 bg-white hover:bg-gray-50 text-slate-700 px-5 py-2.5 rounded-xl text-xs font-bold border border-gray-200 transition-all">
                   <FiSearch size={14} /> Find Jobs

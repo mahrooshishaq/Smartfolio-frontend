@@ -2,7 +2,7 @@
 
 import React, { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, Check, Cloud, Download, Loader2, Plus, Save, Sparkles, Trash2, WandSparkles, X } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowUp, Check, Cloud, Download, GripVertical, Loader2, Plus, Save, Sparkles, Trash2, WandSparkles, X } from 'lucide-react';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
@@ -34,7 +34,12 @@ interface ResumeDocument {
   projects: { name: string; role: string; link: string; technologies: string[]; bullets: string[] }[];
   certifications: { name: string; issuer: string; date: string }[];
   languages: string[];
+  sectionOrder: SectionKey[];
 }
+
+type SectionKey = 'summary' | 'skills' | 'experience' | 'education' | 'projects' | 'certifications' | 'languages';
+const DEFAULT_SECTION_ORDER: SectionKey[] = ['summary', 'skills', 'experience', 'education', 'projects', 'certifications', 'languages'];
+const SECTION_LABELS: Record<SectionKey, string> = { summary: 'Professional summary', skills: 'Skills', experience: 'Experience', education: 'Education', projects: 'Projects', certifications: 'Certifications', languages: 'Languages' };
 
 type Annotation = { kind: 'improvement' | 'positive'; index: number } | null;
 
@@ -80,10 +85,9 @@ function EditorContent() {
         const content = await contentRes.json();
         const structured = await documentRes.json();
         const analyses = await analysesRes.json() as Analysis[];
-        const selected = analyses.find(item => item.analysisId === analysisId) || analyses[0];
-        if (!selected) throw new Error('No analysis is available for this resume.');
+        const selected = analyses.find(item => item.analysisId === analysisId) || analyses[0] || { analysisId: 'new', remarks: { improvements: [], positiveHighlights: [] } };
         setFileName(content.fileName || 'resume');
-        setDocument(structured.document);
+        setDocument({ ...structured.document, sectionOrder: structured.document.sectionOrder?.length ? structured.document.sectionOrder : DEFAULT_SECTION_ORDER });
         setAnalysis(selected);
         loadedRef.current = true;
       } catch (err) {
@@ -129,6 +133,26 @@ function EditorContent() {
     markChanged();
   };
   const removeCollectionItem = (key: 'experience' | 'education' | 'projects' | 'certifications', index: number) => { setDocument(current => current ? { ...current, [key]: current[key].filter((_, itemIndex) => itemIndex !== index) } : current); markChanged(); };
+  const moveSection = (key: SectionKey, offset: number) => {
+    setDocument(current => {
+      if (!current) return current;
+      const order = [...(current.sectionOrder || DEFAULT_SECTION_ORDER)];
+      const from = order.indexOf(key); const to = from + offset;
+      if (from < 0 || to < 0 || to >= order.length) return current;
+      [order[from], order[to]] = [order[to], order[from]];
+      return { ...current, sectionOrder: order };
+    });
+    markChanged();
+  };
+  const dropSection = (dragged: SectionKey, target: SectionKey) => {
+    setDocument(current => {
+      if (!current || dragged === target) return current;
+      const order = [...(current.sectionOrder || DEFAULT_SECTION_ORDER)].filter(key => key !== dragged);
+      order.splice(order.indexOf(target), 0, dragged);
+      return { ...current, sectionOrder: order };
+    });
+    markChanged();
+  };
 
   const saveDocument = useCallback(async (quiet = false, snapshot: ResumeDocument | null = document) => {
     if (!resumeId || !snapshot) return false;
@@ -240,6 +264,7 @@ function EditorContent() {
   if (error || !document || !analysis) return <ErrorState message={error || 'Editor unavailable.'} onBack={() => router.back()} />;
   const currentImprovement = selectedImprovement != null ? analysis.remarks.improvements[selectedImprovement] : null;
   const currentPositive = selectedPositive != null ? analysis.remarks.positiveHighlights[selectedPositive] : null;
+  const applicableImprovements = analysis.remarks.improvements.map((item, index) => ({ item, index })).filter(({ item }) => canApplySuggestion(item, document));
 
   return (
     <div className="min-h-screen bg-[#EFF6F2] p-4 font-raleway md:p-8">
@@ -252,6 +277,8 @@ function EditorContent() {
 
         <div className="grid items-start gap-6 xl:grid-cols-12">
           <main className="space-y-5 xl:col-span-8">
+            <section className="rounded-3xl border border-indigo-100 bg-white p-5 shadow-sm md:p-7"><div className="mb-4"><h2 className="font-century text-lg font-black text-slate-800">Arrange resume sections</h2><p className="mt-1 text-xs text-slate-400">Drag sections or use the arrows. This exact order is preserved in PDF and Word exports.</p></div><div className="grid gap-2 sm:grid-cols-2">{document.sectionOrder.map((key, index) => <div key={key} draggable onDragStart={event => event.dataTransfer.setData('text/plain', key)} onDragOver={event => event.preventDefault()} onDrop={event => dropSection(event.dataTransfer.getData('text/plain') as SectionKey, key)} className="flex cursor-grab items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 active:cursor-grabbing"><GripVertical size={15} className="text-slate-400" /><span className="flex-1 text-xs font-bold text-slate-700">{index + 1}. {SECTION_LABELS[key]}</span><button onClick={() => moveSection(key, -1)} disabled={index === 0} className="rounded-md p-1 text-slate-400 hover:bg-white disabled:opacity-25" aria-label={`Move ${SECTION_LABELS[key]} up`}><ArrowUp size={14} /></button><button onClick={() => moveSection(key, 1)} disabled={index === document.sectionOrder.length - 1} className="rounded-md p-1 text-slate-400 hover:bg-white disabled:opacity-25" aria-label={`Move ${SECTION_LABELS[key]} down`}><ArrowDown size={14} /></button></div>)}</div></section>
+            {analysis.analysisId === 'new' && <section className="rounded-3xl border border-violet-100 bg-violet-50 p-5 text-sm text-slate-600"><h2 className="font-century text-lg font-black text-slate-800">Build your resume step by step</h2><p className="mt-2 leading-6">Start with contact details and a 2–3 sentence summary. Add your most recent experience first, use action-and-result bullets, group related skills, and leave any section blank if it does not strengthen your story. Everything saves automatically.</p></section>}
             <EditorSection title="Contact details"><div className="grid gap-3 sm:grid-cols-2">{(Object.keys(document.personal) as (keyof ResumeDocument['personal'])[]).map(key => <EditableField key={key} label={labelFor(key)} value={document.personal[key]} onChange={value => updatePersonal(key, value)} {...fieldProps(document.personal[key])} />)}</div></EditorSection>
             <EditorSection title="Professional summary"><EditableField label="Summary" value={document.summary} multiline onChange={value => { setDocument({ ...document, summary: value }); markChanged(); }} {...fieldProps(document.summary)} /></EditorSection>
             <EditorSection title="Skills"><TagEditor label="Skills" values={mergeTags(document.skills, [])} placeholder="Add a skill and press Enter" onChange={skills => { setDocument({ ...document, skills }); markChanged(); }} /></EditorSection>
@@ -273,7 +300,7 @@ function EditorContent() {
 
           <aside className="sticky top-6 space-y-5 xl:col-span-4">
             <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">{currentImprovement ? <><div className="mb-3 flex items-center justify-between"><span className={`rounded-full px-2.5 py-1 text-[9px] font-black uppercase ${severityBadge(currentImprovement.severity)}`}>{currentImprovement.severity}</span><span className="text-[10px] font-bold uppercase text-slate-400">{currentImprovement.category}</span></div><h2 className="text-lg font-black text-slate-800">{currentImprovement.title}</h2><p className="mt-3 text-sm leading-relaxed text-slate-600">{currentImprovement.explanation}</p>{currentImprovement.impact && <p className="mt-3 rounded-xl bg-slate-50 p-3 text-xs text-slate-500"><strong>Career impact:</strong> {currentImprovement.impact}</p>}<div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4"><p className="mb-2 text-[9px] font-black uppercase text-slate-500">Proposed Magic Edit</p><p className="text-sm font-semibold text-slate-700">{currentImprovement.suggestedText}</p><button onClick={() => applySuggestion(selectedImprovement!)} disabled={applied.has(selectedImprovement!)} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-slate-800 px-4 py-3 text-xs font-bold text-white disabled:bg-emerald-600">{applied.has(selectedImprovement!) ? <><Check size={15} /> Magic Edit applied</> : <><WandSparkles size={15} /> Apply Magic Edit</>}</button></div></> : currentPositive ? <><span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[9px] font-black uppercase text-emerald-700">Strong — retain</span><h2 className="mt-4 text-lg font-black text-slate-800">This content is working</h2><p className="mt-3 text-sm text-slate-600">{currentPositive.reason}</p></> : <div className="py-8 text-center"><Sparkles className="mx-auto mb-3 text-slate-500" size={30} /><h2 className="font-bold text-slate-800">Choose a Magic Edit</h2><p className="mt-2 text-xs text-slate-400">Review the exact change before applying it to the mapped resume field.</p></div>}</section>
-            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><h3 className="text-xs font-black uppercase text-slate-600">Magic Edits</h3><p className="mb-4 mt-1 text-xs leading-5 text-slate-400">One-click improvements mapped to the correct resume fields.</p><div className="space-y-2">{analysis.remarks.improvements.map((item, index) => <button key={`${item.title}-${index}`} onClick={() => { setSelectedImprovement(index); setSelectedPositive(null); }} className="flex w-full items-center gap-3 rounded-xl bg-slate-50 p-3 text-left hover:bg-slate-100"><span className={`h-2.5 w-2.5 rounded-full ${severityDot(item.severity)}`} /><span className="flex-1 text-xs font-bold text-slate-700">{item.title}</span>{applied.has(index) && <Check size={14} className="text-emerald-500" />}</button>)}</div></section>
+            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><h3 className="text-xs font-black uppercase text-slate-600">Magic Edits</h3><p className="mb-4 mt-1 text-xs leading-5 text-slate-400">Only one-click changes that map to a visible resume field are shown.</p><div className="space-y-2">{applicableImprovements.map(({ item, index }) => <button key={`${item.title}-${index}`} onClick={() => { setSelectedImprovement(index); setSelectedPositive(null); }} className="flex w-full items-center gap-3 rounded-xl bg-slate-50 p-3 text-left hover:bg-slate-100"><span className={`h-2.5 w-2.5 rounded-full ${severityDot(item.severity)}`} /><span className="flex-1 text-xs font-bold text-slate-700">{item.title}</span>{applied.has(index) && <Check size={14} className="text-emerald-500" />}</button>)}{!applicableImprovements.length && <p className="rounded-xl bg-slate-50 p-4 text-xs leading-5 text-slate-400">No safe one-click edits are available. Use the guidance in each section to edit manually.</p>}</div></section>
           </aside>
         </div>
       </div>
@@ -289,6 +316,7 @@ function TagEditor({ label, values, placeholder, onChange }: { label: string; va
 function BulletEditor({ label, values, onChange, fieldProps }: { label: string; values: string[]; onChange: (values: string[]) => void; fieldProps: (value: string) => { tone: string; onFocus: () => void } }) { return <div><div className="mb-3 flex items-center justify-between"><span className="text-[9px] font-black uppercase tracking-wider text-slate-400">{label}</span><button onClick={() => onChange([...values, ''])} className="rounded-lg bg-indigo-50 px-2.5 py-1.5 text-[10px] font-bold text-indigo-600">+ Add bullet</button></div><div className="space-y-3">{values.map((value, index) => <div key={index} className="flex w-full items-start gap-2 rounded-2xl bg-slate-50/70 p-2"><div className="min-w-0 flex-1"><EditableField label={`Bullet ${index + 1}`} value={value} multiline onChange={next => onChange(values.map((item, itemIndex) => itemIndex === index ? next : item))} {...fieldProps(value)} /></div><button onClick={() => onChange(values.filter((_, itemIndex) => itemIndex !== index))} className="mt-6 shrink-0 rounded-lg p-2 text-slate-300 hover:bg-red-50 hover:text-red-500" aria-label={`Remove bullet ${index + 1}`}><Trash2 size={15} /></button></div>)}</div></div>; }
 function downloadBlob(blob: Blob, name: string) { const url = URL.createObjectURL(blob); const anchor = window.document.createElement('a'); anchor.href = url; anchor.download = name; anchor.style.display = 'none'; window.document.body.appendChild(anchor); anchor.click(); anchor.remove(); setTimeout(() => URL.revokeObjectURL(url), 1500); }
 function textSimilarity(left: string, right: string) { const words = (value: string) => new Set(value.toLowerCase().replace(/[^a-z0-9+#.]/g, ' ').split(/\s+/).filter(word => word.length > 2)); const a = words(left); const b = words(right); if (!a.size || !b.size) return 0; const shared = [...a].filter(word => b.has(word)).length; return shared / Math.max(a.size, b.size); }
+function canApplySuggestion(item: Improvement, document: ResumeDocument) { const category = `${item.category} ${item.title}`.toLowerCase(); if (item.currentText && (JSON.stringify(document).toLowerCase().includes(item.currentText.toLowerCase()) || (findClosestText(document, item.currentText)?.score || 0) >= 0.3)) return true; if (category.includes('summary')) return true; if (category.includes('skill')) return parseSuggestedTags(item.suggestedText).length > 0; if ((category.includes('experience') || category.includes('achievement')) && document.experience.length > 0) return true; if ((category.includes('education') || category.includes('course')) && document.education.length > 0) return parseSuggestedTags(item.suggestedText).length > 0; if ((category.includes('project') || category.includes('technolog')) && document.projects.length > 0) return parseSuggestedTags(item.suggestedText).length > 0; return false; }
 function findClosestText(value: unknown, target: string): { value: string; score: number } | null { let best: { value: string; score: number } | null = null; const visit = (node: unknown) => { if (typeof node === 'string' && node.trim()) { const score = textSimilarity(node, target); if (!best || score > best.score) best = { value: node, score }; } else if (Array.isArray(node)) node.forEach(visit); else if (node && typeof node === 'object') Object.values(node).forEach(visit); }; visit(value); return best; }
 function replaceStringValue(value: unknown, target: string, replacement: string): unknown { if (typeof value === 'string') return value === target ? replacement : value; if (Array.isArray(value)) return value.map(item => replaceStringValue(item, target, replacement)); if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([key, child]) => [key, replaceStringValue(child, target, replacement)])); return value; }
 function cleanTag(value: string) { return value.trim().replace(/^[•·\-]+\s*/, '').replace(/^(?:skills?|technologies|tools|relevant coursework|coursework|courses|languages|ai and llm)\s*:\s*/i, '').trim(); }

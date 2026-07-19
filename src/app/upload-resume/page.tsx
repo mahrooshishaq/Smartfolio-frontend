@@ -1,6 +1,6 @@
 'use client';
 import React, { useEffect, useState } from 'react';
-import { CloudUpload, FileText, X, Loader2, ArrowLeft } from 'lucide-react';
+import { CloudUpload, FileText, X, Loader2, ArrowLeft, FilePlus2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import AnimatedBackground from '@/components/AnimatedBackground';
 import BrandMark from '@/components/BrandMark';
@@ -19,6 +19,21 @@ export default function ResumeUploadPage() {
   const [reviewResumeId, setReviewResumeId] = useState<string | null>(null);
   const router = useRouter();
   const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+
+  const createBlankResume = async () => {
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) { router.push('/login'); return; }
+    setIsUploading(true);
+    try {
+      const response = await fetch(`${API}/resume/create`, { method: 'POST', headers: { Authorization: `Bearer ${accessToken}` } });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result?.message || 'Could not create a resume.');
+      router.push(`/resume-editor?resumeId=${result.resumeId}&mode=create`);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Could not create a resume.');
+      setIsUploading(false);
+    }
+  };
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
@@ -165,6 +180,11 @@ export default function ResumeUploadPage() {
           </button>
           <BrandMark className="w-7 h-7 ml-4" />
           <h1 className="font-baloo text-xl ml-4 tracking-wide text-slate-800">SmartFolio - AI</h1>
+        </div>
+
+        <div className="mb-5 w-full max-w-3xl rounded-3xl border border-indigo-100 bg-indigo-50/70 p-5 sm:flex sm:items-center sm:justify-between">
+          <div><h2 className="font-century text-lg font-black text-slate-800">Don't have a resume yet?</h2><p className="mt-1 text-sm text-slate-500">Build one step by step with guided sections, examples, and SmartFolio suggestions.</p></div>
+          <button onClick={createBlankResume} disabled={isUploading} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-xs font-bold text-white hover:bg-indigo-700 disabled:opacity-50 sm:mt-0"><FilePlus2 size={16} /> Build with Folio</button>
         </div>
 
         <div className="w-full max-w-3xl bg-white rounded-[2.5rem] shadow-xl shadow-slate-100 p-12 border border-gray-50">

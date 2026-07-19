@@ -107,6 +107,10 @@ export default function ResumeProfileReview({
     }
   };
 
+  // Keep upload progress on the upload page. The review dialog should appear
+  // only when there is something concrete for the user to review.
+  if (!data && !error) return null;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 font-raleway">
       <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-gray-100 max-h-[90vh] overflow-hidden flex flex-col">
