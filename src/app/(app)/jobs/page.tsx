@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import {
   FiBriefcase, FiSearch, FiMapPin, FiExternalLink,
   FiChevronLeft, FiChevronRight, FiFilter, FiX, FiLoader,
-  FiBookmark, FiCheck, FiTrendingUp, FiClock
+  FiBookmark, FiCheck, FiTrendingUp, FiClock, FiGlobe
 } from 'react-icons/fi';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
@@ -60,6 +60,7 @@ export default function JobsPage() {
   const [loading, setLoading] = useState(true);
   const [scraping, setScraping] = useState(false);
   const [error, setError] = useState('');
+  const [scrapeStatus, setScrapeStatus] = useState('');
   const [userName, setUserName] = useState('User');
 
   // Filter state
@@ -101,6 +102,7 @@ export default function JobsPage() {
       setTotal(data.total);
       setTotalPages(data.totalPages);
       setPage(data.page);
+      return data.total;
     } catch (err: any) {
       setError(err?.message === 'Failed to fetch'
         ? 'Can’t reach the server right now. Check your connection and try again.'
@@ -143,49 +145,127 @@ export default function JobsPage() {
     return false;
   };
 
+  /** The on-screen filters the job boards can actually act on. `source` and
+   *  `geo_restriction` are display-only — they describe results we already have,
+   *  so they stay out of the scrape request. */
+  const scrapeFilters = useCallback(() => {
+    const f: Record<string, string> = {};
+    if (country)         f.country          = country;
+    if (jobType)         f.job_type         = jobType;
+    if (experienceLevel) f.experience_level = experienceLevel;
+    if (category)        f.category         = category;
+    return f;
+  }, [country, jobType, experienceLevel, category]);
+
+  /** Poll a custom search to completion. POST /scraper/search returns a jobId
+   *  immediately — it has NOT scraped anything yet — so treating the 201 as
+   *  "done" is what made searches appear to do nothing. */
+  const pollCustomSearch = async (jobId: string): Promise<'done' | 'failed' | 'timeout'> => {
+    const deadline = Date.now() + 7 * 60 * 1000;
+    while (Date.now() < deadline) {
+      await new Promise(r => setTimeout(r, 4000));
+      try {
+        const res = await fetch(`${API}/scraper/search/${jobId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) continue;
+        const job = await res.json();
+        if (job.status === 'done')   return 'done';
+        if (job.status === 'failed') return 'failed';
+        // 'running' or 'not_found' (server restarted) — keep waiting.
+      } catch { /* transient — keep polling */ }
+    }
+    return 'timeout';
+  };
+
+  /** Scrape the boards for what's on screen: the typed query plus the active
+   *  filters, which get pushed into the board APIs rather than applied after. */
+  const runWebSearch = async () => {
+    if (!token) return;
+    setScraping(true);
+    setError('');
+    setScrapeStatus('Searching job boards…');
+    const startedAt = Date.now() - 5000; // small clock-skew allowance
+    try {
+      let res: Response | null = null;
+      try {
+        res = await fetch(`${API}/scraper/search`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            query: search.trim() || category || jobType || 'jobs',
+            type: 'jobs',
+            filters: scrapeFilters(),
+          }),
+        });
+      } catch {
+        res = null; // proxy cut the request — the backend may still be working
+      }
+      if (res?.status === 401) { router.push('/login'); return; }
+
+      let outcome: 'done' | 'failed' | 'timeout';
+      if (res?.ok) {
+        const { jobId } = await res.json();
+        outcome = jobId ? await pollCustomSearch(jobId) : 'timeout';
+      } else if (res) {
+        throw new Error('Couldn’t start the search. Please try again.');
+      } else {
+        outcome = (await waitForScrapeRun(startedAt)) ? 'done' : 'timeout';
+      }
+
+      // `total` in this closure is the pre-search value; the fresh count has to
+      // come back from fetchJobs itself.
+      const before = total;
+      const after = await fetchJobs(1);
+      await fetchFilters();
+
+      if (outcome === 'failed') {
+        setError('The job boards didn’t return anything for that search. Try widening your filters.');
+      } else if (outcome === 'timeout') {
+        setError('The search is taking longer than usual. Results will keep arriving — refresh in a couple of minutes.');
+      } else {
+        const added = typeof after === 'number' ? Math.max(0, after - before) : 0;
+        setScrapeStatus(added > 0
+          ? `Search complete — ${added} new job${added === 1 ? '' : 's'} added.`
+          : 'Search complete — no new jobs matched. Try widening your filters.');
+      }
+    } catch (err: any) {
+      setError(err?.message === 'Failed to fetch'
+        ? 'Can’t reach the server right now. Check your connection and try again.'
+        : err?.message || 'Job search failed. Please try again.');
+    } finally {
+      setScraping(false);
+    }
+  };
+
+  /** Profile-based scrape — ignores the search box entirely. */
   const runScraper = async () => {
     if (!token) return;
     setScraping(true);
     setError('');
-    const startedAt = Date.now() - 5000; // small clock-skew allowance
+    setScrapeStatus('Finding jobs that match your profile…');
+    const startedAt = Date.now() - 5000;
     let completed = false;
     try {
       let res: Response | null = null;
       try {
-        if (search.trim()) {
-          // Custom search: scrape for the user's query and ADD to existing jobs
-          res = await fetch(`${API}/scraper/search`, {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ query: search.trim(), type: 'both' }),
-          });
-        } else {
-          // Profile-based scrape
-          res = await fetch(`${API}/scraper/run`, {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${token}` },
-          });
-        }
+        res = await fetch(`${API}/scraper/run`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        });
       } catch {
-        // Proxy/connection cut the request — the backend is still scraping.
         res = null;
       }
       if (res?.status === 401) { router.push('/login'); return; }
 
-      if (res?.ok) {
-        completed = true; // backend finished within the request
-      } else {
-        // Request died or errored — wait for the run to appear in history instead
-        completed = await waitForScrapeRun(startedAt);
-      }
+      completed = res?.ok ? true : await waitForScrapeRun(startedAt);
 
       await fetchJobs(1);
       await fetchFilters();
       if (!completed) {
         setError('The job search is taking longer than usual. Results will keep arriving — refresh in a couple of minutes.');
+      } else {
+        setScrapeStatus('');
       }
     } catch (err: any) {
       setError(err?.message === 'Failed to fetch'
@@ -235,6 +315,12 @@ export default function JobsPage() {
 
   const hasActiveFilters = jobType || country || category || experienceLevel || source || geoRestriction;
 
+  /** Plain-English echo of what the user asked for, so the empty state names it
+   *  back to them instead of just saying "no results". */
+  const searchSummary = [search && `“${search}”`, experienceLevel, jobType, category, country]
+    .filter(Boolean)
+    .join(' · ');
+
   const sourceLabel = (s: string) =>
     s === 'jsearch' ? 'JSearch (mixed boards)' : s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -271,7 +357,7 @@ export default function JobsPage() {
               disabled={scraping}
               className="font-raleway flex items-center justify-center gap-2 self-start bg-[#4F46E5] hover:bg-[#4338CA] text-white px-6 py-3 rounded-2xl font-semibold text-sm transition-all disabled:opacity-60"
             >
-              {scraping ? <><FiLoader className="animate-spin" size={16} /> Finding Jobs...</> : <><FiSearch size={16} /> Find New Jobs</>}
+              {scraping ? <><FiLoader className="animate-spin" size={16} /> Finding Jobs...</> : <><FiSearch size={16} /> Find Jobs For Me</>}
             </button>
           </div>
 
@@ -284,10 +370,18 @@ export default function JobsPage() {
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search jobs by title, company, or category..."
+                  placeholder="Search your jobs by title, company, or category..."
                   className="font-raleway w-full pl-12 pr-4 py-3 bg-gray-50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 border border-transparent focus:border-blue-200"
                 />
               </div>
+              <button
+                onClick={runWebSearch}
+                disabled={scraping}
+                title="Scrape the job boards using your search text and active filters"
+                className="font-raleway flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold bg-[#4F46E5] hover:bg-[#4338CA] text-white transition-all disabled:opacity-60"
+              >
+                <FiGlobe size={16} /> Search the web
+              </button>
               <button
                 onClick={() => setShowFilters(!showFilters)}
                 className={`font-raleway flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold transition-all ${showFilters ? 'bg-blue-50 text-blue-600' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`}
@@ -343,6 +437,23 @@ export default function JobsPage() {
             </div>
           )}
 
+          {/* Scrapes take 1–5 min; without this the page looks idle and users
+              assume the search silently failed. */}
+          {(scraping || scrapeStatus) && (
+            <div className="font-raleway bg-blue-50 text-blue-700 px-6 py-4 rounded-2xl mb-6 text-sm flex items-center gap-3">
+              {scraping && <FiLoader className="animate-spin flex-shrink-0" size={16} />}
+              <span>
+                {scrapeStatus}
+                {scraping && <span className="text-blue-400"> — this usually takes 1–2 minutes. You can keep browsing.</span>}
+              </span>
+              {!scraping && (
+                <button onClick={() => setScrapeStatus('')} className="ml-auto flex-shrink-0 text-blue-400 hover:text-blue-600" aria-label="Dismiss">
+                  <FiX size={16} />
+                </button>
+              )}
+            </div>
+          )}
+
           {/* Results count + sort toggle */}
           <div className="font-raleway flex items-center justify-between mb-6">
             <p className="text-sm text-gray-400">{total} jobs found</p>
@@ -370,11 +481,28 @@ export default function JobsPage() {
           ) : jobs.length === 0 ? (
             <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-50 p-16 text-center">
               <FiBriefcase className="mx-auto text-gray-200 mb-4" size={48} />
-              <h3 className="font-century text-xl font-bold text-slate-700 mb-2">No Jobs Found</h3>
-              <p className="font-raleway text-sm text-gray-400 mb-6">Click &quot;Find New Jobs&quot; to scrape personalized job listings based on your profile.</p>
-              <button onClick={runScraper} disabled={scraping} className="font-raleway bg-[#4F46E5] hover:bg-[#4338CA] text-white px-8 py-3 rounded-2xl font-semibold text-sm transition-all disabled:opacity-60">
-                {scraping ? 'Finding Jobs...' : 'Find Jobs Now'}
-              </button>
+              {hasActiveFilters || search ? (
+                <>
+                  {/* The filters describe jobs we haven't collected yet — offer to
+                      go get them instead of dead-ending on "no results". */}
+                  <h3 className="font-century text-xl font-bold text-slate-700 mb-2">No saved jobs match</h3>
+                  <p className="font-raleway text-sm text-gray-400 mb-2">
+                    Nothing in your jobs matches {searchSummary || 'these filters'}.
+                  </p>
+                  <p className="font-raleway text-sm text-gray-400 mb-6">Search the job boards for it?</p>
+                  <button onClick={runWebSearch} disabled={scraping} className="font-raleway inline-flex items-center gap-2 bg-[#4F46E5] hover:bg-[#4338CA] text-white px-8 py-3 rounded-2xl font-semibold text-sm transition-all disabled:opacity-60">
+                    {scraping ? <><FiLoader className="animate-spin" size={16} /> Searching…</> : <><FiGlobe size={16} /> Search the web for this</>}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <h3 className="font-century text-xl font-bold text-slate-700 mb-2">No Jobs Yet</h3>
+                  <p className="font-raleway text-sm text-gray-400 mb-6">Find job listings matched to your profile.</p>
+                  <button onClick={runScraper} disabled={scraping} className="font-raleway bg-[#4F46E5] hover:bg-[#4338CA] text-white px-8 py-3 rounded-2xl font-semibold text-sm transition-all disabled:opacity-60">
+                    {scraping ? 'Finding Jobs...' : 'Find Jobs Now'}
+                  </button>
+                </>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
