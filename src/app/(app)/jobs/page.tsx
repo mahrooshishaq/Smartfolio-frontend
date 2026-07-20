@@ -331,11 +331,6 @@ export default function JobsPage() {
 
   const hasActiveFilters = jobType || country || category || experienceLevel || source || geoRestriction;
 
-  /** "Work from anywhere" is only ever assigned to remote jobs with no country
-   *  attached, so pairing it with a country filter matches nothing by
-   *  construction. Worth calling out rather than letting it look like a failure. */
-  const contradictoryGeoFilter = geoRestriction === 'Anywhere' && !!country;
-
   /** Plain-English echo of what the user asked for, so the empty state names it
    *  back to them instead of just saying "no results". */
   const searchSummary = [search && `“${search}”`, experienceLevel, jobType, category, country]
@@ -467,16 +462,11 @@ export default function JobsPage() {
                 <p className="font-semibold">
                   Found {hiddenByFilters} job{hiddenByFilters === 1 ? '' : 's'} — but your filters are hiding {hiddenByFilters === 1 ? 'it' : 'them'}.
                 </p>
-                {contradictoryGeoFilter && (
-                  <p className="mt-1 text-amber-700">
-                    “Work from anywhere” and a specific country rarely overlap — a job tied to {country || 'a country'} isn’t location-independent.
-                  </p>
-                )}
                 <button
-                  onClick={() => { setGeoRestriction(''); setHiddenByFilters(0); }}
+                  onClick={() => { clearFilters(); setHiddenByFilters(0); }}
                   className="mt-2 font-semibold underline hover:no-underline"
                 >
-                  {contradictoryGeoFilter ? 'Clear the eligibility filter' : 'Clear filters'}
+                  Clear filters to see them
                 </button>
               </div>
               <button onClick={() => setHiddenByFilters(0)} className="flex-shrink-0 text-amber-400 hover:text-amber-600" aria-label="Dismiss">
@@ -537,17 +527,7 @@ export default function JobsPage() {
                   <p className="font-raleway text-sm text-gray-400 mb-2">
                     Nothing in your jobs matches {searchSummary || 'these filters'}.
                   </p>
-                  {contradictoryGeoFilter ? (
-                    <p className="font-raleway text-sm text-amber-700 mb-6 max-w-md mx-auto">
-                      “Work from anywhere” combined with {country} will stay empty — a job tied to a
-                      country isn’t location-independent.{' '}
-                      <button onClick={() => setGeoRestriction('')} className="font-semibold underline hover:no-underline">
-                        Clear the eligibility filter
-                      </button>
-                    </p>
-                  ) : (
-                    <p className="font-raleway text-sm text-gray-400 mb-6">Search the job boards for it?</p>
-                  )}
+                  <p className="font-raleway text-sm text-gray-400 mb-6">Search the job boards for it?</p>
                   <button onClick={runWebSearch} disabled={scraping} className="font-raleway inline-flex items-center gap-2 bg-[#4F46E5] hover:bg-[#4338CA] text-white px-8 py-3 rounded-2xl font-semibold text-sm transition-all disabled:opacity-60">
                     {scraping ? <><FiLoader className="animate-spin" size={16} /> Searching…</> : <><FiGlobe size={16} /> Search the web for this</>}
                   </button>
