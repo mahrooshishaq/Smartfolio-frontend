@@ -193,7 +193,10 @@ export default function JobsPage() {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            query: search.trim() || category || jobType || 'jobs',
+            // Empty is fine — the backend falls back to the category filter and
+            // then the profile's role. Sending a placeholder like "jobs" matched
+            // 189k unrelated postings on Adzuna.
+            query: search.trim(),
             type: 'jobs',
             filters: scrapeFilters(),
           }),
