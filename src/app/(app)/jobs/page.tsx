@@ -61,6 +61,7 @@ export default function JobsPage() {
   const [scraping, setScraping] = useState(false);
   const [error, setError] = useState('');
   const [scrapeStatus, setScrapeStatus] = useState('');
+  const [hiddenByFilters, setHiddenByFilters] = useState(0);
   const [userName, setUserName] = useState('User');
 
   // Filter state
@@ -160,7 +161,9 @@ export default function JobsPage() {
   /** Poll a custom search to completion. POST /scraper/search returns a jobId
    *  immediately — it has NOT scraped anything yet — so treating the 201 as
    *  "done" is what made searches appear to do nothing. */
-  const pollCustomSearch = async (jobId: string): Promise<'done' | 'failed' | 'timeout'> => {
+  const pollCustomSearch = async (
+    jobId: string,
+  ): Promise<{ outcome: 'done' | 'failed' | 'timeout'; jobsFound: number }> => {
     const deadline = Date.now() + 7 * 60 * 1000;
     while (Date.now() < deadline) {
       await new Promise(r => setTimeout(r, 4000));
@@ -170,12 +173,15 @@ export default function JobsPage() {
         });
         if (!res.ok) continue;
         const job = await res.json();
-        if (job.status === 'done')   return 'done';
-        if (job.status === 'failed') return 'failed';
+        // jobs_found is what actually landed in the account — the only honest
+        // measure. The visible list is filtered and can stay at zero even when
+        // the search worked.
+        if (job.status === 'done')   return { outcome: 'done', jobsFound: job.result?.jobs_found ?? 0 };
+        if (job.status === 'failed') return { outcome: 'failed', jobsFound: 0 };
         // 'running' or 'not_found' (server restarted) — keep waiting.
       } catch { /* transient — keep polling */ }
     }
-    return 'timeout';
+    return { outcome: 'timeout', jobsFound: 0 };
   };
 
   /** Scrape the boards for what's on screen: the typed query plus the active
@@ -185,6 +191,7 @@ export default function JobsPage() {
     setScraping(true);
     setError('');
     setScrapeStatus('Searching job boards…');
+    setHiddenByFilters(0);
     const startedAt = Date.now() - 5000; // small clock-skew allowance
     try {
       let res: Response | null = null;
@@ -207,9 +214,11 @@ export default function JobsPage() {
       if (res?.status === 401) { router.push('/login'); return; }
 
       let outcome: 'done' | 'failed' | 'timeout';
+      let jobsFound = 0;
       if (res?.ok) {
         const { jobId } = await res.json();
-        outcome = jobId ? await pollCustomSearch(jobId) : 'timeout';
+        if (jobId) ({ outcome, jobsFound } = await pollCustomSearch(jobId));
+        else outcome = 'timeout';
       } else if (res) {
         throw new Error('Couldn’t start the search. Please try again.');
       } else {
@@ -223,14 +232,18 @@ export default function JobsPage() {
       await fetchFilters();
 
       if (outcome === 'failed') {
-        setError('The job boards didn’t return anything for that search. Try widening your filters.');
+        setError('That search failed. Please try again in a moment.');
       } else if (outcome === 'timeout') {
         setError('The search is taking longer than usual. Results will keep arriving — refresh in a couple of minutes.');
+      } else if (jobsFound === 0) {
+        setScrapeStatus('Search complete — the job boards had nothing new for this. Try a different role or widen your filters.');
+      } else if (typeof after === 'number' && after <= before) {
+        // The scrape worked, but the on-screen filters hide everything it found.
+        // Reporting "no new jobs" here (the old behaviour) was simply untrue.
+        setHiddenByFilters(jobsFound);
+        setScrapeStatus('');
       } else {
-        const added = typeof after === 'number' ? Math.max(0, after - before) : 0;
-        setScrapeStatus(added > 0
-          ? `Search complete — ${added} new job${added === 1 ? '' : 's'} added.`
-          : 'Search complete — no new jobs matched. Try widening your filters.');
+        setScrapeStatus(`Search complete — ${jobsFound} new job${jobsFound === 1 ? '' : 's'} added.`);
       }
     } catch (err: any) {
       setError(err?.message === 'Failed to fetch'
@@ -317,6 +330,11 @@ export default function JobsPage() {
   };
 
   const hasActiveFilters = jobType || country || category || experienceLevel || source || geoRestriction;
+
+  /** "Work from anywhere" is only ever assigned to remote jobs with no country
+   *  attached, so pairing it with a country filter matches nothing by
+   *  construction. Worth calling out rather than letting it look like a failure. */
+  const contradictoryGeoFilter = geoRestriction === 'Anywhere' && !!country;
 
   /** Plain-English echo of what the user asked for, so the empty state names it
    *  back to them instead of just saying "no results". */
@@ -440,6 +458,33 @@ export default function JobsPage() {
             </div>
           )}
 
+          {/* The scrape succeeded but the active filters hide every result. Say
+              so plainly and offer the way out, rather than reporting "no jobs". */}
+          {hiddenByFilters > 0 && (
+            <div className="font-raleway bg-amber-50 text-amber-800 px-6 py-4 rounded-2xl mb-6 text-sm flex items-start gap-3">
+              <FiFilter className="flex-shrink-0 mt-0.5" size={16} />
+              <div className="flex-1">
+                <p className="font-semibold">
+                  Found {hiddenByFilters} job{hiddenByFilters === 1 ? '' : 's'} — but your filters are hiding {hiddenByFilters === 1 ? 'it' : 'them'}.
+                </p>
+                {contradictoryGeoFilter && (
+                  <p className="mt-1 text-amber-700">
+                    “Work from anywhere” and a specific country rarely overlap — a job tied to {country || 'a country'} isn’t location-independent.
+                  </p>
+                )}
+                <button
+                  onClick={() => { setGeoRestriction(''); setHiddenByFilters(0); }}
+                  className="mt-2 font-semibold underline hover:no-underline"
+                >
+                  {contradictoryGeoFilter ? 'Clear the eligibility filter' : 'Clear filters'}
+                </button>
+              </div>
+              <button onClick={() => setHiddenByFilters(0)} className="flex-shrink-0 text-amber-400 hover:text-amber-600" aria-label="Dismiss">
+                <FiX size={16} />
+              </button>
+            </div>
+          )}
+
           {/* Scrapes take 1–5 min; without this the page looks idle and users
               assume the search silently failed. */}
           {(scraping || scrapeStatus) && (
@@ -492,7 +537,17 @@ export default function JobsPage() {
                   <p className="font-raleway text-sm text-gray-400 mb-2">
                     Nothing in your jobs matches {searchSummary || 'these filters'}.
                   </p>
-                  <p className="font-raleway text-sm text-gray-400 mb-6">Search the job boards for it?</p>
+                  {contradictoryGeoFilter ? (
+                    <p className="font-raleway text-sm text-amber-700 mb-6 max-w-md mx-auto">
+                      “Work from anywhere” combined with {country} will stay empty — a job tied to a
+                      country isn’t location-independent.{' '}
+                      <button onClick={() => setGeoRestriction('')} className="font-semibold underline hover:no-underline">
+                        Clear the eligibility filter
+                      </button>
+                    </p>
+                  ) : (
+                    <p className="font-raleway text-sm text-gray-400 mb-6">Search the job boards for it?</p>
+                  )}
                   <button onClick={runWebSearch} disabled={scraping} className="font-raleway inline-flex items-center gap-2 bg-[#4F46E5] hover:bg-[#4338CA] text-white px-8 py-3 rounded-2xl font-semibold text-sm transition-all disabled:opacity-60">
                     {scraping ? <><FiLoader className="animate-spin" size={16} /> Searching…</> : <><FiGlobe size={16} /> Search the web for this</>}
                   </button>
