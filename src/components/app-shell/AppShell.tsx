@@ -188,7 +188,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         {/* Mobile bottom tab bar — floating rounded bar with active pill */}
         {!immersive && (
           <div className="lg:hidden fixed bottom-0 inset-x-0 z-50 px-3 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
-            <nav className="flex items-stretch h-16 rounded-3xl bg-white/90 backdrop-blur border border-gray-100 shadow-lg shadow-slate-900/5">
+            <nav className="flex items-stretch h-16 rounded-3xl bg-white/70 backdrop-blur-xl border border-gray-200/70 shadow-xl shadow-slate-900/10">
               {TAB_ITEMS.map((item) => {
                 const active = isActive(pathname, item.href);
                 return (
