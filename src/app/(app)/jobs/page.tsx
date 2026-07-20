@@ -435,7 +435,9 @@ export default function JobsPage() {
                 </select>
                 <select value={geoRestriction} onChange={(e) => setGeoRestriction(e.target.value)} className="font-raleway text-sm bg-gray-50 rounded-xl px-4 py-3 text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-100">
                   <option value="">Any Eligibility</option>
-                  <option value="Anywhere">🌍 Work from anywhere</option>
+                  {/* Derived from the posting text, so this means "no requirement
+                      stated" rather than a guarantee — the label shouldn't overpromise. */}
+                  <option value="Anywhere">🌍 No location requirement stated</option>
                   <option value="Country-restricted">📍 In-country only</option>
                   <option value="Citizenship/visa required">🛂 Citizenship/visa required</option>
                   <option value="Not specified">Eligibility not stated</option>
