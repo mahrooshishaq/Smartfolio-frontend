@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import { Raleway, Baloo_Chettan_2, Didact_Gothic } from "next/font/google";
 import '../styles/globals.css';
 import React from 'react';
+import ServiceWorkerRegistrar from '@/components/ServiceWorkerRegistrar';
 
 // Fonts
 const raleway = Raleway({ 
@@ -26,11 +27,19 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  themeColor: "#ffffff",
 };
 
 export const metadata: Metadata = {
   title: "SmartFolio - AI",
   description: "Job Hunting Made Simple",
+  applicationName: "SmartFolio",
+  // iOS ignores the web app manifest; standalone launch is driven by these instead.
+  appleWebApp: {
+    capable: true,
+    title: "SmartFolio",
+    statusBarStyle: "default",
+  },
 };
 
 export default function RootLayout({
@@ -44,6 +53,7 @@ export default function RootLayout({
         <React.Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
           {children}
         </React.Suspense>
+        <ServiceWorkerRegistrar />
       </body>
     </html>
   );
