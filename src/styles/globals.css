@@ -123,6 +123,78 @@ select {
   100% { transform: translateY(0) rotate(-1deg); }
 }
 
+/* ---- Pointer tracking: the eyes follow your cursor / finger ----
+   Must come AFTER the idle ambience so it overrides the wandering glance. */
+.foli.tracking .pupil {
+  animation: none;
+  transform: translate(var(--foli-eye-x, 0px), var(--foli-eye-y, 0px));
+}
+
+/* ---- Idle vignettes ---- */
+.foli .mouth-yawn { opacity: 0; transition: opacity .18s ease; }
+.foli .zzz { opacity: 0; transition: opacity .3s ease; }
+.foli .zzz text { transform-box: fill-box; transform-origin: 50% 50%; }
+.foli .spark-orbit { transform-box: view-box; transform-origin: 100px 100px; }
+
+/* wink — one eye only */
+.foli.wink .eyeR { opacity: 0; }
+.foli.wink .eye-happy { opacity: 1; }
+.foli.wink .happyL { opacity: 0; }
+
+/* giggle — closed happy eyes + a quick shoulder-shake */
+.foli.giggle .eye-open { opacity: 0; }
+.foli.giggle .eye-happy { opacity: 1; }
+.foli.giggle .foli-float { animation: foli-giggle 1.2s ease; }
+@keyframes foli-giggle {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  15% { transform: translateY(-9px) rotate(-4deg); }
+  30% { transform: translateY(0) rotate(3deg); }
+  45% { transform: translateY(-7px) rotate(-3deg); }
+  60% { transform: translateY(0) rotate(2deg); }
+  80% { transform: translateY(-3px) rotate(0); }
+}
+
+/* yawn — mouth opens, eyes squeeze shut, body stretches tall then settles */
+.foli.yawn .mouth { opacity: 0; }
+.foli.yawn .mouth-yawn { opacity: 1; animation: foli-yawn-mouth 1.9s ease; }
+.foli.yawn .eye-open { opacity: 0; }
+.foli.yawn .eye-happy { opacity: 1; }
+.foli.yawn .foli-float { animation: foli-yawn 1.9s ease; }
+@keyframes foli-yawn {
+  0%, 100% { transform: translateY(0) scaleY(1); }
+  35% { transform: translateY(-8px) scaleY(1.06); }
+  65% { transform: translateY(-8px) scaleY(1.06); }
+}
+@keyframes foli-yawn-mouth {
+  0%, 100% { transform: scaleY(.2); opacity: 0; }
+  30%, 65% { transform: scaleY(1); opacity: 1; }
+}
+
+/* spark-play — the AI spark takes a lap around Foli */
+.foli.spark-play .spark-orbit { animation: foli-orbit 1.8s ease-in-out; }
+@keyframes foli-orbit {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* sleep — eyes shut, slow breathing, Zzz drifting up */
+.foli.sleep .eye-open { opacity: 0; }
+.foli.sleep .eye-happy { opacity: 1; }
+.foli.sleep .zzz { opacity: 1; }
+.foli.sleep .foli-float { animation: foli-breathe 4.2s ease-in-out infinite; }
+.foli.sleep .z1 { animation: foli-zzz 2.4s ease-in-out infinite; }
+.foli.sleep .z2 { animation: foli-zzz 2.4s .5s ease-in-out infinite; }
+.foli.sleep .z3 { animation: foli-zzz 2.4s 1s ease-in-out infinite; }
+@keyframes foli-breathe {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(3px) scale(1.015); }
+}
+@keyframes foli-zzz {
+  0% { opacity: 0; transform: translate(0, 6px) scale(.7); }
+  35% { opacity: 1; }
+  100% { opacity: 0; transform: translate(7px, -15px) scale(1.05); }
+}
+
 /* typing — watch the field */
 .foli.typing .pupil { transform: translateY(5px); }
 .foli.typing .browL { transform: translateY(-1px) rotate(-3deg); }

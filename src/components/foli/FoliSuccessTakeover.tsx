@@ -45,7 +45,7 @@ export default function FoliSuccessTakeover({
       <div className="foli-confetti" ref={confettiRef} />
       <div className="tk-inner">
         <div className="tk-foli">
-          <Foli state="success" />
+          <Foli state="success" interactive={false} />
         </div>
         <h2 className="tk-title">{title}</h2>
         <p className="tk-sub">{subtitle}</p>
