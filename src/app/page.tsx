@@ -47,10 +47,37 @@ const Typewriter = () => {
   );
 };
 
+/**
+ * Launch gate for the landing page.
+ *
+ * `start_url` is "/", so the installed PWA opens here — which meant a logged-in
+ * user tapping the app icon landed on the marketing page instead of their
+ * dashboard. This runs as a raw inline script during HTML parse (not a React
+ * effect) so the redirect happens before the marketing page ever paints — no
+ * flash, and no history entry thanks to location.replace.
+ *
+ * Crawlers have no token and are not standalone, so they still get the full
+ * landing page and the SEO value is untouched.
+ */
+const LAUNCH_GATE = `
+try{
+  var t = localStorage.getItem('accessToken');
+  if (t) {
+    location.replace('/dashboard');
+  } else {
+    var mm = function(q){ try { return window.matchMedia(q).matches; } catch(e){ return false; } };
+    var standalone = mm('(display-mode: standalone)') || mm('(display-mode: fullscreen)')
+      || mm('(display-mode: minimal-ui)') || window.navigator.standalone === true;
+    // Installed app with no session: skip the marketing pitch, go sign in.
+    if (standalone) location.replace('/login');
+  }
+}catch(e){}`;
+
 export default function Home() {
   return (
     <main className="relative font-sans">
-      
+      <script dangerouslySetInnerHTML={{ __html: LAUNCH_GATE }} />
+
       {/* --- SECTION 1: HERO with Moving Gradient Background --- */}
       <section className="relative min-h-screen flex flex-col text-center overflow-hidden">
         <AnimatedBackground />
