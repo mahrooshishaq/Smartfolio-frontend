@@ -1,4 +1,5 @@
 'use client';
+import FoliLoader from '@/components/foli/FoliLoader';
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
@@ -348,7 +349,7 @@ export default function CoursesPage() {
           {/* Course Cards */}
           {loading ? (
             <div className="flex items-center justify-center py-32">
-              <FiLoader className="animate-spin text-gray-300" size={32} />
+              <FoliLoader fullScreen={false} moods={['typing','happy','look-r']} messages={['Loading courses…','Finding skills to level up…']} />
             </div>
           ) : courses.length === 0 ? (
             <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-50 p-16 text-center">

@@ -1,4 +1,5 @@
 'use client';
+import FoliLoader from '@/components/foli/FoliLoader';
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -259,11 +260,7 @@ export default function DocumentGenerationPage() {
 
           {/* LOADING STAGE */}
           {stage === 'loading' && (
-            <div className="flex flex-col items-center justify-center py-32">
-              <FiLoader className="animate-spin text-[#4F46E5] mb-4" size={40} />
-              <p className="font-century text-lg font-bold text-slate-700">Drafting your document...</p>
-              <p className="font-raleway text-sm text-gray-400 mt-2">Tailoring it to your profile</p>
-            </div>
+            <FoliLoader fullScreen={false} title="Drafting your document" moods={['typing','typing','happy']} messages={['Tailoring it to your profile…','Polishing the words…','Almost ready…']} />
           )}
 
           {/* RESULT STAGE */}

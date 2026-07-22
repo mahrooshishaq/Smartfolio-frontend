@@ -1,4 +1,5 @@
 'use client';
+import FoliLoader from '@/components/foli/FoliLoader';
 import { useEffect, useState, useCallback, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useWebcam } from './useWebcam';
@@ -39,7 +40,7 @@ const REST_HOLD_MAX_MS = 10_000;
 
 export default function MockInterviewPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]"><FiLoader className="animate-spin text-gray-300" size={32} /></div>}>
+    <Suspense fallback={<FoliLoader messages={['Loading…','Almost ready…']} />}>
       <MockInterviewContent />
     </Suspense>
   );
@@ -819,11 +820,7 @@ function MockInterviewContent() {
 
           {/* LOADING STAGE */}
           {stage === 'loading' && (
-            <div className="flex flex-col items-center justify-center py-32">
-              <FiLoader className="animate-spin text-[#4F46E5] mb-4" size={40} />
-              <p className="font-century text-lg font-bold text-slate-700">Preparing your interview...</p>
-              <p className="font-raleway text-sm text-gray-400 mt-2">Crafting questions across 3 rounds</p>
-            </div>
+            <FoliLoader fullScreen={false} title="Preparing your interview" moods={['typing','idle','look-l']} messages={['Crafting questions across 3 rounds…','Take a breath — you’ve got this…']} />
           )}
 
           {/* CONNECTING (call ceremony) */}
@@ -1177,11 +1174,7 @@ function MockInterviewContent() {
 
           {/* EVALUATING STAGE */}
           {stage === 'evaluating' && (
-            <div className="flex flex-col items-center justify-center py-32">
-              <FiLoader className="animate-spin text-[#4F46E5] mb-4" size={40} />
-              <p className="font-century text-lg font-bold text-slate-700">Evaluating your interview...</p>
-              <p className="font-raleway text-sm text-gray-400 mt-2">Reviewing all 3 rounds</p>
-            </div>
+            <FoliLoader fullScreen={false} title="Evaluating your interview" moods={['typing','happy','look-l']} messages={['Reviewing all 3 rounds…','Scoring your answers…']} />
           )}
 
           {/* RESULTS STAGE */}

@@ -1,5 +1,6 @@
 'use client';
 
+import FoliLoader from '@/components/foli/FoliLoader';
 import React, { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import PdfPreview from '@/components/PdfPreview';
@@ -400,9 +401,10 @@ function scoreBadge(score: number) {
 
 function LoadingState() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#EFF6F2] font-raleway">
-      <Loader2 className="mb-4 animate-spin text-indigo-500" size={40} />
-      <p className="font-medium text-slate-500">Loading your resume analysis…</p>
-    </div>
+    <FoliLoader
+      title="Loading your analysis"
+      moods={['typing', 'happy', 'look-l']}
+      messages={['Crunching the numbers…', 'Scoring your resume…', 'Almost got your results…']}
+    />
   );
 }

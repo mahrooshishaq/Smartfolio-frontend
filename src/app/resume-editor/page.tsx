@@ -1,5 +1,6 @@
 'use client';
 
+import FoliLoader from '@/components/foli/FoliLoader';
 import React, { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowDown, ArrowLeft, ArrowUp, Check, Cloud, Download, GripVertical, Loader2, Plus, Save, Sparkles, Trash2, WandSparkles, X } from 'lucide-react';
@@ -331,7 +332,7 @@ function labelFor(value: string) { return value === 'linkedin' ? 'LinkedIn' : va
 function severityBadge(value: Improvement['severity']) { return value === 'critical' ? 'bg-red-100 text-red-700' : value === 'important' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'; }
 function severityDot(value: Improvement['severity']) { return value === 'critical' ? 'bg-red-500' : value === 'important' ? 'bg-amber-500' : 'bg-blue-500'; }
 function Legend({ color, label }: { color: string; label: string }) { return <span className="inline-flex items-center gap-2"><span className={`h-3 w-3 rounded border ${color}`} />{label}</span>; }
-function LoadingState() { return <div className="min-h-screen bg-[#EFF6F2] flex items-center justify-center"><Loader2 className="animate-spin text-indigo-500" size={38} /></div>; }
+function LoadingState() { return <FoliLoader title="Opening your resume" moods={['typing', 'look-r', 'typing']} messages={['Loading the editor…', 'Almost ready…']} />; }
 function ErrorState({ message, onBack }: { message: string; onBack: () => void }) { return <div className="min-h-screen bg-[#EFF6F2] flex flex-col items-center justify-center gap-4 p-6 font-raleway"><p className="font-bold text-slate-700">{message}</p><button onClick={onBack} className="rounded-xl bg-slate-800 px-4 py-2 text-xs font-bold text-white">Go back</button></div>; }
 
 async function downloadLocalPdfV2(document: ResumeDocument, name: string) {

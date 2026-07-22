@@ -1,4 +1,5 @@
 'use client';
+import FoliLoader from '@/components/foli/FoliLoader';
 import { useEffect, useState, useCallback, type ComponentType } from 'react';
 import { useRouter } from 'next/navigation';
 import {
@@ -260,7 +261,7 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="py-32 flex items-center justify-center">
-        <FiLoader className="animate-spin text-gray-300" size={32} />
+        <FoliLoader fullScreen={false} moods={['happy','look-r','idle']} messages={['Loading your dashboard…','Pulling your progress…']} />
       </div>
     );
   }

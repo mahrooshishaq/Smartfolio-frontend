@@ -1,4 +1,5 @@
 'use client';
+import FoliLoader from '@/components/foli/FoliLoader';
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
@@ -275,7 +276,7 @@ export default function ApplicationsPage() {
       {/* Applications list */}
       {loading ? (
         <div className="flex items-center justify-center py-32">
-          <FiLoader className="animate-spin text-gray-300" size={32} />
+          <FoliLoader fullScreen={false} moods={['look-l','look-r','idle']} messages={['Loading your applications…','Sorting your pipeline…']} />
         </div>
       ) : loadFailed ? (
         <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-50 p-16 text-center">

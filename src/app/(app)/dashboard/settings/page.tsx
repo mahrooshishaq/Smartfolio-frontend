@@ -1,4 +1,5 @@
 'use client';
+import FoliLoader from '@/components/foli/FoliLoader';
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
@@ -241,7 +242,7 @@ export default function SettingsPage() {
   if (loading) {
     return (
       <div className="py-32 flex items-center justify-center">
-        <FiLoader className="animate-spin text-gray-300" size={32} />
+        <FoliLoader fullScreen={false} moods={['idle','look-r']} messages={['Loading your settings…']} />
       </div>
     );
   }
