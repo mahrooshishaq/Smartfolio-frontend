@@ -81,6 +81,47 @@ select {
 .foli.look-l .pupil { transform: translateX(-4px); }
 .foli.look-r .pupil { transform: translateX(4px); }
 
+/* ---- Idle ambience: Foli never just sits there ----
+   Eyes wander, the AI spark twinkles, and every ~11s it sneaks in a little hop.
+   Scoped to .idle so the deliberate states (peek/typing/error/success) still win. */
+.foli.idle .pupil { animation: foli-glance 9s ease-in-out infinite; }
+@keyframes foli-glance {
+  0%, 18% { transform: translateX(0); }
+  24%, 36% { transform: translateX(-4px); }
+  42%, 54% { transform: translateX(0); }
+  60%, 72% { transform: translateX(4px); }
+  78%, 100% { transform: translateX(0); }
+}
+
+.foli.idle .spark {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: foli-twinkle 3.4s ease-in-out infinite;
+}
+@keyframes foli-twinkle {
+  0%, 68%, 100% { transform: scale(1) rotate(0); opacity: 1; }
+  80% { transform: scale(1.28) rotate(18deg); opacity: .85; }
+  90% { transform: scale(.92) rotate(-8deg); opacity: 1; }
+}
+
+/* One keyframe carries both the drift and the hop — two animations on the same
+   `transform` would cancel each other out rather than combine. */
+.foli.idle .foli-float { animation: foli-idle-life 11s ease-in-out infinite; }
+@keyframes foli-idle-life {
+  0%   { transform: translateY(0) rotate(-1deg); }
+  12%  { transform: translateY(-7px) rotate(1deg); }
+  24%  { transform: translateY(0) rotate(-1deg); }
+  36%  { transform: translateY(-7px) rotate(1deg); }
+  48%  { transform: translateY(0) rotate(-1deg); }
+  60%  { transform: translateY(-7px) rotate(1deg); }
+  72%  { transform: translateY(0) rotate(0deg); }
+  80%  { transform: translateY(-17px) rotate(0deg); }
+  86%  { transform: translateY(0) rotate(0deg); }
+  91%  { transform: translateY(-7px) rotate(0deg); }
+  96%  { transform: translateY(0) rotate(0deg); }
+  100% { transform: translateY(0) rotate(-1deg); }
+}
+
 /* typing — watch the field */
 .foli.typing .pupil { transform: translateY(5px); }
 .foli.typing .browL { transform: translateY(-1px) rotate(-3deg); }
@@ -141,7 +182,8 @@ select {
 @keyframes tk-slide { 0% { transform: translateX(-120%); } 100% { transform: translateX(360%); } }
 
 @media (prefers-reduced-motion: reduce) {
-  .foli .foli-float, .foli .eye-open, .tk-foli .foli { animation: none !important; }
+  .foli .foli-float, .foli .eye-open, .tk-foli .foli,
+  .foli.idle .pupil, .foli.idle .spark, .foli.idle .foli-float { animation: none !important; }
 }
 
 /* ---------------------------------------------------------------------------
@@ -194,10 +236,34 @@ html[data-pwa-standalone] .sf-splash {
 }
 
 .sf-splash__logo {
-  width: 96px;
-  height: 96px;
-  animation: sf-splash-pop 600ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  width: 108px;
+  height: 108px;
+  overflow: visible;
   filter: drop-shadow(0 8px 24px rgba(168, 85, 247, 0.18));
+  animation: sf-splash-pop 500ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* The logo draws itself: the readiness line climbs, the three milestone dots pop
+   in order, then the AI spark ignites — a ~1.9s sequence synced to the wordmark. */
+.sf-splash__logo .sf-climb {
+  stroke-dasharray: 60;
+  stroke-dashoffset: 60;
+  animation: sf-draw 950ms 350ms ease forwards;
+}
+.sf-splash__logo .sf-dot {
+  transform: scale(0);
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+}
+.sf-splash__logo .sf-d1 { animation: sf-dpop 320ms 520ms cubic-bezier(0.34, 1.6, 0.6, 1) forwards; }
+.sf-splash__logo .sf-d2 { animation: sf-dpop 320ms 820ms cubic-bezier(0.34, 1.6, 0.6, 1) forwards; }
+.sf-splash__logo .sf-d3 { animation: sf-dpop 320ms 1120ms cubic-bezier(0.34, 1.6, 0.6, 1) forwards; }
+.sf-splash__logo .sf-spark {
+  transform: scale(0) rotate(-40deg);
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  opacity: 0;
+  animation: sf-ignite 560ms 1360ms cubic-bezier(0.34, 1.6, 0.6, 1) forwards;
 }
 
 .sf-splash__wordmark {
@@ -205,7 +271,8 @@ html[data-pwa-standalone] .sf-splash {
   font-size: 1.75rem;
   letter-spacing: 0.02em;
   color: #1f2937;
-  animation: sf-splash-rise 600ms 120ms ease both;
+  opacity: 0;
+  animation: sf-splash-rise 520ms 1560ms ease forwards;
 }
 
 .sf-splash__tagline {
@@ -214,7 +281,8 @@ html[data-pwa-standalone] .sf-splash {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: #6b7280;
-  animation: sf-splash-rise 600ms 220ms ease both;
+  opacity: 0;
+  animation: sf-splash-rise 520ms 1720ms ease forwards;
 }
 
 .sf-splash__loader {
@@ -224,6 +292,8 @@ html[data-pwa-standalone] .sf-splash {
   border-radius: 999px;
   background: rgba(168, 85, 247, 0.18);
   overflow: hidden;
+  opacity: 0;
+  animation: sf-splash-fadein 400ms 1880ms ease forwards;
 }
 
 .sf-splash__loader::after {
@@ -267,15 +337,32 @@ html[data-pwa-standalone] .sf-splash {
   }
 }
 
+@keyframes sf-draw { to { stroke-dashoffset: 0; } }
+@keyframes sf-dpop {
+  0% { transform: scale(0); }
+  70% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+@keyframes sf-ignite {
+  0% { transform: scale(0) rotate(-40deg); opacity: 0; }
+  60% { transform: scale(1.3) rotate(10deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+@keyframes sf-splash-fadein { to { opacity: 1; } }
+
 @media (prefers-reduced-motion: reduce) {
   .sf-splash__logo,
   .sf-splash__wordmark,
-  .sf-splash__tagline {
+  .sf-splash__tagline,
+  .sf-splash__loader {
     animation: none;
+    opacity: 1;
   }
-  .sf-splash__loader::after {
-    animation-duration: 2s;
-  }
+  /* Draw-on parts jump straight to their finished state. */
+  .sf-splash__logo .sf-climb { stroke-dashoffset: 0; animation: none; }
+  .sf-splash__logo .sf-dot { transform: scale(1); animation: none; }
+  .sf-splash__logo .sf-spark { transform: none; opacity: 1; animation: none; }
+  .sf-splash__loader::after { animation-duration: 2s; }
 }
 
 /* Font Assignments */

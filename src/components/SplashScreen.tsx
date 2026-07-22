@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import BrandMark from '@/components/BrandMark';
 
 /**
  * Branded launch splash for the installed PWA.
@@ -16,7 +15,8 @@ import BrandMark from '@/components/BrandMark';
  * This component's job is then to fade the overlay out and unmount it once the
  * app is ready, with a minimum on-screen time so it never flickers.
  */
-const MIN_VISIBLE_MS = 900;
+// Long enough for the full draw-on sequence (~1.9s) to play before the fade.
+const MIN_VISIBLE_MS = 2200;
 
 function detectStandalone(): boolean {
   if (typeof window === 'undefined') return false;
@@ -81,7 +81,49 @@ export default function SplashScreen() {
       role="status"
       aria-label="Loading SmartFolio"
     >
-      <BrandMark className="sf-splash__logo" />
+      <svg
+        className="sf-splash__logo"
+        viewBox="0 0 64 64"
+        role="img"
+        aria-label="SmartFolio"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <defs>
+          <linearGradient id="sf-splash-page" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="#eef1ff" />
+            <stop offset="1" stopColor="#ffe6f0" />
+          </linearGradient>
+          <linearGradient id="sf-splash-line" x1="0" y1="1" x2="1" y2="0">
+            <stop offset="0" stopColor="#818cf8" />
+            <stop offset="0.5" stopColor="#c084fc" />
+            <stop offset="1" stopColor="#ec4899" />
+          </linearGradient>
+        </defs>
+        <path
+          d="M0 14 Q0 0 14 0 L44 0 L64 20 L64 50 Q64 64 50 64 L14 64 Q0 64 0 50 Z"
+          fill="url(#sf-splash-page)"
+          stroke="#ecdffb"
+          strokeWidth="1"
+        />
+        <path d="M44 0 L64 20 L44 20 Z" fill="#ffd3bf" />
+        <path
+          className="sf-climb"
+          d="M13 48 C22 46 25 41 27.5 36 C31 29 37 24 43 21"
+          fill="none"
+          stroke="url(#sf-splash-line)"
+          strokeWidth="3.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <circle className="sf-dot sf-d1" cx="13" cy="48" r="4" fill="#818cf8" />
+        <circle className="sf-dot sf-d2" cx="27.5" cy="36" r="4" fill="#c084fc" />
+        <circle className="sf-dot sf-d3" cx="43" cy="21" r="5.5" fill="#ec4899" />
+        <path
+          className="sf-spark"
+          d="M53.5 8.5 L54.7 11.8 L58 13 L54.7 14.2 L53.5 17.5 L52.3 14.2 L49 13 L52.3 11.8 Z"
+          fill="#a855f7"
+        />
+      </svg>
       <span className="sf-splash__wordmark">SmartFolio</span>
       <span className="sf-splash__tagline">Job Hunting Made Simple</span>
       <span className="sf-splash__loader" aria-hidden="true" />
