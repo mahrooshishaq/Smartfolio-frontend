@@ -47,7 +47,7 @@ const VIGNETTES: [FoliState, number, number][] = [
 
 const REST_MIN = 1800;
 const REST_MAX = 3600;
-const SLEEP_AFTER_MS = 18000;
+const SLEEP_AFTER_MS = 12000;
 
 function pickVignette(): [FoliState, number] {
   const total = VIGNETTES.reduce((n, v) => n + v[2], 0);
