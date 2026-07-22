@@ -106,19 +106,20 @@ select {
 
 /* One keyframe carries both the drift and the hop — two animations on the same
    `transform` would cancel each other out rather than combine. */
-.foli.idle .foli-float { animation: foli-idle-life 11s ease-in-out infinite; }
+.foli.idle .foli-float { animation: foli-idle-life 5s ease-in-out infinite; }
+/* 5s cycle: two calm drifts (~1s each way, matching the old float speed), then a
+   hop with a small second bounce at ~4s. Percentages are retuned for 5s rather
+   than just shortening the old 11s cycle, which would have sped the drift up. */
 @keyframes foli-idle-life {
   0%   { transform: translateY(0) rotate(-1deg); }
-  12%  { transform: translateY(-7px) rotate(1deg); }
-  24%  { transform: translateY(0) rotate(-1deg); }
-  36%  { transform: translateY(-7px) rotate(1deg); }
-  48%  { transform: translateY(0) rotate(-1deg); }
+  20%  { transform: translateY(-7px) rotate(1deg); }
+  40%  { transform: translateY(0) rotate(-1deg); }
   60%  { transform: translateY(-7px) rotate(1deg); }
   72%  { transform: translateY(0) rotate(0deg); }
   80%  { transform: translateY(-17px) rotate(0deg); }
-  86%  { transform: translateY(0) rotate(0deg); }
-  91%  { transform: translateY(-7px) rotate(0deg); }
-  96%  { transform: translateY(0) rotate(0deg); }
+  87%  { transform: translateY(0) rotate(0deg); }
+  92%  { transform: translateY(-7px) rotate(0deg); }
+  97%  { transform: translateY(0) rotate(0deg); }
   100% { transform: translateY(0) rotate(-1deg); }
 }
 
