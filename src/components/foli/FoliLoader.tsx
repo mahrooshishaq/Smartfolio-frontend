@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 import Foli, { FoliState } from './Foli';
 
-// Cute expression loop for waiting states.
-const MOODS: FoliState[] = ['idle', 'look-l', 'look-r', 'happy', 'typing'];
+// Default cute expression loop for waiting states.
+const DEFAULT_MOODS: FoliState[] = ['idle', 'look-l', 'look-r', 'happy', 'typing'];
 const DEFAULT_MESSAGES = [
   'Warming things up…',
   'Getting you ready…',
@@ -14,30 +14,33 @@ const DEFAULT_MESSAGES = [
 
 /**
  * Branded loading screen. Foli cycles through cute expressions and encouraging
- * messages so waits feel alive. Use full-screen for route transitions / auth
- * callbacks, or inline (`fullScreen={false}`) inside a card.
+ * messages so waits feel alive. Pass a scenario-specific `moods` sequence and
+ * `messages` per route (searching → looks around, writing → types, etc.). Use
+ * full-screen for route transitions / auth callbacks, or inline inside a card.
  */
 export default function FoliLoader({
   title,
   messages = DEFAULT_MESSAGES,
+  moods = DEFAULT_MOODS,
   fullScreen = true,
 }: {
   title?: string;
   messages?: string[];
+  moods?: FoliState[];
   fullScreen?: boolean;
 }) {
-  const [mood, setMood] = useState<FoliState>('idle');
+  const [mood, setMood] = useState<FoliState>(moods[0] ?? 'idle');
   const [msg, setMsg] = useState(0);
   const i = useRef(0);
 
   useEffect(() => {
     const t = setInterval(() => {
       i.current += 1;
-      setMood(MOODS[i.current % MOODS.length]);
+      setMood(moods[i.current % moods.length]);
       setMsg((m) => (m + 1) % messages.length);
-    }, 1600);
+    }, 1500);
     return () => clearInterval(t);
-  }, [messages.length]);
+  }, [messages.length, moods]);
 
   const body = (
     <div className="tk-inner">

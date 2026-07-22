@@ -11,7 +11,9 @@ export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [foli, setFoli] = useState<FoliState>('idle');
+  // Resting expression is disappointed — you've forgotten your password, and Foli
+  // feels for you. It brightens while you type, and cheers once the link is sent.
+  const [foli, setFoli] = useState<FoliState>('sad');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,7 +28,7 @@ export default function ForgotPasswordPage() {
         const data = await response.json();
         setError(data.message || "Something went wrong.");
         setFoli('error');
-        setTimeout(() => setFoli('idle'), 900);
+        setTimeout(() => setFoli('sad'), 900);
         return;
       }
       setFoli('happy');
@@ -34,7 +36,7 @@ export default function ForgotPasswordPage() {
     } catch {
       setError("Couldn't send the reset email. Try again.");
       setFoli('error');
-      setTimeout(() => setFoli('idle'), 900);
+      setTimeout(() => setFoli('sad'), 900);
     }
   };
 
@@ -65,7 +67,7 @@ export default function ForgotPasswordPage() {
                 <div>
                   <label htmlFor="email" className="block text-xs font-semibold text-gray-500 mb-1.5">Email</label>
                   <input type="email" id="email" name="email" value={email} onChange={(e) => setEmail(e.target.value)} required
-                    placeholder="you@example.com" autoComplete="email" onFocus={() => setFoli('typing')} onBlur={() => setFoli('idle')}
+                    placeholder="you@example.com" autoComplete="email" onFocus={() => setFoli('typing')} onBlur={() => setFoli('sad')}
                     className="w-full text-[15px] text-gray-800 bg-[#fbfaff] border-[1.5px] border-gray-200 rounded-xl px-3.5 py-3 focus:outline-none focus:border-purple-400 focus:ring-4 focus:ring-purple-100 transition" />
                 </div>
                 <button type="submit"
@@ -88,7 +90,7 @@ export default function ForgotPasswordPage() {
                 className="block w-full py-3.5 text-white text-[15px] font-bold rounded-xl bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-500 shadow-lg shadow-purple-200 hover:brightness-105 transition text-center">
                 Back to log in
               </Link>
-              <button onClick={() => { setIsSubmitted(false); setFoli('idle'); }}
+              <button onClick={() => { setIsSubmitted(false); setFoli('sad'); }}
                 className="mt-4 w-full text-sm text-gray-500 hover:text-purple-600">
                 Try a different email
               </button>

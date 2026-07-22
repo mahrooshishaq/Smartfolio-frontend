@@ -100,6 +100,13 @@ select {
 .foli.success .spark { animation: foli-spin .7s ease; transform-box: fill-box; transform-origin: 50% 50%; }
 @keyframes foli-spin { from { transform: rotate(0) scale(1); } to { transform: rotate(220deg) scale(1.25); } }
 
+/* sad — disappointed (inner brow ends lift, gaze drops, a small slump) */
+.foli.sad .browL { transform: translate(3px,4px) rotate(-17deg); }
+.foli.sad .browR { transform: translate(-3px,4px) rotate(17deg); }
+.foli.sad .pupil { transform: translate(0,4px); }
+.foli.sad .foli-float { animation: foli-sad-slump 4s ease-in-out infinite; }
+@keyframes foli-sad-slump { 0%,100% { transform: translateY(3px) rotate(0); } 50% { transform: translateY(6px) rotate(0); } }
+
 /* error — angry */
 .foli.error .foli-float { animation: foli-shake .5s; }
 @keyframes foli-shake { 0%,100%{transform:translateX(0);} 12%{transform:translateX(-11px) rotate(-4deg);} 28%{transform:translateX(10px) rotate(4deg);} 44%{transform:translateX(-9px);} 60%{transform:translateX(8px);} 78%{transform:translateX(-4px);} }

@@ -1,6 +1,11 @@
 import FoliLoader from '@/components/foli/FoliLoader';
 
-// Shown while an authenticated app route (dashboard, jobs, courses…) loads.
+// Fallback for authenticated app routes that don't define their own loader.
 export default function Loading() {
-  return <FoliLoader messages={['Loading your workspace…', 'Fetching the latest…', 'Almost ready…']} />;
+  return (
+    <FoliLoader
+      moods={['idle', 'look-r', 'happy', 'look-l']}
+      messages={['Loading your workspace…', 'Fetching the latest…', 'Almost ready…']}
+    />
+  );
 }

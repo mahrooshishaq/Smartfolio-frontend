@@ -7,6 +7,7 @@ export type FoliState =
   | 'happy'
   | 'success'
   | 'error'
+  | 'sad'
   | 'look-l'
   | 'look-r';
 
@@ -14,11 +15,14 @@ const MOUTH: Record<string, string> = {
   neutral: 'M88 118 Q100 126 112 118',
   smileBig: 'M84 116 Q100 134 116 116',
   frown: 'M86 124 Q100 112 114 124',
+  // A gentle, softer downturn — disappointed, not angry.
+  sad: 'M89 121 Q100 115 111 121',
 };
 
 function mouthFor(state: FoliState): string {
   if (state === 'success' || state === 'happy') return MOUTH.smileBig;
   if (state === 'error') return MOUTH.frown;
+  if (state === 'sad') return MOUTH.sad;
   return MOUTH.neutral;
 }
 
