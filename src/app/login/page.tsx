@@ -5,197 +5,154 @@ import { useState } from 'react';
 import { FaGoogle, FaEye, FaEyeSlash } from 'react-icons/fa';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
-import AnimatedBackground from '@/components/AnimatedBackground';
+import Foli, { FoliState } from '@/components/foli/Foli';
+import FoliSuccessTakeover from '@/components/foli/FoliSuccessTakeover';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
 
 export default function LoginPage() {
-  const [formData, setFormData] = useState({
-    email: '',
-    password: ''
-  });
+  const [formData, setFormData] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [foli, setFoli] = useState<FoliState>('idle');
+  const [redirectTo, setRedirectTo] = useState<string | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
+    const next = !showPassword;
+    setShowPassword(next);
+    // Foli peeks through when the password is revealed.
+    if (document.activeElement === document.getElementById('password')) {
+      setFoli(next ? 'typing' : 'peek');
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setSuccessMessage(null);
 
     try {
-      console.log('Submitting login:', formData);
       const res = await axios.post(`${API}/auth/login`, formData);
-
-      console.log('Backend success message:', res.data.message);
-      setSuccessMessage(res.data.message);
-      const { user, accessToken, refreshToken } = res.data;
-      
+      const { accessToken, refreshToken } = res.data;
       localStorage.setItem('accessToken', accessToken);
       localStorage.setItem('refreshToken', refreshToken);
 
-      // Check onboarding status, then redirect
+      let target = '/dashboard';
       try {
         const statusRes = await axios.get(`${API}/onboarding/status`, {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
-        const onboarded = statusRes.data?.completed;
-        setTimeout(() => {
-          window.location.href = onboarded ? "/dashboard" : "/onboarding";
-        }, 1000);
+        target = statusRes.data?.completed ? '/dashboard' : '/onboarding';
       } catch {
-        setTimeout(() => {
-          window.location.href = "/dashboard";
-        }, 1000);
+        target = '/dashboard';
       }
+      // Celebrate, then the takeover's onDone performs the redirect.
+      setFoli('success');
+      setRedirectTo(target);
     } catch (err: any) {
       const backendMessage = err.response?.data?.message;
-      if (Array.isArray(backendMessage)) {
-        setError(backendMessage.join(', '));
-      } else {
-        setError(backendMessage || 'Login failed');
-      }
+      setError(Array.isArray(backendMessage) ? backendMessage.join(', ') : (backendMessage || 'Login failed'));
+      setFoli('error');
+      setTimeout(() => setFoli('idle'), 900);
     }
   };
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center p-4 overflow-hidden font-raleway">
-      <AnimatedBackground />
-      
-      {/* Main Card Container - Matches the rounded, clean look of your image */}
-      <div className="bg-white rounded-2rem shadow-2xl p-6 md:p-8 w-full max-w-[480px] z-10 relative">
-        
-        {/* Header: Back Arrow and Close Button */}
-        <div className="flex justify-between items-center mb-6 text-gray-400">
-           <Link href="/" className="hover:text-gray-600 transition-colors">
-             <ArrowLeft size={24} />
-           </Link>
+    <div className="relative min-h-screen flex items-center justify-center p-4 overflow-hidden font-raleway bg-[#f5f4fb]">
+      <FoliSuccessTakeover
+        show={!!redirectTo}
+        title="Welcome back! 🎉"
+        subtitle="Taking you to your dashboard…"
+        onDone={() => { if (redirectTo) window.location.href = redirectTo; }}
+      />
+
+      <div className="bg-white rounded-[26px] shadow-2xl w-full max-w-[440px] z-10 relative overflow-hidden">
+        {/* Mascot bay */}
+        <div className="foli-bay h-44">
+          <Link href="/" aria-label="Back to home"
+            className="absolute left-4 top-4 text-gray-500/80 hover:text-gray-700 transition-colors z-10">
+            <ArrowLeft size={22} />
+          </Link>
+          <Foli state={foli} className="w-[150px] h-[150px]" />
         </div>
 
-        {/* Title and Subtitle */}
-        <div className="mb-6">
-            <h1 className="text-2xl font-normal text-gray-800 mb-2">Log In</h1>
+        <div className="p-6 md:p-8">
+          <div className="mb-5">
+            <h1 className="text-2xl font-semibold text-gray-800 mb-1">Log in</h1>
             <p className="text-sm text-gray-500">
-            Don't have an account? <a href="/signup" className="text-gray-800 underline hover:text-black">Sign up</a>
+              Don&apos;t have an account? <a href="/signup" className="font-semibold text-purple-600 hover:text-purple-700">Sign up</a>
             </p>
-        </div>
+          </div>
 
-        {/* Google Login Button */}
-        <div className="mb-6">
           <button
             type="button"
-            className="w-full py-2.5 px-4 border border-gray-300 rounded-full flex items-center justify-center gap-3 text-gray-600 hover:bg-gray-200 hover:border-gray-400 active:bg-gray-800 active:text-white active:border-gray-800 transition-all duration-200"
-            onClick={() => { window.location.href = `${BACKEND_URL}/auth/google`;}}
+            className="w-full py-2.5 px-4 border border-gray-300 rounded-xl flex items-center justify-center gap-3 text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 font-medium"
+            onClick={() => { window.location.href = `${BACKEND_URL}/auth/google`; }}
           >
-            <FaGoogle className="text-xl" /> {/* Google colors usually handled by icon, or keep generic */}
-            <span className="text-lg font-medium">Log in with Google</span>
+            <FaGoogle className="text-lg" /> Continue with Google
           </button>
-        </div>
 
-        {/* OR Divider */}
-        <div className="my-6 flex items-center gap-4">
-          <div className="flex-1 border-t border-gray-300"></div>
-          <span className="text-gray-400 text-sm">OR</span>
-          <div className="flex-1 border-t border-gray-300"></div>
-        </div>
-
-        {/* Error/Success Messages */}
-        {error && <div className="mb-6 p-3 bg-red-50 text-red-500 text-sm rounded-lg text-center">{error}</div>}
-        {successMessage && <div className="mb-6 p-3 bg-green-50 text-green-500 text-sm rounded-lg text-center">{successMessage}</div>}
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <input type="email" name="email" autoComplete="email" style={{ display: 'none' }} />
-          <input type="password" name="password" autoComplete="new-password" style={{ display: 'none' }} />
-          
-          {/* --- ANIMATED EMAIL INPUT --- */}
-          {/* The 'group' wrapper helps organize, but the magic is in 'peer' */}
-          <div className="relative w-full">
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-              className="peer w-full border-b border-gray-300 bg-transparent py-2 text-gray-800 focus:outline-none placeholder-transparent"
-              placeholder="Email Address" /* Required for the peer-placeholder-shown trick */
-              autoComplete="email"
-            />
-            {/* The Label */}
-            <label
-              htmlFor="email"
-              className="absolute left-0 -top-3.5 text-xs text-gray-400 transition-all 
-                         peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400 peer-placeholder-shown:top-2 
-                         peer-focus:-top-3.5 peer-focus:text-xs peer-focus:text-gray-400"
-            >
-              Email Address
-            </label>
-            {/* The Animated Underline */}
-            <div className="absolute bottom-0 left-0 h-1px w-full origin-center scale-x-0 bg-gray-800 transition-transform duration-300 peer-focus:scale-x-100"></div>
+          <div className="my-5 flex items-center gap-4">
+            <div className="flex-1 border-t border-gray-200"></div>
+            <span className="text-gray-400 text-xs font-medium">OR</span>
+            <div className="flex-1 border-t border-gray-200"></div>
           </div>
 
-          {/* --- ANIMATED PASSWORD INPUT --- */}
-          <div className="relative w-full">
-            <input
-              type={showPassword ? "text" : "password"}
-              id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              className="peer w-full border-b border-gray-300 bg-transparent py-2 pr-20 text-gray-800 focus:outline-none placeholder-transparent"
-              placeholder="Password"
-              autoComplete="new-password"
-            />
-            {/* The Label */}
-            <label
-              htmlFor="password"
-              className="absolute left-0 -top-3.5 text-xs text-gray-400 transition-all 
-                         peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400 peer-placeholder-shown:top-2 
-                         peer-focus:-top-3.5 peer-focus:text-xs peer-focus:text-gray-400"
-            >
-              Password
-            </label>
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-xl flex items-center gap-2 font-medium">
+              <span aria-hidden>✕</span>{error}
+            </div>
+          )}
 
-            {/* Password Toggle (Text + Icon style to match design) */}
-            <button
-              type="button"
-              onClick={togglePasswordVisibility}
-              className="absolute right-0 top-2 text-gray-400 hover:text-gray-600 flex items-center gap-1 text-sm"
-            >
-              {showPassword ? <FaEyeSlash /> : <FaEye />} 
-              <span className="text-xs">{showPassword ? 'Hide' : 'Show'}</span>
-            </button>
+          <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
+            <div>
+              <label htmlFor="email" className="block text-xs font-semibold text-gray-500 mb-1.5">Email</label>
+              <input
+                type="email" id="email" name="email" value={formData.email} onChange={handleChange} required
+                placeholder="you@example.com" autoComplete="email"
+                onFocus={() => setFoli('typing')}
+                onBlur={() => setFoli('idle')}
+                className="w-full text-[15px] text-gray-800 bg-[#fbfaff] border-[1.5px] border-gray-200 rounded-xl px-3.5 py-3 focus:outline-none focus:border-purple-400 focus:ring-4 focus:ring-purple-100 transition"
+              />
+            </div>
 
-            {/* The Animated Underline */}
-            <div className="absolute bottom-0 left-0 h-1px w-full origin-center scale-x-0 bg-gray-800 transition-transform duration-300 peer-focus:scale-x-100"></div>
-          </div>
-            
-          <div className="flex justify-end mt-1">
-             <Link href="/forgot-password" className="text-sm text-gray-500 hover:text-gray-800 underline decoration-gray-400 underline-offset-2">
+            <div>
+              <label htmlFor="password" className="block text-xs font-semibold text-gray-500 mb-1.5">Password</label>
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"} id="password" name="password"
+                  value={formData.password} onChange={handleChange} required
+                  placeholder="••••••••" autoComplete="new-password"
+                  onFocus={() => setFoli('peek')}
+                  onBlur={() => setFoli('idle')}
+                  className="w-full text-[15px] text-gray-800 bg-[#fbfaff] border-[1.5px] border-gray-200 rounded-xl px-3.5 py-3 pr-11 focus:outline-none focus:border-purple-400 focus:ring-4 focus:ring-purple-100 transition"
+                />
+                <button type="button" onClick={togglePasswordVisibility}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 grid place-items-center text-gray-400 hover:text-gray-600 rounded-lg">
+                  {showPassword ? <FaEyeSlash /> : <FaEye />}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex justify-end">
+              <Link href="/forgot-password" className="text-sm text-gray-500 hover:text-purple-600">
                 Forgot your password?
-             </Link>
-          </div>
+              </Link>
+            </div>
 
-          <button
-            type="submit"
-            className="w-full py-2.5 px-4 bg-[#C4C4C4] hover:bg-gray-700 active:bg-gray-800 text-gray-800 hover:text-white active:text-white text-lg font-medium rounded-full transition-all duration-200 mt-6"
-          >
-            Log In
-          </button>
-        </form>
+            <button
+              type="submit"
+              className="w-full py-3.5 text-white text-[15px] font-bold rounded-xl bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-500 shadow-lg shadow-purple-200 hover:brightness-105 active:translate-y-px transition"
+            >
+              Log in
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );

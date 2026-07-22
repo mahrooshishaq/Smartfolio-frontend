@@ -2,242 +2,186 @@
 'use client';
 import axios from "axios";
 import { useState } from 'react';
-import { FaGoogle, FaEye, FaEyeSlash } from 'react-icons/fa'; // Added Eye icons for password visibility
+import { FaGoogle, FaEye, FaEyeSlash } from 'react-icons/fa';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import AnimatedBackground from '@/components/AnimatedBackground';
+import Foli, { FoliState } from '@/components/foli/Foli';
+import FoliSuccessTakeover from '@/components/foli/FoliSuccessTakeover';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
 
+const STRENGTH_LABELS = ['', 'Weak — add length', 'Getting there', 'Strong', 'Excellent 💪'];
+function scorePassword(v: string): number {
+  let s = 0;
+  if (v.length >= 6) s++;
+  if (/[A-Z]/.test(v) && /[a-z]/.test(v)) s++;
+  if (/\d/.test(v)) s++;
+  if (/[^A-Za-z0-9]/.test(v) && v.length >= 10) s++;
+  return s;
+}
+
 export default function SignupPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    password: '',
-    confirmPassword: ''
+    firstName: '', lastName: '', email: '', password: '', confirmPassword: '',
   });
-  
-  // State for toggling password visibility
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
   const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [foli, setFoli] = useState<FoliState>('idle');
+  const [done, setDone] = useState(false);
+
+  const strength = scorePassword(formData.password);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setSuccessMessage(null);
 
     if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match!");
+      setError("Passwords don't match — please re-enter them.");
+      setFoli('error');
+      setTimeout(() => setFoli('idle'), 900);
       return;
     }
 
     try {
-      console.log('Submitting:', formData);
-      const res = await axios.post(`${API}/auth/signup`, {
+      await axios.post(`${API}/auth/signup`, {
         name: `${formData.firstName} ${formData.lastName}`,
         email: formData.email,
         password: formData.password,
       });
-
-      console.log('Backend success message:', res.data.message);
-      setSuccessMessage(res.data.message);
-      
-      // Redirect to OTP verification page
-      setTimeout(() => {
-         router.push(`/verify-otp?email=${formData.email}`);
-      }, 1500);
+      setFoli('success');
+      setDone(true);
     } catch (err: any) {
       const backendMessage = err.response?.data?.message;
-
-      if (Array.isArray(backendMessage)) {
-        console.log('Backend validation errors:', backendMessage);
-        setError(backendMessage.join(', '));
-      } else {
-        console.log('Backend error:', backendMessage);
-        setError(backendMessage || "Signup failed");
-      }
+      setError(Array.isArray(backendMessage) ? backendMessage.join(', ') : (backendMessage || 'Signup failed'));
+      setFoli('error');
+      setTimeout(() => setFoli('idle'), 900);
     }
   };
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center p-4 overflow-hidden font-raleway">
-      <AnimatedBackground />
-      
-      {/* Main Card Container */}
-      <div className="bg-white rounded-2rem shadow-2xl p-6 md:p-8 w-full max-w-[480px] z-10 relative">
-        
-        {/* Header: Back Arrow and Close Button */}
-        <div className="flex justify-between items-center mb-6 text-gray-400">
-           <Link href="/" className="hover:text-gray-600 transition-colors">
-             <ArrowLeft size={24} />
-           </Link>
+    <div className="relative min-h-screen flex items-center justify-center p-4 overflow-hidden font-raleway bg-[#f5f4fb]">
+      <FoliSuccessTakeover
+        show={done}
+        title="Account created! 🎉"
+        subtitle="Sending your verification code…"
+        onDone={() => router.push(`/verify-otp?email=${encodeURIComponent(formData.email)}`)}
+      />
+
+      <div className="bg-white rounded-[26px] shadow-2xl w-full max-w-[460px] z-10 relative overflow-hidden">
+        <div className="foli-bay h-40">
+          <Link href="/" aria-label="Back to home"
+            className="absolute left-4 top-4 text-gray-500/80 hover:text-gray-700 transition-colors z-10">
+            <ArrowLeft size={22} />
+          </Link>
+          <Foli state={foli} className="w-[132px] h-[132px]" />
         </div>
 
-        {/* Title and Subtitle */}
-        <div className="mb-6">
-            <h1 className="text-2xl font-normal text-gray-800 mb-2">Create Account</h1>
+        <div className="p-6 md:p-8">
+          <div className="mb-5">
+            <h1 className="text-2xl font-semibold text-gray-800 mb-1">Create account</h1>
             <p className="text-sm text-gray-500">
-             Already have an account? <a href="/login" className="text-gray-800 underline hover:text-black">Log in</a>
+              Already have an account? <a href="/login" className="font-semibold text-purple-600 hover:text-purple-700">Log in</a>
             </p>
-        </div>
+          </div>
 
-        {/* Google Signup Button (Moved to top to match Login style) */}
-        <div className="mb-6">
           <button
             type="button"
-            className="w-full py-2.5 px-4 border border-gray-300 rounded-full flex items-center justify-center gap-3 text-gray-600 hover:bg-gray-200 hover:border-gray-400 active:bg-gray-800 active:text-white active:border-gray-800 transition-all duration-200"
+            className="w-full py-2.5 px-4 border border-gray-300 rounded-xl flex items-center justify-center gap-3 text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 font-medium"
             onClick={() => { window.location.href = `${BACKEND_URL}/auth/google`; }}
           >
-            <FaGoogle className="text-xl" />
-            <span className="text-lg font-medium">Sign up with Google</span>
+            <FaGoogle className="text-lg" /> Continue with Google
           </button>
-        </div>
 
-        {/* OR Divider */}
-        <div className="my-6 flex items-center gap-4">
-          <div className="flex-1 border-t border-gray-300"></div>
-          <span className="text-gray-400 text-sm">OR</span>
-          <div className="flex-1 border-t border-gray-300"></div>
-        </div>
+          <div className="my-5 flex items-center gap-4">
+            <div className="flex-1 border-t border-gray-200"></div>
+            <span className="text-gray-400 text-xs font-medium">OR</span>
+            <div className="flex-1 border-t border-gray-200"></div>
+          </div>
 
-        {/* Error/Success Messages */}
-        {error && <div className="mb-6 p-3 bg-red-50 text-red-500 text-sm rounded-lg text-center">{error}</div>}
-        {successMessage && <div className="mb-6 p-3 bg-green-50 text-green-500 text-sm rounded-lg text-center">{successMessage}</div>}
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-xl flex items-center gap-2 font-medium">
+              <span aria-hidden>✕</span>{error}
+            </div>
+          )}
 
-        <form onSubmit={handleSubmit} className="space-y-5" autoComplete="off">
-          <input type="email" name="email" autoComplete="email" style={{ display: 'none' }} />
-          <input type="password" name="password" autoComplete="new-password" style={{ display: 'none' }} />
-          
-          {/* Row: First Name & Last Name */}
-          <div className="flex gap-4">
-            {/* First Name */}
-            <div className="relative w-full">
-                <input
-                    type="text"
-                    id="firstName"
-                    name="firstName"
-                    value={formData.firstName}
-                    onChange={handleChange}
-                    required
-                    className="peer w-full border-b border-gray-300 bg-transparent py-2 text-gray-800 focus:outline-none placeholder-transparent"
-                    placeholder="First Name"
-                />
-                <label htmlFor="firstName" className="absolute left-0 -top-3.5 text-xs text-gray-400 transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400 peer-placeholder-shown:top-2 peer-focus:-top-3.5 peer-focus:text-xs peer-focus:text-gray-400">
-                    First Name
-                </label>
-                <div className="absolute bottom-0 left-0 h-1px w-full origin-center scale-x-0 bg-gray-800 transition-transform duration-300 peer-focus:scale-x-100"></div>
+          <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="firstName" className="block text-xs font-semibold text-gray-500 mb-1.5">First name</label>
+                <input type="text" id="firstName" name="firstName" value={formData.firstName} onChange={handleChange} required
+                  placeholder="Ada" onFocus={() => setFoli('typing')} onBlur={() => setFoli('idle')}
+                  className="w-full text-[15px] text-gray-800 bg-[#fbfaff] border-[1.5px] border-gray-200 rounded-xl px-3.5 py-3 focus:outline-none focus:border-purple-400 focus:ring-4 focus:ring-purple-100 transition" />
+              </div>
+              <div>
+                <label htmlFor="lastName" className="block text-xs font-semibold text-gray-500 mb-1.5">Last name</label>
+                <input type="text" id="lastName" name="lastName" value={formData.lastName} onChange={handleChange} required
+                  placeholder="Lovelace" onFocus={() => setFoli('typing')} onBlur={() => setFoli('idle')}
+                  className="w-full text-[15px] text-gray-800 bg-[#fbfaff] border-[1.5px] border-gray-200 rounded-xl px-3.5 py-3 focus:outline-none focus:border-purple-400 focus:ring-4 focus:ring-purple-100 transition" />
+              </div>
             </div>
 
-            {/* Last Name */}
-            <div className="relative w-full">
-                <input
-                    type="text"
-                    id="lastName"
-                    name="lastName"
-                    value={formData.lastName}
-                    onChange={handleChange}
-                    required
-                    className="peer w-full border-b border-gray-300 bg-transparent py-2 text-gray-800 focus:outline-none placeholder-transparent"
-                    placeholder="Last Name"
-                />
-                <label htmlFor="lastName" className="absolute left-0 -top-3.5 text-xs text-gray-400 transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400 peer-placeholder-shown:top-2 peer-focus:-top-3.5 peer-focus:text-xs peer-focus:text-gray-400">
-                    Last Name
-                </label>
-                <div className="absolute bottom-0 left-0 h-1px w-full origin-center scale-x-0 bg-gray-800 transition-transform duration-300 peer-focus:scale-x-100"></div>
+            <div>
+              <label htmlFor="email" className="block text-xs font-semibold text-gray-500 mb-1.5">Email</label>
+              <input type="email" id="email" name="email" value={formData.email} onChange={handleChange} required
+                placeholder="you@example.com" autoComplete="email" onFocus={() => setFoli('typing')} onBlur={() => setFoli('idle')}
+                className="w-full text-[15px] text-gray-800 bg-[#fbfaff] border-[1.5px] border-gray-200 rounded-xl px-3.5 py-3 focus:outline-none focus:border-purple-400 focus:ring-4 focus:ring-purple-100 transition" />
             </div>
-          </div>
 
-          {/* Email */}
-          <div className="relative w-full">
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-              className="peer w-full border-b border-gray-300 bg-transparent py-2 text-gray-800 focus:outline-none placeholder-transparent"
-              placeholder="Email Address"
-              autoComplete="email"
-            />
-            <label htmlFor="email" className="absolute left-0 -top-3.5 text-xs text-gray-400 transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400 peer-placeholder-shown:top-2 peer-focus:-top-3.5 peer-focus:text-xs peer-focus:text-gray-400">
-              Email Address
-            </label>
-            <div className="absolute bottom-0 left-0 h-1px w-full origin-center scale-x-0 bg-gray-800 transition-transform duration-300 peer-focus:scale-x-100"></div>
-          </div>
+            <div>
+              <label htmlFor="password" className="block text-xs font-semibold text-gray-500 mb-1.5">Password</label>
+              <div className="relative">
+                <input type={showPassword ? "text" : "password"} id="password" name="password" value={formData.password} onChange={handleChange} required
+                  placeholder="••••••••" autoComplete="new-password" onFocus={() => setFoli('peek')} onBlur={() => setFoli('idle')}
+                  className="w-full text-[15px] text-gray-800 bg-[#fbfaff] border-[1.5px] border-gray-200 rounded-xl px-3.5 py-3 pr-11 focus:outline-none focus:border-purple-400 focus:ring-4 focus:ring-purple-100 transition" />
+                <button type="button" onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 grid place-items-center text-gray-400 hover:text-gray-600 rounded-lg">
+                  {showPassword ? <FaEyeSlash /> : <FaEye />}
+                </button>
+              </div>
+              {formData.password && (
+                <>
+                  <div className="flex gap-1.5 mt-2" aria-hidden>
+                    {[0, 1, 2, 3].map((i) => (
+                      <span key={i} className="h-1.5 flex-1 rounded-full transition-colors"
+                        style={{ background: i < strength
+                          ? (strength <= 1 ? '#f43f5e' : strength === 2 ? '#f59e0b' : strength === 3 ? '#c084fc' : '#12b981')
+                          : '#e5e0f0' }} />
+                    ))}
+                  </div>
+                  <p className="text-[11.5px] text-gray-500 mt-1.5">{STRENGTH_LABELS[strength]}</p>
+                </>
+              )}
+            </div>
 
-          {/* Password */}
-          <div className="relative w-full">
-            <input
-              type={showPassword ? "text" : "password"}
-              id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              className="peer w-full border-b border-gray-300 bg-transparent py-2 pr-10 text-gray-800 focus:outline-none placeholder-transparent"
-              placeholder="Password"
-              autoComplete="new-password"
-            />
-            <label htmlFor="password" className="absolute left-0 -top-3.5 text-xs text-gray-400 transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400 peer-placeholder-shown:top-2 peer-focus:-top-3.5 peer-focus:text-xs peer-focus:text-gray-400">
-              Password
-            </label>
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-0 top-2 text-gray-400 hover:text-gray-600"
-            >
-              {showPassword ? <FaEyeSlash /> : <FaEye />}
+            <div>
+              <label htmlFor="confirmPassword" className="block text-xs font-semibold text-gray-500 mb-1.5">Confirm password</label>
+              <div className="relative">
+                <input type={showConfirmPassword ? "text" : "password"} id="confirmPassword" name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} required
+                  placeholder="••••••••" onFocus={() => setFoli('peek')} onBlur={() => setFoli('idle')}
+                  className="w-full text-[15px] text-gray-800 bg-[#fbfaff] border-[1.5px] border-gray-200 rounded-xl px-3.5 py-3 pr-11 focus:outline-none focus:border-purple-400 focus:ring-4 focus:ring-purple-100 transition" />
+                <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 grid place-items-center text-gray-400 hover:text-gray-600 rounded-lg">
+                  {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
+                </button>
+              </div>
+            </div>
+
+            <button type="submit"
+              className="w-full py-3.5 text-white text-[15px] font-bold rounded-xl bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-500 shadow-lg shadow-purple-200 hover:brightness-105 active:translate-y-px transition">
+              Create account
             </button>
-            <div className="absolute bottom-0 left-0 h-1px w-full origin-center scale-x-0 bg-gray-800 transition-transform duration-300 peer-focus:scale-x-100"></div>
-          </div>
-
-          {/* Confirm Password */}
-          <div className="relative w-full">
-            <input
-              type={showConfirmPassword ? "text" : "password"}
-              id="confirmPassword"
-              name="confirmPassword"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              required
-              className="peer w-full border-b border-gray-300 bg-transparent py-2 pr-10 text-gray-800 focus:outline-none placeholder-transparent"
-              placeholder="Confirm Password"
-            />
-            <label htmlFor="confirmPassword" className="absolute left-0 -top-3.5 text-xs text-gray-400 transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400 peer-placeholder-shown:top-2 peer-focus:-top-3.5 peer-focus:text-xs peer-focus:text-gray-400">
-              Confirm Password
-            </label>
-            <button
-              type="button"
-              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              className="absolute right-0 top-2 text-gray-400 hover:text-gray-600"
-            >
-              {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
-            </button>
-            <div className="absolute bottom-0 left-0 h-1px w-full origin-center scale-x-0 bg-gray-800 transition-transform duration-300 peer-focus:scale-x-100"></div>
-          </div>
-
-          <button
-            type="submit"
-            className="w-full py-2.5 px-4 bg-[#C4C4C4] hover:bg-gray-700 active:bg-gray-800 text-gray-800 hover:text-white active:text-white text-lg font-medium rounded-full transition-all duration-200 mt-6"
-          >
-            Create Account
-          </button>
-        </form>
+          </form>
+        </div>
       </div>
     </div>
   );

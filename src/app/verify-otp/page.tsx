@@ -1,24 +1,26 @@
 // src/app/verify-otp/page.tsx
 'use client';
 import axios from "axios";
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, Suspense } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
-import AnimatedBackground from '@/components/AnimatedBackground';
 import { useSearchParams } from 'next/navigation';
+import Foli, { FoliState } from '@/components/foli/Foli';
+import FoliSuccessTakeover from '@/components/foli/FoliSuccessTakeover';
+import FoliLoader from '@/components/foli/FoliLoader';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
-
-export default function VerifyOtpPage() {
+function VerifyOtpContent() {
   const [otp, setOtp] = useState(['', '', '', '']);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isResending, setIsResending] = useState(false);
+  const [foli, setFoli] = useState<FoliState>('idle');
+  const [verified, setVerified] = useState(false);
   const searchParams = useSearchParams();
   const email = searchParams.get('email') || '';
 
-  // Create refs for each input
   const inputRefs = [
     useRef<HTMLInputElement>(null),
     useRef<HTMLInputElement>(null),
@@ -26,80 +28,51 @@ export default function VerifyOtpPage() {
     useRef<HTMLInputElement>(null),
   ];
 
-  // Focus first input on mount
-  useEffect(() => {
-    inputRefs[0].current?.focus();
-  }, []);
+  useEffect(() => { inputRefs[0].current?.focus(); }, []);
 
   const handleChange = (index: number, value: string) => {
-    // Only allow numbers
     if (value && !/^\d$/.test(value)) return;
-
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
-
-    // Auto-focus next input
-    if (value && index < 3) {
-      inputRefs[index + 1].current?.focus();
-    }
+    setFoli(newOtp.every((d) => d) ? 'happy' : 'typing');
+    if (value && index < 3) inputRefs[index + 1].current?.focus();
   };
 
   const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    // Handle backspace
-    if (e.key === 'Backspace' && !otp[index] && index > 0) {
-      inputRefs[index - 1].current?.focus();
-    }
+    if (e.key === 'Backspace' && !otp[index] && index > 0) inputRefs[index - 1].current?.focus();
   };
 
   const handlePaste = (e: React.ClipboardEvent) => {
     e.preventDefault();
     const pastedData = e.clipboardData.getData('text').slice(0, 4);
-    
     if (!/^\d+$/.test(pastedData)) return;
-
     const newOtp = [...otp];
-    pastedData.split('').forEach((char, index) => {
-      if (index < 4) {
-        newOtp[index] = char;
-      }
-    });
+    pastedData.split('').forEach((char, index) => { if (index < 4) newOtp[index] = char; });
     setOtp(newOtp);
-
-    // Focus the next empty input or the last one
-    const nextIndex = Math.min(pastedData.length, 3);
-    inputRefs[nextIndex].current?.focus();
+    setFoli(newOtp.every((d) => d) ? 'happy' : 'typing');
+    inputRefs[Math.min(pastedData.length, 3)].current?.focus();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccessMessage(null);
-
     const otpCode = otp.join('');
-    
     if (otpCode.length !== 4) {
-      setError('Please enter the complete OTP');
+      setError('Please enter the complete 4-digit code.');
+      setFoli('error');
+      setTimeout(() => setFoli('idle'), 900);
       return;
     }
-
     try {
-      console.log('Verifying OTP:', otpCode);
-      const res = await axios.post(`${API}/auth/verify-otp`, {
-        otp: otpCode,
-        email: email,
-      });
-
-      console.log('Backend success message:', res.data.message);
-      setSuccessMessage(res.data.message);
-      
-      //Redirect to login or dashboard after successful verification
-      setTimeout(() => {
-        window.location.href = "/login";
-      }, 2000);
+      await axios.post(`${API}/auth/verify-otp`, { otp: otpCode, email });
+      setFoli('success');
+      setVerified(true);
     } catch (err: any) {
-      const backendMessage = err.response?.data?.message;
-      setError(backendMessage || 'OTP verification failed');
+      setError(err.response?.data?.message || 'That code was incorrect. Try again.');
+      setFoli('error');
+      setTimeout(() => setFoli('idle'), 900);
     }
   };
 
@@ -107,91 +80,89 @@ export default function VerifyOtpPage() {
     setIsResending(true);
     setError(null);
     setSuccessMessage(null);
-
     try {
-      console.log('Resending OTP');
-      const res = await axios.post(`${API}/auth/resend-otp`, {
-        email: email,
-      });
-
-      setSuccessMessage('OTP has been resent to your email');
+      await axios.post(`${API}/auth/resend-otp`, { email });
+      setSuccessMessage('A fresh code is on its way to your email.');
       setOtp(['', '', '', '']);
       inputRefs[0].current?.focus();
     } catch (err: any) {
-      const backendMessage = err.response?.data?.message;
-      setError(backendMessage || 'Failed to resend OTP');
+      setError(err.response?.data?.message || 'Failed to resend the code.');
     } finally {
       setIsResending(false);
     }
   };
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center p-4 overflow-hidden font-raleway">
-      <AnimatedBackground />
-      
-      {/* Main Card Container */}
-      <div className="bg-white rounded-[2rem] shadow-2xl p-8 md:p-12 w-full max-w-[500px] z-10 relative">
-        
-        {/* Header: Back Arrow */}
-        <div className="flex justify-between items-center mb-10 text-gray-400">
-           <Link href="/signup" className="hover:text-gray-600 transition-colors">
-             <ArrowLeft size={24} />
-           </Link>
+    <div className="relative min-h-screen flex items-center justify-center p-4 overflow-hidden font-raleway bg-[#f5f4fb]">
+      <FoliSuccessTakeover
+        show={verified}
+        title="Email verified! 🎉"
+        subtitle="Taking you to log in…"
+        onDone={() => { window.location.href = '/login'; }}
+      />
+
+      <div className="bg-white rounded-[26px] shadow-2xl w-full max-w-[460px] z-10 relative overflow-hidden">
+        <div className="foli-bay h-40">
+          <Link href="/signup" aria-label="Back to sign up"
+            className="absolute left-4 top-4 text-gray-500/80 hover:text-gray-700 transition-colors z-10">
+            <ArrowLeft size={22} />
+          </Link>
+          <Foli state={foli} className="w-[128px] h-[128px]" />
         </div>
 
-        {/* Title and Subtitle */}
-        <div className="mb-8 text-center">
-            <h1 className="text-3xl font-normal text-gray-800 mb-2">Verify Your Email</h1>
+        <div className="p-6 md:p-8">
+          <div className="mb-6 text-center">
+            <h1 className="text-2xl font-semibold text-gray-800 mb-1">Verify your email</h1>
             <p className="text-sm text-gray-500">
-              We've sent a 4-digit code to your email address
+              We sent a 4-digit code{email ? <> to <span className="font-medium text-gray-700">{email}</span></> : ' to your email'}.
             </p>
-        </div>
-
-        {/* Error/Success Messages */}
-        {error && <div className="mb-6 p-3 bg-red-50 text-red-500 text-sm rounded-lg text-center">{error}</div>}
-        {successMessage && <div className="mb-6 p-3 bg-green-50 text-green-500 text-sm rounded-lg text-center">{successMessage}</div>}
-
-        <form onSubmit={handleSubmit} className="space-y-8">
-          
-          {/* OTP Input Boxes */}
-          <div className="flex justify-center gap-4">
-            {otp.map((digit, index) => (
-              <input
-                key={index}
-                ref={inputRefs[index]}
-                type="text"
-                inputMode="numeric"
-                maxLength={1}
-                value={digit}
-                onChange={(e) => handleChange(index, e.target.value)}
-                onKeyDown={(e) => handleKeyDown(index, e)}
-                onPaste={index === 0 ? handlePaste : undefined}
-                className="w-16 h-16 text-center text-2xl font-semibold border-2 border-gray-300 rounded-xl focus:border-gray-800 focus:outline-none transition-colors bg-gray-50 text-gray-800"
-              />
-            ))}
           </div>
 
-          {/* Resend OTP Button */}
-          <div className="text-center">
-            <button
-              type="button"
-              onClick={handleResendOtp}
-              disabled={isResending}
-              className="text-sm text-gray-600 hover:text-gray-800 underline decoration-gray-400 underline-offset-2 disabled:opacity-50"
-            >
-              {isResending ? 'Resending...' : "Didn't receive the code? Resend OTP"}
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-xl text-center font-medium">{error}</div>
+          )}
+          {successMessage && (
+            <div className="mb-4 p-3 bg-green-50 text-green-600 text-sm rounded-xl text-center font-medium">{successMessage}</div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="flex justify-center gap-3">
+              {otp.map((digit, index) => (
+                <input
+                  key={index}
+                  ref={inputRefs[index]}
+                  type="text" inputMode="numeric" maxLength={1} value={digit}
+                  onChange={(e) => handleChange(index, e.target.value)}
+                  onKeyDown={(e) => handleKeyDown(index, e)}
+                  onPaste={index === 0 ? handlePaste : undefined}
+                  onFocus={() => setFoli('typing')}
+                  className="w-14 h-16 text-center text-2xl font-semibold border-[1.5px] border-gray-200 rounded-xl bg-[#fbfaff] text-gray-800 focus:border-purple-400 focus:ring-4 focus:ring-purple-100 focus:outline-none transition"
+                />
+              ))}
+            </div>
+
+            <div className="text-center">
+              <button type="button" onClick={handleResendOtp} disabled={isResending}
+                className="text-sm text-gray-500 hover:text-purple-600 disabled:opacity-50">
+                {isResending ? 'Resending…' : "Didn't get it? Resend code"}
+              </button>
+            </div>
+
+            <button type="submit"
+              className="w-full py-3.5 text-white text-[15px] font-bold rounded-xl bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-500 shadow-lg shadow-purple-200 hover:brightness-105 active:translate-y-px transition">
+              Verify
             </button>
-          </div>
-
-          {/* Verify Button */}
-          <button
-            type="submit"
-            className="w-full py-4 px-4 bg-[#C4C4C4] hover:bg-gray-700 active:bg-gray-800 text-gray-800 hover:text-white active:text-white text-lg font-medium rounded-full transition-all duration-200"
-          >
-            Verify
-          </button>
-        </form>
+          </form>
+        </div>
       </div>
     </div>
+  );
+}
+
+export default function VerifyOtpPage() {
+  return (
+    <Suspense fallback={<FoliLoader />}>
+      <VerifyOtpContent />
+    </Suspense>
   );
 }

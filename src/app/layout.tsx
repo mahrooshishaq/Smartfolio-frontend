@@ -5,7 +5,11 @@ import '../styles/globals.css';
 import React from 'react';
 import ServiceWorkerRegistrar from '@/components/ServiceWorkerRegistrar';
 import InstallPrompt from '@/components/InstallPrompt';
+import SplashScreen from '@/components/SplashScreen';
+import AppleSplashLinks from '@/components/AppleSplashLinks';
+import FoliLoader from '@/components/foli/FoliLoader';
 import Script from 'next/script';
+
 
 // Chrome fires beforeinstallprompt before React hydrates, so catch it here or the
 // event is lost and no install banner can ever be shown.
@@ -39,7 +43,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#ffffff",
+  themeColor: "#eef1ff",
 };
 
 export const metadata: Metadata = {
@@ -61,13 +65,17 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="scroll-smooth">
+      <head>
+        <AppleSplashLinks />
+      </head>
       <body className={`${raleway.variable} ${baloo.variable} ${century.variable} font-sans`}>
         <Script
           id="pwa-install-capture"
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{ __html: CAPTURE_INSTALL_PROMPT }}
         />
-        <React.Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+        <SplashScreen />
+        <React.Suspense fallback={<FoliLoader />}>
           {children}
         </React.Suspense>
         <ServiceWorkerRegistrar />
