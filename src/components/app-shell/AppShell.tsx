@@ -7,6 +7,7 @@ import BrandMark from '@/components/BrandMark';
 import AnimatedBackground from '@/components/AnimatedBackground';
 import SidebarItem from './SidebarItem';
 import { NAV_ITEMS, SUPPORT_ITEMS, isActive, type NavItem } from './nav';
+import { clearSession } from '@/lib/api';
 
 type AppChrome = {
   /** Hide all shell chrome (top bar, tabs) — used by the mock-interview call. */
@@ -41,8 +42,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }, [pathname]);
 
   const handleLogout = () => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
+    clearSession();
     router.push('/login');
   };
 

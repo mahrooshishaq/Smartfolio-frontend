@@ -8,7 +8,7 @@ import {
   FiBookmark, FiCheck, FiTrendingUp, FiClock, FiGlobe
 } from 'react-icons/fi';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+import { apiFetch } from '@/lib/api';
 
 interface Job {
   id: string;
@@ -94,7 +94,7 @@ export default function JobsPage() {
       if (source) params.set('source', source);
       if (geoRestriction) params.set('geo_restriction', geoRestriction);
 
-      const res = await fetch(`${API}/jobs/me?${params}`, {
+      const res = await apiFetch(`/jobs/me?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.status === 401) { router.push('/login'); return; }
@@ -117,7 +117,7 @@ export default function JobsPage() {
   const fetchFilters = useCallback(async () => {
     if (!token) return;
     try {
-      const res = await fetch(`${API}/jobs/me/filters`, {
+      const res = await apiFetch(`/jobs/me/filters`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
@@ -135,7 +135,7 @@ export default function JobsPage() {
     while (Date.now() < deadline) {
       await new Promise(r => setTimeout(r, 8000));
       try {
-        const res = await fetch(`${API}/scraper/runs?limit=1`, {
+        const res = await apiFetch(`/scraper/runs?limit=1`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) continue;
@@ -169,7 +169,7 @@ export default function JobsPage() {
     while (Date.now() < deadline) {
       await new Promise(r => setTimeout(r, 4000));
       try {
-        const res = await fetch(`${API}/scraper/search/${jobId}`, {
+        const res = await apiFetch(`/scraper/search/${jobId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) continue;
@@ -197,7 +197,7 @@ export default function JobsPage() {
     try {
       let res: Response | null = null;
       try {
-        res = await fetch(`${API}/scraper/search`, {
+        res = await apiFetch(`/scraper/search`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -266,7 +266,7 @@ export default function JobsPage() {
     try {
       let res: Response | null = null;
       try {
-        res = await fetch(`${API}/scraper/run`, {
+        res = await apiFetch(`/scraper/run`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -307,7 +307,7 @@ export default function JobsPage() {
   const saveJob = async (jobId: string) => {
     if (!token || savedJobs[jobId]) return;
     try {
-      const res = await fetch(`${API}/applications`, {
+      const res = await apiFetch(`/applications`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ jobId }),

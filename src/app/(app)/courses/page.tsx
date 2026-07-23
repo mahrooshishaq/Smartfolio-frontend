@@ -9,7 +9,7 @@ import {
 } from 'react-icons/fi';
 import { FaStar, FaStarHalfAlt, FaRegStar } from 'react-icons/fa';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+import { apiFetch } from '@/lib/api';
 
 interface Course {
   id: string;
@@ -117,7 +117,7 @@ export default function CoursesPage() {
       if (category) params.set('category', category);
       if (price) params.set('price', price);
 
-      const res = await fetch(`${API}/courses/me?${params}`, {
+      const res = await apiFetch(`/courses/me?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.status === 401) { router.push('/login'); return; }
@@ -137,7 +137,7 @@ export default function CoursesPage() {
   const fetchFilters = useCallback(async () => {
     if (!token) return;
     try {
-      const res = await fetch(`${API}/courses/me/filters`, {
+      const res = await apiFetch(`/courses/me/filters`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
@@ -154,7 +154,7 @@ export default function CoursesPage() {
     while (Date.now() < deadline) {
       await new Promise(r => setTimeout(r, 8000));
       try {
-        const res = await fetch(`${API}/scraper/runs?limit=1`, {
+        const res = await apiFetch(`/scraper/runs?limit=1`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) continue;
@@ -173,7 +173,7 @@ export default function CoursesPage() {
     while (Date.now() < deadline) {
       await new Promise(r => setTimeout(r, 6000));
       try {
-        const res = await fetch(`${API}/scraper/search/${jobId}`, {
+        const res = await apiFetch(`/scraper/search/${jobId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) continue;
@@ -196,7 +196,7 @@ export default function CoursesPage() {
         // Custom search is async: kick it off, get a jobId, then poll it.
         let jobId = '';
         try {
-          const res = await fetch(`${API}/scraper/search`, {
+          const res = await apiFetch(`/scraper/search`, {
             method: 'POST',
             headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ query: search.trim(), type: 'both' }),
@@ -212,7 +212,7 @@ export default function CoursesPage() {
         // Profile-based scrape (synchronous but long; may outlive the proxy).
         let res: Response | null = null;
         try {
-          res = await fetch(`${API}/scraper/run`, {
+          res = await apiFetch(`/scraper/run`, {
             method: 'POST',
             headers: { Authorization: `Bearer ${token}` },
           });

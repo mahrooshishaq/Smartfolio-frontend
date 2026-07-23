@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import AnimatedBackground from '@/components/AnimatedBackground';
 import { FiArrowRight, FiArrowLeft, FiCheck, FiMapPin, FiLoader } from 'react-icons/fi';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+import { apiFetch } from '@/lib/api';
 
 // --- Enums matching backend ---
 const GOALS = [
@@ -153,7 +153,7 @@ export default function OnboardingPage() {
     setShowWelcome(true);
 
     try {
-      const res = await fetch(`${API}/onboarding/complete`, {
+      const res = await apiFetch(`/onboarding/complete`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

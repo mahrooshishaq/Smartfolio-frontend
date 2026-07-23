@@ -19,7 +19,7 @@ import {
   Info,
 } from 'lucide-react';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+import { apiFetch } from '@/lib/api';
 
 interface AnalysisResult {
   analysisId: string;
@@ -111,9 +111,9 @@ function ResultsContent() {
       try {
         const headers = { Authorization: `Bearer ${token}` };
         const [analysisRes, contentRes, fileRes] = await Promise.all([
-          fetch(`${API}/resume/${resumeId}/analyses`, { headers }),
-          fetch(`${API}/resume/${resumeId}/content`, { headers }),
-          fetch(`${API}/resume/${resumeId}/file`, { headers }),
+          apiFetch(`/resume/${resumeId}/analyses`, { headers }),
+          apiFetch(`/resume/${resumeId}/content`, { headers }),
+          apiFetch(`/resume/${resumeId}/file`, { headers }),
         ]);
 
         const analysisResult = await analysisRes.json();
@@ -184,7 +184,7 @@ function ResultsContent() {
     setReanalyzing(true);
     setShowReanalysisWarning(false);
     try {
-      const response = await fetch(`${API}/resume/analyze`, {
+      const response = await apiFetch(`/resume/analyze`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ resumeId }),

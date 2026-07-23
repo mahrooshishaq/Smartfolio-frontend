@@ -9,7 +9,7 @@ import {
 } from 'react-icons/fi';
 import jsPDF from 'jspdf';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+import { apiFetch } from '@/lib/api';
 
 type DocumentType = 'cover_letter' | 'professional_email' | 'university_statement';
 
@@ -47,7 +47,7 @@ export default function DocumentGenerationPage() {
   const fetchDocDetail = async (accessToken: string, docId: string) => {
     setStage('loading');
     try {
-      const res = await fetch(`${API}/document-generation/${docId}`, {
+      const res = await apiFetch(`/document-generation/${docId}`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       if (res.ok) {
@@ -80,7 +80,7 @@ export default function DocumentGenerationPage() {
     setStage('loading');
     setError('');
     try {
-      const res = await fetch(`${API}/document-generation/generate`, {
+      const res = await apiFetch(`/document-generation/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ documentType: docType, formData }),

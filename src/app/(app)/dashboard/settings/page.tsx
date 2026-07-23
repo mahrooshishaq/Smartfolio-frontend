@@ -6,7 +6,7 @@ import {
   FiArrowLeft, FiSave, FiLoader, FiX, FiPlus, FiCheck,
 } from 'react-icons/fi';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+import { apiFetch } from '@/lib/api';
 
 // --- Enums (matching backend) ---
 const CAREER_STAGES = [
@@ -150,7 +150,7 @@ export default function SettingsPage() {
     if (!token) { router.push('/login'); return; }
 
     try {
-      const res = await fetch(`${API}/onboarding/context`, {
+      const res = await apiFetch(`/onboarding/context`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.status === 401) { router.push('/login'); return; }
@@ -164,7 +164,7 @@ export default function SettingsPage() {
       setSkills(data.skills || []);
 
       // Fetch full profile for fields not in context
-      const profileRes = await fetch(`${API}/onboarding/context`, {
+      const profileRes = await apiFetch(`/onboarding/context`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (profileRes.ok) {
@@ -215,7 +215,7 @@ export default function SettingsPage() {
       if (interests.length > 0) body.interests = interests;
       if (bio) body.bio = bio;
 
-      const res = await fetch(`${API}/onboarding/profile`, {
+      const res = await apiFetch(`/onboarding/profile`, {
         method: 'PUT',
         headers: {
           Authorization: `Bearer ${token}`,

@@ -7,7 +7,7 @@ import {
   FiEdit3, FiCheck, FiX, FiPlus, FiWifiOff, FiRefreshCw,
 } from 'react-icons/fi';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+import { apiFetch } from '@/lib/api';
 
 const STATUSES = ['saved', 'applied', 'interviewing', 'offer', 'rejected', 'accepted'] as const;
 type Status = (typeof STATUSES)[number];
@@ -88,7 +88,7 @@ export default function ApplicationsPage() {
     setLoadFailed('');
     try {
       const params = status ? `?status=${status}` : '';
-      const res = await fetch(`${API}/applications${params}`, {
+      const res = await apiFetch(`/applications${params}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.status === 401) { router.push('/login'); return; }
@@ -112,7 +112,7 @@ export default function ApplicationsPage() {
   const updateStatus = async (id: string, status: Status) => {
     if (!token) return;
     try {
-      const res = await fetch(`${API}/applications/${id}`, {
+      const res = await apiFetch(`/applications/${id}`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
@@ -127,7 +127,7 @@ export default function ApplicationsPage() {
   const saveNotes = async (id: string) => {
     if (!token) return;
     try {
-      const res = await fetch(`${API}/applications/${id}`, {
+      const res = await apiFetch(`/applications/${id}`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ notes: noteDraft }),
@@ -144,7 +144,7 @@ export default function ApplicationsPage() {
     if (!token) return;
     if (!window.confirm('Remove this job from your tracker?')) return;
     try {
-      const res = await fetch(`${API}/applications/${id}`, {
+      const res = await apiFetch(`/applications/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -160,7 +160,7 @@ export default function ApplicationsPage() {
     setSaving(true);
     setError('');
     try {
-      const res = await fetch(`${API}/applications`, {
+      const res = await apiFetch(`/applications`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({

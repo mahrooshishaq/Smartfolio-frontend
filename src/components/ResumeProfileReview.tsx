@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { Loader2, Sparkles, Check, AlertCircle } from 'lucide-react';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+import { apiFetch } from '@/lib/api';
 
 /**
  * Post-upload review step. The SERVER decides what actually changes — it returns
@@ -49,7 +49,7 @@ export default function ResumeProfileReview({
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
-    fetch(`${API}/resume/${resumeId}/profile-suggestions`, {
+    apiFetch(`/resume/${resumeId}/profile-suggestions`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(async (r) => {
@@ -86,7 +86,7 @@ export default function ResumeProfileReview({
     setApplyError(null);
     try {
       const token = localStorage.getItem('accessToken');
-      const res = await fetch(`${API}/resume/${resumeId}/apply-to-profile`, {
+      const res = await apiFetch(`/resume/${resumeId}/apply-to-profile`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

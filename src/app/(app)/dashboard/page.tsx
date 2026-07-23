@@ -9,8 +9,7 @@ import {
   FiExternalLink, FiLoader,
 } from 'react-icons/fi';
 import ScoreRing from '@/components/ScoreRing';
-
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+import { apiFetch, getAccessToken } from '@/lib/api';
 
 // --- Sub-components ---
 
@@ -171,18 +170,20 @@ export default function DashboardPage() {
   const [interviewSessions, setInterviewSessions] = useState<InterviewSession[]>([]);
   const [documentHistory, setDocumentHistory] = useState<GeneratedDocument[]>([]);
 
-  const fetchData = useCallback(async (accessToken: string) => {
-    const headers = { Authorization: `Bearer ${accessToken}` };
-
+  const fetchData = useCallback(async () => {
+    // apiFetch attaches the token, silently refreshes on a 401, and redirects
+    // to /login if the session is truly gone — so a non-ok response here means
+    // "no data yet", never "token expired". That's what keeps an expired
+    // session from rendering as an all-zeros dashboard.
     const results = await Promise.allSettled([
-      fetch(`${API}/onboarding/context`, { headers }).then(r => r.ok ? r.json() : null),
-      fetch(`${API}/resume/dashboard`, { headers }).then(r => r.ok ? r.json() : null),
-      fetch(`${API}/jobs/me/stats`, { headers }).then(r => r.ok ? r.json() : null),
-      fetch(`${API}/courses/me/stats`, { headers }).then(r => r.ok ? r.json() : null),
-      fetch(`${API}/jobs/me?page=1&limit=5`, { headers }).then(r => r.ok ? r.json() : { data: [] }),
-      fetch(`${API}/courses/me?page=1&limit=5`, { headers }).then(r => r.ok ? r.json() : { data: [] }),
-      fetch(`${API}/mock-interview/sessions`, { headers }).then(r => r.ok ? r.json() : []),
-      fetch(`${API}/document-generation/history`, { headers }).then(r => r.ok ? r.json() : []),
+      apiFetch(`/onboarding/context`).then(r => r.ok ? r.json() : null),
+      apiFetch(`/resume/dashboard`).then(r => r.ok ? r.json() : null),
+      apiFetch(`/jobs/me/stats`).then(r => r.ok ? r.json() : null),
+      apiFetch(`/courses/me/stats`).then(r => r.ok ? r.json() : null),
+      apiFetch(`/jobs/me?page=1&limit=5`).then(r => r.ok ? r.json() : { data: [] }),
+      apiFetch(`/courses/me?page=1&limit=5`).then(r => r.ok ? r.json() : { data: [] }),
+      apiFetch(`/mock-interview/sessions`).then(r => r.ok ? r.json() : []),
+      apiFetch(`/document-generation/history`).then(r => r.ok ? r.json() : []),
     ]);
 
     const getValue = (r: PromiseSettledResult<unknown>): unknown => r.status === 'fulfilled' ? r.value : null;
@@ -217,19 +218,19 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    const accessToken = localStorage.getItem('accessToken');
+    const accessToken = getAccessToken();
     const name = localStorage.getItem('userName') || '';
     if (!accessToken) { router.push('/login'); return; }
     setToken(accessToken);
     setUserName(name);
-    fetchData(accessToken);
+    fetchData();
   }, [router, fetchData]);
 
   // Poll every 15s while scraper is running
   useEffect(() => {
     if (!scraperRunning || !token) return;
     const interval = setInterval(async () => {
-      const result = await fetchData(token);
+      const result = await fetchData();
       if (result?.hasData) {
         setScraperRunning(false);
         clearInterval(interval);

@@ -23,7 +23,7 @@ import {
 } from './constants';
 import { useAppChrome } from '@/components/app-shell/AppShell';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+import { apiFetch } from '@/lib/api';
 
 // Breather between questions: long enough to reset (and for the next question's
 // audio to finish synthesizing in the background), short enough to keep pace.
@@ -120,7 +120,7 @@ function MockInterviewContent() {
     if (!tok) return null;
     try {
       const canOgg = document.createElement('audio').canPlayType('audio/ogg; codecs=opus') !== '';
-      const res = await fetch(`${API}/mock-interview/tts`, {
+      const res = await apiFetch(`/mock-interview/tts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok}` },
         body: JSON.stringify({ text, format: canOgg ? 'ogg' : 'wav' }),
@@ -146,7 +146,7 @@ function MockInterviewContent() {
       const form = new FormData();
       form.append('audio', audio, `answer.${ext}`);
       if (speechContextRef.current) form.append('context', speechContextRef.current.slice(0, 600));
-      const res = await fetch(`${API}/mock-interview/transcribe`, {
+      const res = await apiFetch(`/mock-interview/transcribe`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${tok}` },
         body: form,
@@ -178,7 +178,7 @@ function MockInterviewContent() {
 
   // Loads the user's score trend for the progress card (Phase 4.1). Fails silently.
   const loadProgress = (tok: string) => {
-    fetch(`${API}/mock-interview/progress`, { headers: { Authorization: `Bearer ${tok}` } })
+    apiFetch(`/mock-interview/progress`, { headers: { Authorization: `Bearer ${tok}` } })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => { if (d) setProgress(d); })
       .catch(() => {});
@@ -200,7 +200,7 @@ function MockInterviewContent() {
   const fetchSessionDetail = async (accessToken: string, sid: string) => {
     setStage('loading');
     try {
-      const res = await fetch(`${API}/mock-interview/${sid}`, {
+      const res = await apiFetch(`/mock-interview/${sid}`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       if (res.ok) {
@@ -402,7 +402,7 @@ function MockInterviewContent() {
     setStage('loading');
     setError('');
     try {
-      const res = await fetch(`${API}/mock-interview/generate`, {
+      const res = await apiFetch(`/mock-interview/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
@@ -477,7 +477,7 @@ function MockInterviewContent() {
   const fetchFollowUp = async (questionId: number, answer: string): Promise<string | null> => {
     if (!token || !sessionId) return null;
     try {
-      const res = await fetch(`${API}/mock-interview/follow-up`, {
+      const res = await apiFetch(`/mock-interview/follow-up`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ sessionId, questionId, answer }),
@@ -635,7 +635,7 @@ function MockInterviewContent() {
         parentQuestionId: Number(parentQuestionId),
         answer,
       }));
-      const res = await fetch(`${API}/mock-interview/submit`, {
+      const res = await apiFetch(`/mock-interview/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({

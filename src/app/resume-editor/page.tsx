@@ -5,7 +5,7 @@ import React, { Suspense, useCallback, useEffect, useRef, useState } from 'react
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowDown, ArrowLeft, ArrowUp, Check, Cloud, Download, GripVertical, Loader2, Plus, Save, Sparkles, Trash2, WandSparkles, X } from 'lucide-react';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+import { apiFetch } from '@/lib/api';
 
 interface Improvement {
   category: string;
@@ -80,9 +80,9 @@ function EditorContent() {
       try {
         const headers = { Authorization: `Bearer ${token}` };
         const [contentRes, documentRes, analysesRes] = await Promise.all([
-          fetch(`${API}/resume/${resumeId}/content`, { headers }),
-          fetch(`${API}/resume/${resumeId}/document`, { headers }),
-          fetch(`${API}/resume/${resumeId}/analyses`, { headers }),
+          apiFetch(`/resume/${resumeId}/content`, { headers }),
+          apiFetch(`/resume/${resumeId}/document`, { headers }),
+          apiFetch(`/resume/${resumeId}/analyses`, { headers }),
         ]);
         if (!contentRes.ok || !documentRes.ok || !analysesRes.ok) throw new Error('The structured resume editor could not be loaded.');
         const content = await contentRes.json();
@@ -164,7 +164,7 @@ function EditorContent() {
     setSaving(true);
     if (!quiet) setStatus('Saving…');
     try {
-      const response = await fetch(`${API}/resume/${resumeId}/document`, { method: 'PUT', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ document: snapshot }) });
+      const response = await apiFetch(`/resume/${resumeId}/document`, { method: 'PUT', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ document: snapshot }) });
       if (!response.ok) {
         const result = await response.json().catch(() => null);
         throw new Error(Array.isArray(result?.message) ? result.message.join(' ') : result?.message || 'Resume could not be saved.');
@@ -193,7 +193,7 @@ function EditorContent() {
     setExporting(format);
     setStatus(`Generating ${format.toUpperCase()}…`);
     try {
-      const response = await fetch(`${API}/resume/${resumeId}/export/${format}`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+      const response = await apiFetch(`/resume/${resumeId}/export/${format}`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
       if (!response.ok) { const result = await response.json(); throw new Error(result?.message || 'Export failed.'); }
       const blob = await response.blob();
       downloadBlob(blob, `${fileName.replace(/\.(pdf|docx)$/i, '') || 'resume'}-smartfolio.${format}`);

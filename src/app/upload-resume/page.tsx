@@ -6,7 +6,7 @@ import AnimatedBackground from '@/components/AnimatedBackground';
 import BrandMark from '@/components/BrandMark';
 import ResumeProfileReview from '@/components/ResumeProfileReview';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+import { apiFetch } from '@/lib/api';
 
 export default function ResumeUploadPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -25,7 +25,7 @@ export default function ResumeUploadPage() {
     if (!accessToken) { router.push('/login'); return; }
     setIsUploading(true);
     try {
-      const response = await fetch(`${API}/resume/create`, { method: 'POST', headers: { Authorization: `Bearer ${accessToken}` } });
+      const response = await apiFetch(`/resume/create`, { method: 'POST', headers: { Authorization: `Bearer ${accessToken}` } });
       const result = await response.json();
       if (!response.ok) throw new Error(result?.message || 'Could not create a resume.');
       router.push(`/resume-editor?resumeId=${result.resumeId}&mode=create`);
@@ -38,7 +38,7 @@ export default function ResumeUploadPage() {
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
     if (!token) return;
-    fetch(`${API}/onboarding/context`, { headers: { Authorization: `Bearer ${token}` } })
+    apiFetch(`/onboarding/context`, { headers: { Authorization: `Bearer ${token}` } })
       .then(response => response.ok ? response.json() : null)
       .then(context => setTargetRole(context?.targetRole || ''))
       .catch(() => undefined);
@@ -93,7 +93,7 @@ export default function ResumeUploadPage() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const uploadRes = await fetch(`${API}/resume/upload`, {
+      const uploadRes = await apiFetch(`/resume/upload`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -133,7 +133,7 @@ export default function ResumeUploadPage() {
         return;
       }
       const trimmedJobDescription = jobDescription.trim();
-      const analyzeRes = await fetch(`${API}/resume/analyze`, {
+      const analyzeRes = await apiFetch(`/resume/analyze`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
