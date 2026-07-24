@@ -156,8 +156,9 @@ test('a saved CV whose file is gone asks for a re-upload instead', async ({ page
   await page.goto('/upload-resume?fromJob=resume');
 
   // Container disks are wiped on rebuild, so a row can outlive its file. Say so
-  // rather than offering a one-click analysis that would fail.
-  await expect(page.getByText(/no longer readable/i)).toBeVisible();
+  // rather than offering a saved CV that cannot be previewed, downloaded or
+  // edited once the user reaches the results page.
+  await expect(page.getByText(/no longer stored on the server/i)).toBeVisible();
   await expect(page.getByText('Using your saved CV')).toHaveCount(0);
   await expect(page.getByText(/choose a file or drag/i)).toBeVisible();
   await expect(page.locator('textarea')).toHaveValue(JOB.description);
