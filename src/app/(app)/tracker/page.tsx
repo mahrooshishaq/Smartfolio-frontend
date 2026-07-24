@@ -387,7 +387,8 @@ export default function ApplicationsPage() {
                 </a>
                 <button
                   onClick={() => deleteApp(app.id)}
-                  className="font-raleway flex items-center gap-1 text-xs text-gray-300 hover:text-red-500 transition-colors"
+                  title="Remove this job from your tracker"
+                  className="font-raleway flex items-center gap-1.5 text-xs font-semibold text-gray-400 px-3 py-1.5 rounded-lg hover:bg-red-50 hover:text-red-500 transition-colors"
                 >
                   <FiTrash2 size={13} /> Remove
                 </button>

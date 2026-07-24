@@ -1,6 +1,6 @@
 'use client';
 import FoliLoader from '@/components/foli/FoliLoader';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   FiBriefcase, FiSearch, FiMapPin, FiExternalLink,
@@ -11,6 +11,7 @@ import {
 import { apiFetch } from '@/lib/api';
 import { stashJobHandoff, canHandOff, type HandoffIntent } from '@/lib/job-handoff';
 import { companyLogo, sourceLogo } from '@/lib/logo';
+import { useFeedback } from '@/components/ui/feedback';
 
 interface Job {
   id: string;
@@ -55,6 +56,7 @@ interface JobsResponse {
 
 export default function JobsPage() {
   const router = useRouter();
+  const { success: notifySuccess, error: notifyError } = useFeedback();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [filters, setFilters] = useState<Filters | null>(null);
   const [total, setTotal] = useState(0);
@@ -77,7 +79,12 @@ export default function JobsPage() {
   const [geoRestriction, setGeoRestriction] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [sort, setSort] = useState<'match' | 'newest'>('match');
-  const [savedJobs, setSavedJobs] = useState<Record<string, boolean>>({});
+  // Feed job id -> tracked application id. The application id is what the
+  // unsave (DELETE) needs, and having it lets the bookmark toggle both ways.
+  const [savedJobs, setSavedJobs] = useState<Record<string, string>>({});
+  // Jobs with a save/unsave request in flight — guards against a double-click
+  // firing a second POST/DELETE before the first settles.
+  const savingRef = useRef<Set<string>>(new Set());
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
 
@@ -306,25 +313,74 @@ export default function JobsPage() {
     return () => clearTimeout(timer);
   }, [search, jobType, country, category, experienceLevel, source, geoRestriction, sort]);
 
-  const saveJob = async (jobId: string) => {
-    if (!token || savedJobs[jobId]) return;
+  // Which feed jobs are already in the tracker — so the bookmark shows saved on
+  // load (not just after a click) and we hold each one's application id for
+  // unsaving. Applications snapshot the feed job in `sourceJobId`.
+  const hydrateSavedJobs = useCallback(async () => {
+    if (!token) return;
     try {
-      const res = await apiFetch(`/applications`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jobId }),
-      });
-      if (res.ok || res.status === 400) {
-        // 400 = already tracked — treat as saved either way
-        setSavedJobs(prev => ({ ...prev, [jobId]: true }));
+      const res = await apiFetch(`/applications`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) return;
+      const body: { data?: Array<{ id: string; sourceJobId: string | null }> } = await res.json();
+      const map: Record<string, string> = {};
+      for (const a of body.data ?? []) if (a.sourceJobId) map[a.sourceJobId] = a.id;
+      setSavedJobs(map);
+    } catch {
+      // A failed sync just means the bookmarks fall back to click-to-save; the
+      // save/unsave calls themselves still report their own errors.
+    }
+  }, [token]);
+
+  useEffect(() => { hydrateSavedJobs(); }, [hydrateSavedJobs]);
+
+  const friendlyMsg = (err: unknown, fallback: string) => {
+    const msg = err instanceof Error ? err.message : '';
+    return msg === 'Failed to fetch'
+      ? 'Can’t reach the server right now. Check your connection and try again.'
+      : msg || fallback;
+  };
+
+  // Bookmark toggle: save an untracked job, or unsave one already tracked. The
+  // saved map doubles as the lookup for the application id the DELETE needs.
+  const toggleSave = async (jobId: string) => {
+    if (!token || savingRef.current.has(jobId)) return;
+    savingRef.current.add(jobId);
+    const applicationId = savedJobs[jobId];
+    try {
+      if (applicationId) {
+        const res = await apiFetch(`/applications/${applicationId}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        // 404 = already gone (removed from the tracker tab); still drop it here.
+        if (!res.ok && res.status !== 404) {
+          throw new Error(`Couldn’t remove this job (server said ${res.status}). Please try again.`);
+        }
+        setSavedJobs(prev => { const next = { ...prev }; delete next[jobId]; return next; });
+        notifySuccess('Removed from your tracker.');
       } else {
-        throw new Error(`Couldn’t save this job (server said ${res.status}). Please try again.`);
+        const res = await apiFetch(`/applications`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jobId }),
+        });
+        if (res.ok) {
+          const created: { id: string } = await res.json();
+          setSavedJobs(prev => ({ ...prev, [jobId]: created.id }));
+          notifySuccess('Saved to your tracker.');
+        } else if (res.status === 400) {
+          // Already tracked (e.g. saved in another tab) — reconcile so we pick up
+          // its application id and the bookmark can be unsaved from here too.
+          await hydrateSavedJobs();
+          notifySuccess('Saved to your tracker.');
+        } else {
+          throw new Error(`Couldn’t save this job (server said ${res.status}). Please try again.`);
+        }
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : '';
-      setError(msg === 'Failed to fetch'
-        ? 'Can’t reach the server right now. Check your connection and try again.'
-        : msg || 'Couldn’t save this job. Please try again.');
+      notifyError(friendlyMsg(err, applicationId ? 'Couldn’t remove this job. Please try again.' : 'Couldn’t save this job. Please try again.'));
+    } finally {
+      savingRef.current.delete(jobId);
     }
   };
 
@@ -611,11 +667,18 @@ export default function JobsPage() {
                     </div>
                     <div className="flex-shrink-0 flex items-center gap-2">
                       <button
-                        onClick={() => saveJob(job.id)}
-                        title={savedJobs[job.id] ? 'Saved to Job Tracker' : 'Save to Job Tracker'}
-                        className={`p-2.5 rounded-xl text-xs font-bold flex items-center transition-all ${savedJobs[job.id] ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-50 text-gray-400 hover:bg-indigo-50 hover:text-[#4F46E5]'}`}
+                        onClick={() => toggleSave(job.id)}
+                        aria-pressed={!!savedJobs[job.id]}
+                        title={savedJobs[job.id] ? 'Saved — click to remove from tracker' : 'Save to Job Tracker'}
+                        aria-label={savedJobs[job.id] ? 'Remove from tracker' : 'Save to tracker'}
+                        className={`group/save p-2.5 rounded-xl text-xs font-bold flex items-center transition-all ${savedJobs[job.id] ? 'bg-emerald-50 text-emerald-600 hover:bg-red-50 hover:text-red-500' : 'bg-gray-50 text-gray-400 hover:bg-indigo-50 hover:text-[#4F46E5]'}`}
                       >
-                        {savedJobs[job.id] ? <FiCheck size={14} /> : <FiBookmark size={14} />}
+                        {savedJobs[job.id]
+                          ? (<>
+                              <FiCheck size={14} className="group-hover/save:hidden" />
+                              <FiX size={14} className="hidden group-hover/save:block" />
+                            </>)
+                          : <FiBookmark size={14} />}
                       </button>
                       <a
                         href={job.apply_url}
