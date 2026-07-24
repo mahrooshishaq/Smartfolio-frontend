@@ -637,11 +637,16 @@ export default function JobsPage() {
                       interview form would refuse to start anyway. */}
                   {canPractice(job) && (
                     <div className="flex flex-wrap items-center gap-2 mt-4">
+                      {/* Reads as a secondary to Apply's solid fill: same indigo,
+                          carried as a tint and a hairline rather than a block of
+                          colour, so it has real presence without two buttons
+                          competing to be the primary action on one card. */}
                       <button
                         onClick={() => practiceInterview(job)}
-                        className="font-raleway flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[11px] font-bold bg-gray-50 text-gray-500 hover:bg-indigo-50 hover:text-[#4F46E5] transition-all"
+                        className="font-raleway group/practice flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-indigo-50/70 text-[#4F46E5] border border-indigo-100 hover:bg-indigo-100/80 hover:border-indigo-200 active:scale-[0.98] transition-all"
                       >
-                        <FiMic size={12} /> Practice this interview
+                        <FiMic size={14} className="transition-transform group-hover/practice:scale-110 motion-reduce:transition-none motion-reduce:group-hover/practice:scale-100" />
+                        Practice this interview
                       </button>
                     </div>
                   )}
