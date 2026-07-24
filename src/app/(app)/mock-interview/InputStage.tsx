@@ -1,6 +1,7 @@
-import { FiVolume2, FiMic, FiZap, FiSend, FiVideo } from 'react-icons/fi';
+import { FiVolume2, FiMic, FiZap, FiSend, FiVideo, FiBriefcase, FiX } from 'react-icons/fi';
 import { TIER_OPTIONS, SENIORITY_OPTIONS, INTERVIEWER_STYLE_OPTIONS, INTERVIEWER } from './constants';
 import type { LengthTier, Seniority, InterviewerStyle, ProgressPoint, ProgressSummary } from './types';
+import type { InterviewPrefill } from '@/lib/interview-handoff';
 
 function Stat({ label, value }: { label: string; value: number | null }) {
   return (
@@ -51,6 +52,9 @@ interface InputStageProps {
   onStart: () => void;
   sttSupported: boolean;
   progress: { points: ProgressPoint[]; summary: ProgressSummary } | null;
+  /** Set when the user came from "Practice this interview" on a job card. */
+  prefilledFrom?: InterviewPrefill | null;
+  onClearPrefill?: () => void;
 }
 
 export function InputStage({
@@ -58,6 +62,7 @@ export function InputStage({
   seniority, setSeniority, focusInput, setFocusInput, useResume, setUseResume,
   interviewerStyle, setInterviewerStyle,
   onStart, sttSupported, progress,
+  prefilledFrom, onClearPrefill,
 }: InputStageProps) {
   const showProgress = progress && progress.summary.attempts >= 1;
 
@@ -86,6 +91,34 @@ export function InputStage({
         {!sttSupported && (
           <div className="bg-amber-50 text-amber-700 rounded-xl px-4 py-3 mb-5 text-xs font-raleway">
             Voice input isn&apos;t supported in this browser (Chrome works best). You can still type every answer.
+          </div>
+        )}
+
+        {/* Arrived from a job card — say which posting was loaded, so a
+            pre-filled textarea reads as intentional rather than as leftover
+            text from a previous session. */}
+        {prefilledFrom && (
+          <div className="flex items-start gap-3 bg-indigo-50/60 border border-indigo-100 rounded-2xl px-4 py-3 mb-5">
+            <span className="mt-0.5 text-[#4F46E5]"><FiBriefcase size={14} /></span>
+            <div className="flex-1 min-w-0">
+              <p className="font-raleway text-xs font-bold text-slate-700 truncate">
+                {prefilledFrom.title}
+                {prefilledFrom.company && <span className="font-normal text-gray-500"> · {prefilledFrom.company}</span>}
+              </p>
+              <p className="font-raleway text-[11px] text-gray-500 mt-0.5">
+                Description loaded from your jobs. Adjust anything below, then start.
+              </p>
+            </div>
+            {onClearPrefill && (
+              <button
+                type="button"
+                onClick={onClearPrefill}
+                aria-label="Clear this job and start from a blank description"
+                className="flex-shrink-0 p-1.5 rounded-lg text-gray-400 hover:text-slate-600 hover:bg-white transition-all"
+              >
+                <FiX size={14} />
+              </button>
+            )}
           </div>
         )}
 

@@ -5,10 +5,11 @@ import { useRouter } from 'next/navigation';
 import {
   FiBriefcase, FiSearch, FiMapPin, FiExternalLink,
   FiChevronLeft, FiChevronRight, FiFilter, FiX, FiLoader,
-  FiBookmark, FiCheck, FiTrendingUp, FiClock, FiGlobe
+  FiBookmark, FiCheck, FiTrendingUp, FiClock, FiGlobe, FiMic
 } from 'react-icons/fi';
 
 import { apiFetch } from '@/lib/api';
+import { stashInterviewPrefill } from '@/lib/interview-handoff';
 
 interface Job {
   id: string;
@@ -326,6 +327,25 @@ export default function JobsPage() {
     }
   };
 
+  // The interview form won't start on fewer than 20 characters, so a posting
+  // that thin can't produce an interview — don't offer the button at all.
+  const canPractice = (job: Job) => (job.description || '').trim().length >= 20;
+
+  // Hand the posting to the mock interview and jump straight to its form, where
+  // the description is already filled in and only Start is left to press.
+  const practiceInterview = (job: Job) => {
+    const href = stashInterviewPrefill({
+      description: job.description,
+      title: job.title,
+      company: job.company,
+    });
+    if (!href) {
+      setError('This posting doesn’t have enough description to build an interview from.');
+      return;
+    }
+    router.push(href);
+  };
+
   const clearFilters = () => {
     setSearch(''); setJobType(''); setCountry(''); setCategory(''); setExperienceLevel(''); setSource(''); setGeoRestriction('');
   };
@@ -610,6 +630,21 @@ export default function JobsPage() {
                       <span className="font-raleway text-[11px] text-gray-400 flex items-center gap-1"><FiMapPin size={10} />{job.location}</span>
                     )}
                   </div>
+
+                  {/* Secondary actions — things to do with the posting other than
+                      applying to it. Hidden entirely when the board gave us too
+                      little description to build an interview from, since the
+                      interview form would refuse to start anyway. */}
+                  {canPractice(job) && (
+                    <div className="flex flex-wrap items-center gap-2 mt-4">
+                      <button
+                        onClick={() => practiceInterview(job)}
+                        className="font-raleway flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[11px] font-bold bg-gray-50 text-gray-500 hover:bg-indigo-50 hover:text-[#4F46E5] transition-all"
+                      >
+                        <FiMic size={12} /> Practice this interview
+                      </button>
+                    </div>
+                  )}
 
                   <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-50">
                     {formatSalary(job.salary_min, job.salary_max) ? (
