@@ -476,7 +476,7 @@ export default function JobsPage() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
             <div>
               <h2 className="font-century text-2xl md:text-3xl font-black text-slate-800">Jobs For You</h2>
-              <p className="font-raleway text-sm text-gray-400 mt-1">Personalized job recommendations based on your profile</p>
+              <p className="font-raleway text-sm text-gray-500 mt-1">Personalized job recommendations based on your profile</p>
             </div>
             <button
               onClick={runScraper}
@@ -491,7 +491,7 @@ export default function JobsPage() {
           <div className="bg-white rounded-[2rem] shadow-sm border border-gray-50 p-4 md:p-6 mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
               <div className="flex-1 relative">
-                <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
+                <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
                 <input
                   type="text"
                   value={search}
@@ -515,7 +515,7 @@ export default function JobsPage() {
                 <FiFilter size={16} /> Filters {hasActiveFilters && <span className="w-2 h-2 rounded-full bg-blue-500" />}
               </button>
               {hasActiveFilters && (
-                <button onClick={clearFilters} className="font-raleway flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600">
+                <button onClick={clearFilters} className="font-raleway flex items-center gap-1 text-xs text-gray-500 hover:text-gray-600">
                   <FiX size={14} /> Clear
                 </button>
               )}
@@ -609,17 +609,17 @@ export default function JobsPage() {
 
           {/* Results count + sort toggle */}
           <div className="font-raleway flex items-center justify-between mb-6">
-            <p className="text-sm text-gray-400">{total} jobs found</p>
+            <p className="text-sm text-gray-500">{total} jobs found</p>
             <div className="flex items-center gap-1 bg-white border border-gray-100 rounded-xl p-1">
               <button
                 onClick={() => setSort('match')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${sort === 'match' ? 'bg-[#4F46E5] text-white' : 'text-gray-400 hover:text-gray-600'}`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${sort === 'match' ? 'bg-[#4F46E5] text-white' : 'text-gray-500 hover:text-gray-600'}`}
               >
                 <FiTrendingUp size={12} /> Best Match
               </button>
               <button
                 onClick={() => setSort('newest')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${sort === 'newest' ? 'bg-[#4F46E5] text-white' : 'text-gray-400 hover:text-gray-600'}`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${sort === 'newest' ? 'bg-[#4F46E5] text-white' : 'text-gray-500 hover:text-gray-600'}`}
               >
                 <FiClock size={12} /> Newest
               </button>
@@ -639,10 +639,10 @@ export default function JobsPage() {
                   {/* The filters describe jobs we haven't collected yet — offer to
                       go get them instead of dead-ending on "no results". */}
                   <h3 className="font-century text-xl font-bold text-slate-700 mb-2">No saved jobs match</h3>
-                  <p className="font-raleway text-sm text-gray-400 mb-2">
+                  <p className="font-raleway text-sm text-gray-500 mb-2">
                     Nothing in your jobs matches {searchSummary || 'these filters'}.
                   </p>
-                  <p className="font-raleway text-sm text-gray-400 mb-6">Search the job boards for it?</p>
+                  <p className="font-raleway text-sm text-gray-500 mb-6">Search the job boards for it?</p>
                   <button onClick={runWebSearch} disabled={scraping} className="font-raleway inline-flex items-center gap-2 bg-[#4F46E5] hover:bg-[#4338CA] text-white px-8 py-3 rounded-2xl font-semibold text-sm transition-all disabled:opacity-60">
                     {scraping ? <><FiLoader className="animate-spin" size={16} /> Searching…</> : <><FiGlobe size={16} /> Search the web for this</>}
                   </button>
@@ -650,7 +650,7 @@ export default function JobsPage() {
               ) : (
                 <>
                   <h3 className="font-century text-xl font-bold text-slate-700 mb-2">No Jobs Yet</h3>
-                  <p className="font-raleway text-sm text-gray-400 mb-6">Find job listings matched to your profile.</p>
+                  <p className="font-raleway text-sm text-gray-500 mb-6">Find job listings matched to your profile.</p>
                   <button onClick={runScraper} disabled={scraping} className="font-raleway bg-[#4F46E5] hover:bg-[#4338CA] text-white px-8 py-3 rounded-2xl font-semibold text-sm transition-all disabled:opacity-60">
                     {scraping ? 'Finding Jobs...' : 'Find Jobs Now'}
                   </button>
@@ -670,7 +670,7 @@ export default function JobsPage() {
                     />
                     <div className="flex-1 min-w-0">
                       <h3 className="font-century text-base font-bold text-slate-800 truncate group-hover:text-[#4F46E5] transition-colors">{job.title}</h3>
-                      <p className="font-raleway text-sm text-gray-400 mt-0.5">{job.company}</p>
+                      <p className="font-raleway text-sm text-gray-500 mt-0.5">{job.company}</p>
                     </div>
                     <div className="flex-shrink-0 flex items-center gap-2">
                       <button
@@ -678,7 +678,7 @@ export default function JobsPage() {
                         aria-pressed={!!savedJobs[job.id]}
                         title={savedJobs[job.id] ? 'Saved — click to remove from tracker' : 'Save to Job Tracker'}
                         aria-label={savedJobs[job.id] ? 'Remove from tracker' : 'Save to tracker'}
-                        className={`group/save p-2.5 rounded-xl text-xs font-bold flex items-center transition-all ${savedJobs[job.id] ? 'bg-emerald-50 text-emerald-600 hover:bg-red-50 hover:text-red-500' : 'bg-gray-50 text-gray-400 hover:bg-indigo-50 hover:text-[#4F46E5]'}`}
+                        className={`group/save p-2.5 rounded-xl text-xs font-bold flex items-center transition-all ${savedJobs[job.id] ? 'bg-emerald-50 text-emerald-600 hover:bg-red-50 hover:text-red-500' : 'bg-gray-50 text-gray-500 hover:bg-indigo-50 hover:text-[#4F46E5]'}`}
                       >
                         {savedJobs[job.id]
                           ? (<>
@@ -699,7 +699,7 @@ export default function JobsPage() {
                   </div>
 
                   {job.description && (
-                    <p className="font-raleway text-xs text-gray-400 mt-3 line-clamp-2 leading-relaxed">{job.description}</p>
+                    <p className="font-raleway text-xs text-gray-500 mt-3 line-clamp-2 leading-relaxed">{job.description}</p>
                   )}
 
                   <div className="flex flex-wrap items-center gap-2 mt-4">
@@ -726,7 +726,7 @@ export default function JobsPage() {
                       <span className="font-raleway text-[11px] font-bold px-3 py-1 rounded-lg bg-gray-50 text-gray-500">{job.experience_level}</span>
                     )}
                     {job.location && (
-                      <span className="font-raleway text-[11px] text-gray-400 flex items-center gap-1"><FiMapPin size={10} />{job.location}</span>
+                      <span className="font-raleway text-[11px] text-gray-500 flex items-center gap-1"><FiMapPin size={10} />{job.location}</span>
                     )}
                   </div>
 
@@ -765,11 +765,11 @@ export default function JobsPage() {
                     {formatSalary(job.salary_min, job.salary_max) ? (
                       <span className="font-century text-sm font-bold text-slate-700">{formatSalary(job.salary_min, job.salary_max)}</span>
                     ) : (
-                      <span className="font-raleway text-xs text-gray-300">Salary not disclosed</span>
+                      <span className="font-raleway text-xs text-gray-500">Salary not disclosed</span>
                     )}
                     <div className="flex items-center gap-2">
                       <img src={sourceLogo(job.source_logo, job.source)} alt={job.source} className="w-4 h-4 rounded" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                      <span className="font-raleway text-[10px] text-gray-300 uppercase tracking-wider">{job.source}</span>
+                      <span className="font-raleway text-[10px] text-gray-500 uppercase tracking-wider">{job.source}</span>
                     </div>
                   </div>
                 </div>

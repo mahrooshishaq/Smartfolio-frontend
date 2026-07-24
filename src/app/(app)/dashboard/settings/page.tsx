@@ -56,7 +56,7 @@ const TextField = ({ label, value, onChange, placeholder }: { label: string; val
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="font-raleway w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-slate-700 placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent transition-all"
+      className="font-raleway w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-slate-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent transition-all"
     />
   </div>
 );
@@ -94,7 +94,7 @@ const TagInput = ({ label, tags, onChange, placeholder }: { label: string; tags:
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addTag(); } }}
           placeholder={placeholder}
-          className="font-raleway flex-1 min-w-0 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-slate-700 placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent transition-all"
+          className="font-raleway flex-1 min-w-0 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-slate-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent transition-all"
         />
         <button onClick={addTag} className="shrink-0 bg-[#4F46E5] hover:bg-[#4338CA] text-white px-3 py-2.5 rounded-xl transition-all">
           <FiPlus size={16} />
@@ -108,7 +108,7 @@ const ToggleField = ({ label, description, value, onChange }: { label: string; d
   <div className="flex items-center justify-between py-3">
     <div>
       <p className="font-raleway text-sm font-bold text-slate-700">{label}</p>
-      {description && <p className="font-raleway text-xs text-gray-400">{description}</p>}
+      {description && <p className="font-raleway text-xs text-gray-500">{description}</p>}
     </div>
     <button
       onClick={() => onChange(!value)}
@@ -251,12 +251,12 @@ export default function SettingsPage() {
           {/* Header */}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
             <div className="flex items-center gap-4">
-              <button onClick={() => router.push('/dashboard')} className="text-gray-400 hover:text-slate-700 transition-colors min-h-11 min-w-11 flex items-center justify-center -ml-2">
+              <button onClick={() => router.push('/dashboard')} className="text-gray-500 hover:text-slate-700 transition-colors min-h-11 min-w-11 flex items-center justify-center -ml-2">
                 <FiArrowLeft size={20} />
               </button>
               <div>
                 <h2 className="font-century text-2xl md:text-3xl font-black text-slate-800">Profile Settings</h2>
-                <p className="font-raleway text-sm text-gray-400 mt-1">Update your career profile to improve recommendations</p>
+                <p className="font-raleway text-sm text-gray-500 mt-1">Update your career profile to improve recommendations</p>
               </div>
             </div>
             <button
@@ -336,7 +336,7 @@ export default function SettingsPage() {
                   onChange={(e) => setBio(e.target.value)}
                   placeholder="Tell us about yourself, your career goals, and what you're looking for..."
                   rows={4}
-                  className="font-raleway w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-slate-700 placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent transition-all resize-none"
+                  className="font-raleway w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-slate-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent transition-all resize-none"
                 />
               </div>
             </div>

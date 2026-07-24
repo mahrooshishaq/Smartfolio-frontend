@@ -92,7 +92,7 @@ function ResetPasswordContent() {
                   className="w-full text-[15px] text-gray-800 bg-[#fbfaff] border-[1.5px] border-gray-200 rounded-xl px-3.5 py-3 pr-11 focus:outline-none focus:border-purple-400 focus:ring-4 focus:ring-purple-100 transition" />
                 <button type="button" onClick={() => setShowNewPassword(!showNewPassword)}
                   aria-label={showNewPassword ? 'Hide password' : 'Show password'}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 grid place-items-center text-gray-400 hover:text-gray-600 rounded-lg">
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 grid place-items-center text-gray-500 hover:text-gray-600 rounded-lg">
                   {showNewPassword ? <FaEyeSlash /> : <FaEye />}
                 </button>
               </div>
@@ -107,7 +107,7 @@ function ResetPasswordContent() {
                   className="w-full text-[15px] text-gray-800 bg-[#fbfaff] border-[1.5px] border-gray-200 rounded-xl px-3.5 py-3 pr-11 focus:outline-none focus:border-purple-400 focus:ring-4 focus:ring-purple-100 transition" />
                 <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 grid place-items-center text-gray-400 hover:text-gray-600 rounded-lg">
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 grid place-items-center text-gray-500 hover:text-gray-600 rounded-lg">
                   {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
                 </button>
               </div>

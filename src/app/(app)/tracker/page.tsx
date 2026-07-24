@@ -203,7 +203,7 @@ export default function ApplicationsPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
         <div>
           <h2 className="font-century text-2xl md:text-3xl font-black text-slate-800">Job Tracker</h2>
-          <p className="font-raleway text-sm text-gray-400 mt-1">Track every application from saved to accepted — no more spreadsheets</p>
+          <p className="font-raleway text-sm text-gray-500 mt-1">Track every application from saved to accepted — no more spreadsheets</p>
         </div>
         <button
           onClick={() => setShowManualForm(!showManualForm)}
@@ -244,7 +244,7 @@ export default function ApplicationsPage() {
             </button>
             <button
               onClick={() => setShowManualForm(false)}
-              className="font-raleway text-sm text-gray-400 hover:text-gray-600 px-4"
+              className="font-raleway text-sm text-gray-500 hover:text-gray-600 px-4"
             >
               Cancel
             </button>
@@ -291,7 +291,7 @@ export default function ApplicationsPage() {
         <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-50 p-16 text-center">
           <FiWifiOff className="mx-auto text-gray-200 mb-4" size={48} />
           <h3 className="font-century text-xl font-bold text-slate-700 mb-2">Couldn&apos;t load your tracker</h3>
-          <p className="font-raleway text-sm text-gray-400 mb-6 max-w-md mx-auto">{loadFailed}</p>
+          <p className="font-raleway text-sm text-gray-500 mb-6 max-w-md mx-auto">{loadFailed}</p>
           <button
             onClick={() => fetchApps()}
             className="font-raleway inline-flex items-center gap-2 bg-[#4F46E5] hover:bg-[#4338CA] text-white px-8 py-3 rounded-2xl font-semibold text-sm transition-all"
@@ -305,7 +305,7 @@ export default function ApplicationsPage() {
           <h3 className="font-century text-xl font-bold text-slate-700 mb-2">
             {statusFilter ? `No ${STATUS_LABELS[statusFilter as Status]?.toLowerCase()} jobs` : 'Nothing tracked yet'}
           </h3>
-          <p className="font-raleway text-sm text-gray-400 mb-6">
+          <p className="font-raleway text-sm text-gray-500 mb-6">
             Save jobs from the Jobs page, or add one manually to start tracking your applications.
           </p>
           <button
@@ -322,7 +322,7 @@ export default function ApplicationsPage() {
               <div className="flex items-start gap-4">
                 <div className="flex-1 min-w-0">
                   <h3 className="font-century text-base font-bold text-slate-800 truncate group-hover:text-[#4F46E5] transition-colors">{app.title}</h3>
-                  <p className="font-raleway text-sm text-gray-400 mt-0.5">{app.company}</p>
+                  <p className="font-raleway text-sm text-gray-500 mt-0.5">{app.company}</p>
                 </div>
                 <Select
                   value={app.status}
@@ -338,10 +338,10 @@ export default function ApplicationsPage() {
                   <span className="font-raleway text-[11px] font-bold px-3 py-1 rounded-lg bg-gray-50 text-gray-500">{app.jobType}</span>
                 )}
                 {app.location && app.location !== 'Not specified' && (
-                  <span className="font-raleway text-[11px] text-gray-400 flex items-center gap-1"><FiMapPin size={10} />{app.location}</span>
+                  <span className="font-raleway text-[11px] text-gray-500 flex items-center gap-1"><FiMapPin size={10} />{app.location}</span>
                 )}
                 {app.appliedAt && (
-                  <span className="font-raleway text-[11px] text-gray-400">Applied {formatDate(app.appliedAt)}</span>
+                  <span className="font-raleway text-[11px] text-gray-500">Applied {formatDate(app.appliedAt)}</span>
                 )}
               </div>
 
@@ -361,7 +361,7 @@ export default function ApplicationsPage() {
                       <button onClick={() => saveNotes(app.id)} className="font-raleway flex items-center gap-1 text-xs font-bold text-emerald-600 hover:text-emerald-700">
                         <FiCheck size={13} /> Save
                       </button>
-                      <button onClick={() => setEditingNotes(null)} className="font-raleway flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600">
+                      <button onClick={() => setEditingNotes(null)} className="font-raleway flex items-center gap-1 text-xs text-gray-500 hover:text-gray-600">
                         <FiX size={13} /> Cancel
                       </button>
                     </div>
@@ -369,7 +369,7 @@ export default function ApplicationsPage() {
                 ) : (
                   <button
                     onClick={() => { setEditingNotes(app.id); setNoteDraft(app.notes); }}
-                    className="font-raleway w-full text-left text-xs text-gray-400 hover:text-gray-600 flex items-start gap-1.5"
+                    className="font-raleway w-full text-left text-xs text-gray-500 hover:text-gray-600 flex items-start gap-1.5"
                   >
                     <FiEdit3 size={12} className="mt-0.5 flex-shrink-0" />
                     <span className="line-clamp-2">{app.notes || 'Add notes...'}</span>
@@ -389,7 +389,7 @@ export default function ApplicationsPage() {
                 <button
                   onClick={() => deleteApp(app.id)}
                   title="Remove this job from your tracker"
-                  className="font-raleway flex items-center gap-1.5 text-xs font-semibold text-gray-400 px-3 py-1.5 rounded-lg hover:bg-red-50 hover:text-red-500 transition-colors"
+                  className="font-raleway flex items-center gap-1.5 text-xs font-semibold text-gray-500 px-3 py-1.5 rounded-lg hover:bg-red-50 hover:text-red-500 transition-colors"
                 >
                   <FiTrash2 size={13} /> Remove
                 </button>

@@ -154,7 +154,7 @@ function ToastCard({ toast, onDismiss }: { toast: ToastItem; onDismiss: () => vo
       <button
         onClick={onDismiss}
         aria-label={`Dismiss ${label.toLowerCase()}`}
-        className="text-slate-400 hover:text-slate-600 transition flex-shrink-0"
+        className="text-slate-500 hover:text-slate-700 transition flex-shrink-0"
       >
         <FiX size={16} />
       </button>

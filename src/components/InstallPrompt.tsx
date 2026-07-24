@@ -101,7 +101,7 @@ export default function InstallPrompt() {
         type="button"
         onClick={dismiss}
         aria-label="Dismiss"
-        className="shrink-0 rounded-full p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+        className="shrink-0 rounded-full p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-600"
       >
         ✕
       </button>

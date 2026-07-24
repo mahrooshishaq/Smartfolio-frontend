@@ -121,7 +121,7 @@ export default function ResumeProfileReview({
             <span className="text-[11px] font-bold uppercase tracking-widest">From your resume</span>
           </div>
           <h2 className="font-century text-xl text-slate-800">Add these details to your profile?</h2>
-          <p className="text-sm text-gray-400 mt-1">
+          <p className="text-sm text-gray-500 mt-1">
             We use these to match you with better jobs and courses. Uncheck anything you’d rather skip.
           </p>
         </div>
@@ -165,7 +165,7 @@ export default function ResumeProfileReview({
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500">
                         {row.label}
                       </span>
                       <span
@@ -176,7 +176,7 @@ export default function ResumeProfileReview({
                     </div>
                     <p className="text-sm text-slate-700 mt-0.5 break-words">{row.displayValue}</p>
                     {row.currentValue && (
-                      <p className="text-xs text-gray-400 mt-0.5 break-words">
+                      <p className="text-xs text-gray-500 mt-0.5 break-words">
                         Currently: {row.currentValue}
                       </p>
                     )}

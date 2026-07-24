@@ -323,7 +323,7 @@ function ResumeUploadContent() {
               type="button"
               onClick={dismissHandoff}
               aria-label="Clear this job and analyse against your career target instead"
-              className="flex-shrink-0 rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-white hover:text-slate-600"
+              className="flex-shrink-0 rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-white hover:text-slate-600"
             >
               <X size={16} />
             </button>
@@ -336,7 +336,7 @@ function ResumeUploadContent() {
               file again. Only shown when the backend confirms it is still
               analysable. */}
           {checkingSaved ? (
-            <div className="flex items-center justify-center gap-2 rounded-[2rem] border border-slate-100 bg-slate-50/60 p-12 text-sm text-slate-400">
+            <div className="flex items-center justify-center gap-2 rounded-[2rem] border border-slate-100 bg-slate-50/60 p-12 text-sm text-slate-500">
               <Loader2 size={16} className="animate-spin" /> Checking for a saved CV…
             </div>
           ) : showSavedCard ? (
@@ -404,10 +404,10 @@ function ResumeUploadContent() {
                 ) : (
                   <>
                     <div className="bg-slate-50 p-4 rounded-2xl mb-4 group-hover:bg-blue-50 transition-colors">
-                      <CloudUpload size={32} className="text-gray-400 group-hover:text-blue-500" />
+                      <CloudUpload size={32} className="text-gray-500 group-hover:text-blue-500" />
                     </div>
                     <h2 className="font-century text-2xl text-slate-800 mb-1 text-center">Choose a file or drag &amp; drop it here</h2>
-                    <p className="font-raleway text-gray-400 text-sm">PDF or DOCX files up to 5MB</p>
+                    <p className="font-raleway text-gray-500 text-sm">PDF or DOCX files up to 5MB</p>
                   </>
                 )}
 
@@ -430,7 +430,7 @@ function ResumeUploadContent() {
 
           {/* Optional Job Description Input */}
           <div className="mt-8 px-4">
-            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">
+            <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3">
               Target Job Description <span className="normal-case tracking-normal">— optional</span>
             </label>
             <textarea 
@@ -440,8 +440,8 @@ function ResumeUploadContent() {
               disabled={isUploading}
               className="font-raleway w-full h-32 p-4 bg-slate-50 border border-transparent rounded-2xl text-sm focus:bg-white focus:border-blue-100 outline-none transition-all resize-none disabled:opacity-50"
             />
-            {jobDescription.trim() && <div className="mt-4"><label className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-gray-400">Job title <span className="normal-case tracking-normal">— used to label this evaluation</span></label><input value={jobTitle} onChange={event => setJobTitle(event.target.value)} disabled={isUploading} placeholder="e.g. MLOps Engineer" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-indigo-200 focus:bg-white" /></div>}
-            <div className="mt-2 flex items-center justify-between px-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            {jobDescription.trim() && <div className="mt-4"><label className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-gray-500">Job title <span className="normal-case tracking-normal">— used to label this evaluation</span></label><input value={jobTitle} onChange={event => setJobTitle(event.target.value)} disabled={isUploading} placeholder="e.g. MLOps Engineer" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-indigo-200 focus:bg-white" /></div>}
+            <div className="mt-2 flex items-center justify-between px-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
               <span>{jobDescription.trim() ? `Evaluating against: ${jobTitle.trim() || 'supplied job description'}` : targetRole ? `Career target: ${targetRole}` : 'General readiness analysis'}</span>
               <span className={jobDescription.trim().length > 0 && jobDescription.trim().length < 50 ? 'text-orange-500' : ''}>
                 {jobDescription.trim().length}/10,000
@@ -459,13 +459,13 @@ function ResumeUploadContent() {
                 <div className="flex justify-between mb-1">
                   <span className="font-raleway font-bold text-slate-700 text-sm truncate max-w-[250px]">{file.name}</span>
                   {!isUploading && (
-                    <button onClick={() => setFile(null)} className="text-gray-400 hover:text-gray-600">
+                    <button onClick={() => setFile(null)} className="text-gray-500 hover:text-gray-600">
                       <X size={18} />
                     </button>
                   )}
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="font-raleway text-[10px] font-bold text-gray-400 uppercase">
+                  <span className="font-raleway text-[10px] font-bold text-gray-500 uppercase">
                     {(file.size / 1024).toFixed(0)} KB
                   </span>
                   <div className="flex items-center gap-1.5 text-slate-500">

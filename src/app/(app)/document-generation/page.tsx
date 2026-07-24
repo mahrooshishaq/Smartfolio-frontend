@@ -149,7 +149,7 @@ export default function DocumentGenerationPage() {
           <FormField label="Subject (optional)" value={formData.subject ?? ''} onChange={(v) => updateField('subject', v)} placeholder="Will be auto-generated if left blank" />
           <FormField label="Purpose *" value={formData.purpose ?? ''} onChange={(v) => updateField('purpose', v)} placeholder="What is this email about?" multiline rows={3} />
           <div className="mb-5">
-            <label className="font-raleway block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Tone</label>
+            <label className="font-raleway block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Tone</label>
             <div className="flex gap-3">
               {['formal', 'friendly'].map((t) => (
                 <button
@@ -200,14 +200,14 @@ export default function DocumentGenerationPage() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
             <div>
               <h2 className="font-century text-2xl md:text-3xl font-black text-slate-800">Document Generation</h2>
-              <p className="font-raleway text-sm text-gray-400 mt-1">
+              <p className="font-raleway text-sm text-gray-500 mt-1">
                 {stage === 'select' && 'Pick a document type to start'}
                 {stage === 'form' && 'Fill in the details and let AI draft it for you'}
                 {stage === 'result' && 'Edit, copy, or download your document'}
               </p>
             </div>
             {stage !== 'select' && stage !== 'loading' && (
-              <button onClick={restart} className="font-raleway flex items-center gap-2 text-sm text-gray-400 hover:text-slate-600 transition-colors">
+              <button onClick={restart} className="font-raleway flex items-center gap-2 text-sm text-gray-500 hover:text-slate-600 transition-colors">
                 <FiArrowLeft size={16} /> Start Over
               </button>
             )}
@@ -269,7 +269,7 @@ export default function DocumentGenerationPage() {
               <div className="bg-white rounded-[2rem] shadow-sm border border-gray-50 p-5 md:p-8">
                 <div className="flex flex-wrap items-center justify-between gap-2 mb-5">
                   <h3 className="font-century text-lg font-black text-slate-800">{title}</h3>
-                  <span className="font-raleway text-xs text-gray-400">{content.length} characters</span>
+                  <span className="font-raleway text-xs text-gray-500">{content.length} characters</span>
                 </div>
                 <textarea
                   value={content}
@@ -317,7 +317,7 @@ function FormField({
 }) {
   return (
     <div className="mb-5">
-      <label className="font-raleway block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">{label}</label>
+      <label className="font-raleway block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{label}</label>
       {multiline ? (
         <textarea
           value={value}

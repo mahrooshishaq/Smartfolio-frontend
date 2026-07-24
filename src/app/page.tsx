@@ -124,7 +124,7 @@ export default function Home() {
                 Try Now
               </button>
             </div>
-            <div className="md:w-2/3 w-full bg-gray-50 rounded-lg shadow-sm border p-2 h-64 md:h-96 flex items-center justify-center text-gray-400 overflow-hidden relative">
+            <div className="md:w-2/3 w-full bg-gray-50 rounded-lg shadow-sm border p-2 h-64 md:h-96 flex items-center justify-center text-gray-500 overflow-hidden relative">
                <img src={ResumeImg.src} alt="Resume Editor Preview" className="w-full h-full object-cover rounded-md" />
             </div>
           </div>
@@ -197,7 +197,7 @@ export default function Home() {
                           <div className={`w-8 h-8 ${course.color} rounded-lg`}></div> {/* Logo Placeholder */}
                           <div>
                               <div className="font-bold text-sm">{course.title}</div>
-                              <div className="text-xs text-gray-400">{course.platform}</div>
+                              <div className="text-xs text-gray-500">{course.platform}</div>
                           </div>
                       </div>
                       <div className="text-xs text-gray-500">{course.duration} • {course.price}</div>

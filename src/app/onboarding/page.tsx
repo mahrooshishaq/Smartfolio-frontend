@@ -189,10 +189,10 @@ export default function OnboardingPage() {
               <h1 className="font-century text-4xl font-black text-slate-800 mb-3">
                 Welcome aboard, {displayName}!
               </h1>
-              <p className="font-raleway text-gray-400 text-lg mb-2">
+              <p className="font-raleway text-gray-500 text-lg mb-2">
                 Your profile is being set up
               </p>
-              <p className="font-raleway text-gray-300 text-sm">
+              <p className="font-raleway text-gray-500 text-sm">
                 We&apos;re finding personalized jobs and courses for you...
               </p>
             </div>
@@ -267,7 +267,7 @@ export default function OnboardingPage() {
                           </span>
                           {selected && <FiCheck className="text-indigo-500" size={16} />}
                         </div>
-                        <span className="font-raleway text-xs text-gray-400 mt-1 block">{g.desc}</span>
+                        <span className="font-raleway text-xs text-gray-500 mt-1 block">{g.desc}</span>
                       </button>
                     );
                   })}
@@ -295,7 +295,7 @@ export default function OnboardingPage() {
                         <span className={`font-raleway text-sm font-semibold ${careerStage === cs.value ? 'text-indigo-700' : 'text-slate-700'}`}>
                           {cs.label}
                         </span>
-                        <span className="font-raleway text-xs text-gray-400 ml-2">{cs.desc}</span>
+                        <span className="font-raleway text-xs text-gray-500 ml-2">{cs.desc}</span>
                       </button>
                     ))}
                   </div>
@@ -390,7 +390,7 @@ export default function OnboardingPage() {
                 <div>
                   <label className="font-raleway text-sm font-semibold text-slate-700 block mb-2">Your Location</label>
                   <div className="relative">
-                    <FiMapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                    <FiMapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
                     <input
                       type="text"
                       placeholder="e.g. Lahore, Pakistan"
@@ -458,7 +458,7 @@ export default function OnboardingPage() {
                 {/* Skills */}
                 <div>
                   <label className="font-raleway text-sm font-semibold text-slate-700 block mb-2">
-                    Skills <span className="font-normal text-gray-400">(up to 10)</span>
+                    Skills <span className="font-normal text-gray-500">(up to 10)</span>
                   </label>
                   <div className="flex gap-2 mb-3">
                     <input
@@ -493,7 +493,7 @@ export default function OnboardingPage() {
                 {/* Interests */}
                 <div>
                   <label className="font-raleway text-sm font-semibold text-slate-700 block mb-2">
-                    Interests <span className="font-normal text-gray-400">(up to 10)</span>
+                    Interests <span className="font-normal text-gray-500">(up to 10)</span>
                   </label>
                   <div className="flex gap-2 mb-3">
                     <input

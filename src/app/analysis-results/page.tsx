@@ -315,11 +315,11 @@ function ResultsContent() {
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <span className="text-xl font-black text-slate-800">{data.overallScore}/100</span>
-                  <span className="text-[10px] font-bold uppercase text-gray-400">Overall score</span>
+                  <span className="text-[10px] font-bold uppercase text-gray-500">Overall score</span>
                 </div>
               </div>
               <h1 className="text-center text-xl font-bold text-slate-800">{data.interpretationBand}</h1>
-              <p className="mt-2 text-center text-xs font-medium text-slate-400">{issueCount} {issueCount === 1 ? 'issue' : 'issues'} identified</p>
+              <p className="mt-2 text-center text-xs font-medium text-slate-500">{issueCount} {issueCount === 1 ? 'issue' : 'issues'} identified</p>
               </div><div className="grid gap-x-8 sm:grid-cols-2 xl:grid-cols-3">
                 {scoreItems.map(item => <ScoreItem key={item.label} {...item} />)}
               </div></div>
@@ -367,7 +367,7 @@ function ResultsContent() {
                   <div className="rounded-xl bg-red-50 p-2.5 text-red-500"><FileText size={20} /></div>
                   <div className="min-w-0">
                     <h2 className="truncate text-sm font-bold text-slate-800">{fileName}</h2>
-                    <p className="text-xs text-slate-400">Original uploaded {resumeContent?.fileType?.toUpperCase() || 'document'}</p>
+                    <p className="text-xs text-slate-500">Original uploaded {resumeContent?.fileType?.toUpperCase() || 'document'}</p>
                   </div>
                 </div>
                 {pdfUrl && (
@@ -408,10 +408,10 @@ function ResultsContent() {
                   </div>
                 </div>
               ) : (
-                <div className="flex min-h-[700px] items-center justify-center text-sm text-slate-400">PDF unavailable</div>
+                <div className="flex min-h-[700px] items-center justify-center text-sm text-slate-500">PDF unavailable</div>
               )}
             </section>
-            <p className="pb-4 text-center text-xs font-medium text-slate-400">
+            <p className="pb-4 text-center text-xs font-medium text-slate-500">
               Confidence: {data.confidenceLevel} · Processed in {(data.processingTimeMs / 1000).toFixed(1)}s
             </p>
           </main>
@@ -422,7 +422,7 @@ function ResultsContent() {
           <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
             <div className="mb-4 flex items-start justify-between gap-4">
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-100 text-violet-700"><Info size={21} /></div>
-              <button onClick={() => setShowReanalysisWarning(false)} className="rounded-full p-2 text-slate-400 hover:bg-slate-100" aria-label="Close"><X size={18} /></button>
+              <button onClick={() => setShowReanalysisWarning(false)} className="rounded-full p-2 text-slate-500 hover:bg-slate-100" aria-label="Close"><X size={18} /></button>
             </div>
             <h2 id="reanalysis-title" className="text-xl font-black text-slate-800">Create a fresh analysis?</h2>
             <p className="mt-2 text-sm leading-6 text-slate-600">
@@ -482,7 +482,7 @@ function ImprovementCard({ improvement }: { improvement: ResumeImprovement }) {
       {improvement.impact && <p className="mt-3 text-xs font-semibold leading-relaxed text-slate-500"><span className="font-black">Why it matters:</span> {improvement.impact}</p>}
       {improvement.suggestedText && (
         <div className="mt-4 rounded-xl bg-slate-50 p-3.5">
-          <p className="mb-1 text-[9px] font-black uppercase tracking-widest text-slate-400">Suggested wording</p>
+          <p className="mb-1 text-[9px] font-black uppercase tracking-widest text-slate-500">Suggested wording</p>
           <p className="text-sm font-semibold leading-relaxed text-slate-700">{improvement.suggestedText}</p>
         </div>
       )}

@@ -58,7 +58,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         ))}
       </nav>
       <div className="mt-auto pt-8 border-t border-gray-50 space-y-2">
-        <p className="font-raleway text-[10px] font-bold text-gray-300 px-4 mb-4 uppercase tracking-[0.15em]">Support</p>
+        <p className="font-raleway text-[10px] font-bold text-gray-500 px-4 mb-4 uppercase tracking-[0.15em]">Support</p>
         {SUPPORT_ITEMS.map((item) => (
           <SidebarItem key={item.label} icon={item.icon} label={item.label} active={isActive(pathname, item.href)} onClick={() => go(item)} />
         ))}
@@ -67,7 +67,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </button>
         <div className="mt-8 px-4 py-2 bg-slate-50 rounded-2xl">
           <p className="font-century text-sm font-bold text-slate-800">{userName || 'User'}</p>
-          <p className="font-raleway text-[11px] text-gray-400 truncate">SmartFolio User</p>
+          <p className="font-raleway text-[11px] text-gray-500 truncate">SmartFolio User</p>
         </div>
       </div>
     </>
@@ -147,7 +147,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-gray-200" />
               <div className="px-4 py-2 mb-3 bg-slate-50 rounded-2xl">
                 <p className="font-century text-sm font-bold text-slate-800">{userName || 'User'}</p>
-                <p className="font-raleway text-[11px] text-gray-400 truncate">SmartFolio User</p>
+                <p className="font-raleway text-[11px] text-gray-500 truncate">SmartFolio User</p>
               </div>
               <div className="grid grid-cols-3 gap-2 mb-3">
                 {MORE_ITEMS.map((item) => {

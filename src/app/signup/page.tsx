@@ -102,7 +102,7 @@ export default function SignupPage() {
 
           <div className="my-5 flex items-center gap-4">
             <div className="flex-1 border-t border-gray-200"></div>
-            <span className="text-gray-400 text-xs font-medium">OR</span>
+            <span className="text-gray-500 text-xs font-medium">OR</span>
             <div className="flex-1 border-t border-gray-200"></div>
           </div>
 
@@ -143,7 +143,7 @@ export default function SignupPage() {
                   className="w-full text-[15px] text-gray-800 bg-[#fbfaff] border-[1.5px] border-gray-200 rounded-xl px-3.5 py-3 pr-11 focus:outline-none focus:border-purple-400 focus:ring-4 focus:ring-purple-100 transition" />
                 <button type="button" onClick={() => setShowPassword(!showPassword)}
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 grid place-items-center text-gray-400 hover:text-gray-600 rounded-lg">
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 grid place-items-center text-gray-500 hover:text-gray-600 rounded-lg">
                   {showPassword ? <FaEyeSlash /> : <FaEye />}
                 </button>
               </div>
@@ -170,7 +170,7 @@ export default function SignupPage() {
                   className="w-full text-[15px] text-gray-800 bg-[#fbfaff] border-[1.5px] border-gray-200 rounded-xl px-3.5 py-3 pr-11 focus:outline-none focus:border-purple-400 focus:ring-4 focus:ring-purple-100 transition" />
                 <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 grid place-items-center text-gray-400 hover:text-gray-600 rounded-lg">
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 grid place-items-center text-gray-500 hover:text-gray-600 rounded-lg">
                   {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
                 </button>
               </div>

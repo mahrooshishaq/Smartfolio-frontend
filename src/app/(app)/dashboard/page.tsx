@@ -21,10 +21,10 @@ const StatCard = ({ title, value, subtitle, icon: Icon, color, onClick }: { titl
       <div className={`w-10 h-10 rounded-xl ${color} flex items-center justify-center`}>
         <Icon size={18} className="text-white" />
       </div>
-      <h3 className="font-raleway text-gray-400 text-[10px] font-bold uppercase tracking-widest">{title}</h3>
+      <h3 className="font-raleway text-gray-500 text-[10px] font-bold uppercase tracking-widest">{title}</h3>
     </div>
     <p className="font-century text-3xl font-black text-slate-800">{value}</p>
-    {subtitle && <p className="font-raleway text-xs text-gray-400 mt-1">{subtitle}</p>}
+    {subtitle && <p className="font-raleway text-xs text-gray-500 mt-1">{subtitle}</p>}
   </div>
 );
 
@@ -49,7 +49,7 @@ const EmptyState = ({ icon: Icon, title, description, buttonLabel, onClick }: { 
   <div className="flex flex-col items-center justify-center py-8 text-center">
     <Icon className="text-gray-200 mb-3" size={36} />
     <p className="font-century text-sm font-bold text-slate-700 mb-1">{title}</p>
-    <p className="font-raleway text-xs text-gray-400 mb-4">{description}</p>
+    <p className="font-raleway text-xs text-gray-500 mb-4">{description}</p>
     <button onClick={onClick} className="font-raleway bg-[#4F46E5] hover:bg-[#4338CA] text-white px-5 py-2 rounded-xl text-xs font-bold transition-all">
       {buttonLabel}
     </button>
@@ -278,12 +278,12 @@ export default function DashboardPage() {
                   Welcome back, {userName?.split(' ')[0] || 'there'}!
                 </h2>
                 {userContext?.currentRole && userContext?.targetRole ? (
-                  <p className="font-raleway text-sm text-gray-400 mt-1">
+                  <p className="font-raleway text-sm text-gray-500 mt-1">
                     {userContext.currentRole} <span className="text-[#4F46E5]">→</span> {userContext.targetRole}
-                    {userContext.careerStage && <span className="ml-2 text-gray-300">• {userContext.careerStage.replace(/_/g, ' ')}</span>}
+                    {userContext.careerStage && <span className="ml-2 text-gray-500">• {userContext.careerStage.replace(/_/g, ' ')}</span>}
                   </p>
                 ) : (
-                  <p className="font-raleway text-sm text-gray-400 mt-1">Your AI-powered career companion</p>
+                  <p className="font-raleway text-sm text-gray-500 mt-1">Your AI-powered career companion</p>
                 )}
               </div>
               <div className="flex flex-wrap items-center gap-3">
@@ -303,7 +303,7 @@ export default function DashboardPage() {
             {userContext && userContext.profileCompleteness < 100 && (
               <div className="mt-6 pt-5 border-t border-gray-50">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-raleway text-xs font-bold text-gray-400 uppercase tracking-wider">Profile Completeness</span>
+                  <span className="font-raleway text-xs font-bold text-gray-500 uppercase tracking-wider">Profile Completeness</span>
                   <span className="font-century text-sm font-bold text-[#4F46E5]">{userContext.profileCompleteness}%</span>
                 </div>
                 <div className="w-full bg-gray-100 rounded-full h-2">
@@ -320,7 +320,7 @@ export default function DashboardPage() {
                     <span key={skill} className="font-raleway text-[11px] font-bold px-3 py-1 rounded-lg bg-indigo-50 text-indigo-600">{skill}</span>
                   ))}
                   {userContext.skills.length > 8 && (
-                    <span className="font-raleway text-[11px] font-bold px-3 py-1 rounded-lg bg-gray-50 text-gray-400">+{userContext.skills.length - 8} more</span>
+                    <span className="font-raleway text-[11px] font-bold px-3 py-1 rounded-lg bg-gray-50 text-gray-500">+{userContext.skills.length - 8} more</span>
                   )}
                 </div>
               </div>
@@ -334,11 +334,11 @@ export default function DashboardPage() {
               onClick={() => latestAnalysis && router.push(`/analysis-results?resumeId=${latestAnalysis.resumeId}`)}
               className="bg-white p-5 rounded-3xl shadow-sm border border-gray-50 flex flex-col items-center justify-center text-center cursor-pointer hover:shadow-md transition-all"
             >
-              <h3 className="font-raleway text-gray-400 text-[9px] font-bold mb-3 uppercase tracking-widest">Resume</h3>
+              <h3 className="font-raleway text-gray-500 text-[9px] font-bold mb-3 uppercase tracking-widest">Resume</h3>
               {latestAnalysis ? (
                 <ScoreRing score={latestAnalysis.overallScore} size={80} strokeWidth={6} color="#F472B6" />
               ) : (
-                <div className="w-20 h-20 rounded-full bg-gray-50 flex items-center justify-center text-gray-300">
+                <div className="w-20 h-20 rounded-full bg-gray-50 flex items-center justify-center text-gray-500">
                   <FiFileText size={24} />
                 </div>
               )}
@@ -387,7 +387,7 @@ export default function DashboardPage() {
               <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h3 className="font-century text-xl font-black text-slate-800">Resume progress</h3>
-                  <p className="font-raleway text-xs text-gray-400">Every upload and review, measured against the career target used at that time.</p>
+                  <p className="font-raleway text-xs text-gray-500">Every upload and review, measured against the career target used at that time.</p>
                 </div>
                 <button onClick={() => router.push('/upload-resume')} className="font-raleway text-xs font-bold text-[#4F46E5]">Run a new analysis →</button>
               </div>
@@ -403,7 +403,7 @@ export default function DashboardPage() {
               <div className="grid gap-5 lg:grid-cols-2">
                 <div>
                   <div className="mb-4 flex items-center justify-between">
-                    <h4 className="font-raleway text-[10px] font-bold uppercase tracking-widest text-gray-400">Score history</h4>
+                    <h4 className="font-raleway text-[10px] font-bold uppercase tracking-widest text-gray-500">Score history</h4>
                     {resumeDashboard.summary.scoreChange != null && (
                       <span className={`rounded-full px-2.5 py-1 text-[10px] font-black ${resumeDashboard.summary.scoreChange >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-500'}`}>
                         {resumeDashboard.summary.scoreChange >= 0 ? '+' : ''}{resumeDashboard.summary.scoreChange} since previous
@@ -420,7 +420,7 @@ export default function DashboardPage() {
                         </button>
                       ))}
                     </div>
-                    <div className="mt-2 flex gap-2 px-1">{[...resumeDashboard.analyses].slice(0, 8).reverse().map((analysis) => <span key={analysis.analysisId} className="min-w-0 flex-1 truncate text-center text-[10px] font-bold text-slate-400">{new Date(analysis.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>)}</div>
+                    <div className="mt-2 flex gap-2 px-1">{[...resumeDashboard.analyses].slice(0, 8).reverse().map((analysis) => <span key={analysis.analysisId} className="min-w-0 flex-1 truncate text-center text-[10px] font-bold text-slate-500">{new Date(analysis.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>)}</div>
                   </div>
                   <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
                     {Object.entries(resumeDashboard.summary.categoryAverages).map(([key, score], index) => <div key={key} className="rounded-xl border border-white bg-white/80 p-2.5 shadow-sm"><div className="mb-1.5 flex items-center justify-between gap-2"><span className="truncate text-[10px] font-bold text-slate-500">{categoryLabels[key] || key}</span><span className="text-[10px] font-black" style={{ color: chartColors[index % chartColors.length] }}>{score ?? '—'}%</span></div><div className="h-1.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full" style={{ width: `${score || 0}%`, backgroundColor: chartColors[index % chartColors.length] }} /></div></div>)}
@@ -428,14 +428,14 @@ export default function DashboardPage() {
                 </div>
 
                 <div>
-                  <h4 className="mb-4 font-raleway text-[10px] font-bold uppercase tracking-widest text-gray-400">Resume library</h4>
+                  <h4 className="mb-4 font-raleway text-[10px] font-bold uppercase tracking-widest text-gray-500">Resume library</h4>
                   <div className="max-h-52 space-y-2 overflow-auto pr-1">
                     {resumeDashboard.resumes.map((resume) => (
                       <button key={resume.resumeId} onClick={() => resume.latestAnalysis ? router.push(`/analysis-results?resumeId=${resume.resumeId}`) : router.push('/upload-resume')} className="flex w-full items-center gap-3 rounded-2xl border border-violet-100 bg-white/70 p-3 text-left transition hover:border-violet-200 hover:bg-violet-50/60 hover:shadow-sm">
                         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-pink-50 text-pink-500"><FiFileText size={16} /></div>
                         <div className="min-w-0 flex-1">
                           <p className="truncate font-century text-sm font-bold text-slate-700">{resume.fileName}</p>
-                          <p className="font-raleway text-[10px] text-gray-400">{new Date(resume.uploadedAt).toLocaleDateString()} · {resume.analysisCount} {resume.analysisCount === 1 ? 'review' : 'reviews'}{resume.latestAnalysis?.targetRole ? ` · ${resume.latestAnalysis.targetRole}` : ''}</p>
+                          <p className="font-raleway text-[10px] text-gray-500">{new Date(resume.uploadedAt).toLocaleDateString()} · {resume.analysisCount} {resume.analysisCount === 1 ? 'review' : 'reviews'}{resume.latestAnalysis?.targetRole ? ` · ${resume.latestAnalysis.targetRole}` : ''}</p>
                         </div>
                         <span className="font-century text-sm font-black text-[#4F46E5]">{resume.latestAnalysis ? `${resume.latestAnalysis.overallScore}%` : '—'}</span>
                       </button>
@@ -446,13 +446,13 @@ export default function DashboardPage() {
 
               {resumeDashboard.analyses.length > 0 && (
                 <div className="mt-7 border-t border-slate-100 pt-6">
-                  <h4 className="mb-4 font-raleway text-[10px] font-bold uppercase tracking-widest text-gray-400">Complete review history</h4>
+                  <h4 className="mb-4 font-raleway text-[10px] font-bold uppercase tracking-widest text-gray-500">Complete review history</h4>
                   <div className="max-h-72 space-y-2 overflow-auto pr-1">
                     {resumeDashboard.analyses.map((analysis) => (
                       <button key={analysis.analysisId} onClick={() => router.push(`/analysis-results?resumeId=${analysis.resumeId}&analysisId=${analysis.analysisId}`)} className="grid w-full grid-cols-[1fr_auto] items-center gap-3 rounded-xl bg-slate-50 px-4 py-3 text-left transition hover:bg-indigo-50 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto]">
                         <span className="truncate font-century text-sm font-bold text-slate-700">{analysis.fileName || 'Resume'}</span>
                         <span className="hidden truncate font-raleway text-xs font-semibold text-slate-500 sm:block">{analysis.targetSource === 'job_description' ? `Job: ${analysis.targetRole || 'Supplied job description'}` : analysis.targetSource === 'profile_target' ? `Target: ${analysis.targetRole || 'Profile role'}` : 'General readiness'}</span>
-                        <span className="hidden font-raleway text-xs text-slate-400 sm:block">{new Date(analysis.createdAt).toLocaleDateString()}</span>
+                        <span className="hidden font-raleway text-xs text-slate-500 sm:block">{new Date(analysis.createdAt).toLocaleDateString()}</span>
                         <span className="font-century text-sm font-black text-indigo-600">{analysis.overallScore}%</span>
                       </button>
                     ))}
@@ -466,7 +466,7 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             {/* Jobs by Type */}
             <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-50">
-              <h3 className="font-raleway text-gray-400 text-[10px] font-bold mb-4 uppercase tracking-widest">Jobs by Type</h3>
+              <h3 className="font-raleway text-gray-500 text-[10px] font-bold mb-4 uppercase tracking-widest">Jobs by Type</h3>
               {jobStats && Object.keys(jobStats.counts_by_type || {}).length > 0 ? (
                 <div className="flex flex-wrap gap-2">
                   {Object.entries(jobStats.counts_by_type).sort((a, b) => b[1] - a[1]).map(([type, count]) => (
@@ -476,13 +476,13 @@ export default function DashboardPage() {
                   ))}
                 </div>
               ) : (
-                <p className="font-raleway text-xs text-gray-300">No job data yet</p>
+                <p className="font-raleway text-xs text-gray-500">No job data yet</p>
               )}
             </div>
 
             {/* Courses by Level */}
             <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-50">
-              <h3 className="font-raleway text-gray-400 text-[10px] font-bold mb-4 uppercase tracking-widest">Courses by Level</h3>
+              <h3 className="font-raleway text-gray-500 text-[10px] font-bold mb-4 uppercase tracking-widest">Courses by Level</h3>
               {courseStats && Object.keys(courseStats.counts_by_level || {}).length > 0 ? (
                 <div className="space-y-3">
                   {Object.entries(courseStats.counts_by_level).sort((a, b) => b[1] - a[1]).map(([level, count]) => {
@@ -492,7 +492,7 @@ export default function DashboardPage() {
                       <div key={level}>
                         <div className="font-raleway flex justify-between text-[11px] font-bold mb-1">
                           <span className="text-slate-500">{level}</span>
-                          <span className="text-gray-400">{count} ({pct}%)</span>
+                          <span className="text-gray-500">{count} ({pct}%)</span>
                         </div>
                         <div className="w-full bg-gray-100 rounded-full h-1.5">
                           <div className="h-1.5 rounded-full bg-purple-400 transition-all" style={{ width: `${pct}%` }} />
@@ -502,7 +502,7 @@ export default function DashboardPage() {
                   })}
                 </div>
               ) : (
-                <p className="font-raleway text-xs text-gray-300">No course data yet</p>
+                <p className="font-raleway text-xs text-gray-500">No course data yet</p>
               )}
             </div>
           </div>
@@ -512,7 +512,7 @@ export default function DashboardPage() {
             {/* Recent Interviews */}
             <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-50">
               <div className="flex items-center justify-between mb-5">
-                <h3 className="font-raleway text-gray-400 text-[10px] font-bold uppercase tracking-widest">Recent Interviews</h3>
+                <h3 className="font-raleway text-gray-500 text-[10px] font-bold uppercase tracking-widest">Recent Interviews</h3>
                 {interviewSessions.length > 0 && (
                   <button onClick={() => router.push('/mock-interview')} className="font-raleway text-[11px] font-bold text-[#4F46E5] flex items-center gap-1 hover:underline">
                     View All <FiArrowRight size={12} />
@@ -534,7 +534,7 @@ export default function DashboardPage() {
                         <p className="font-century text-sm font-bold text-slate-800 truncate group-hover:text-[#4F46E5] transition-colors">
                           {session.jobDescriptionPreview || 'Mock Interview Session'}
                         </p>
-                        <p className="font-raleway text-[11px] text-gray-400">
+                        <p className="font-raleway text-[11px] text-gray-500">
                           {new Date(session.createdAt).toLocaleDateString()} • {session.isSubmitted ? 'Completed' : 'Draft'}
                         </p>
                       </div>
@@ -560,7 +560,7 @@ export default function DashboardPage() {
             {/* Recent Documents */}
             <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-50">
               <div className="flex items-center justify-between mb-5">
-                <h3 className="font-raleway text-gray-400 text-[10px] font-bold uppercase tracking-widest">Generated Documents</h3>
+                <h3 className="font-raleway text-gray-500 text-[10px] font-bold uppercase tracking-widest">Generated Documents</h3>
                 {documentHistory.length > 0 && (
                   <button onClick={() => router.push('/document-generation')} className="font-raleway text-[11px] font-bold text-[#4F46E5] flex items-center gap-1 hover:underline">
                     View All <FiArrowRight size={12} />
@@ -580,11 +580,11 @@ export default function DashboardPage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-century text-sm font-bold text-slate-800 truncate group-hover:text-[#4F46E5] transition-colors">{doc.title}</p>
-                        <p className="font-raleway text-[11px] text-gray-400">
+                        <p className="font-raleway text-[11px] text-gray-500">
                           {doc.documentType.replace(/_/g, ' ')} • {new Date(doc.createdAt).toLocaleDateString()}
                         </p>
                       </div>
-                      <button onClick={() => router.push('/document-generation')} className="text-gray-300 hover:text-[#4F46E5] transition-colors">
+                      <button onClick={() => router.push('/document-generation')} className="text-gray-500 hover:text-[#4F46E5] transition-colors">
                         <FiExternalLink size={14} />
                       </button>
                     </div>
@@ -605,7 +605,7 @@ export default function DashboardPage() {
           {/* Row 5: Jobs by Category */}
           {jobStats && Object.keys(jobStats.counts_by_category || {}).length > 0 && (
             <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-50 mb-8">
-              <h3 className="font-raleway text-gray-400 text-[10px] font-bold mb-4 uppercase tracking-widest">Jobs by Category</h3>
+              <h3 className="font-raleway text-gray-500 text-[10px] font-bold mb-4 uppercase tracking-widest">Jobs by Category</h3>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                 {Object.entries(jobStats.counts_by_category).sort((a, b) => b[1] - a[1]).map(([cat, count]) => (
                   <div key={cat} className="bg-slate-50 rounded-xl px-4 py-3 flex items-center justify-between">

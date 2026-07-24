@@ -282,7 +282,7 @@ export default function CoursesPage() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
             <div>
               <h2 className="font-century text-2xl md:text-3xl font-black text-slate-800">Courses For You</h2>
-              <p className="font-raleway text-sm text-gray-400 mt-1">Personalized course recommendations based on your profile</p>
+              <p className="font-raleway text-sm text-gray-500 mt-1">Personalized course recommendations based on your profile</p>
             </div>
             <button
               onClick={runScraper}
@@ -297,7 +297,7 @@ export default function CoursesPage() {
           <div className="bg-white rounded-[2rem] shadow-sm border border-gray-50 p-4 md:p-6 mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
               <div className="flex-1 relative">
-                <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
+                <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
                 <input
                   type="text"
                   value={search}
@@ -313,7 +313,7 @@ export default function CoursesPage() {
                 <FiFilter size={16} /> Filters {hasActiveFilters && <span className="w-2 h-2 rounded-full bg-blue-500" />}
               </button>
               {hasActiveFilters && (
-                <button onClick={clearFilters} className="font-raleway flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600">
+                <button onClick={clearFilters} className="font-raleway flex items-center gap-1 text-xs text-gray-500 hover:text-gray-600">
                   <FiX size={14} /> Clear
                 </button>
               )}
@@ -347,7 +347,7 @@ export default function CoursesPage() {
 
           {/* Results count */}
           <div className="font-raleway flex items-center justify-between mb-6">
-            <p className="text-sm text-gray-400">{total} courses found</p>
+            <p className="text-sm text-gray-500">{total} courses found</p>
           </div>
 
           {/* Course Cards */}
@@ -359,7 +359,7 @@ export default function CoursesPage() {
             <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-50 p-16 text-center">
               <FiBookOpen className="mx-auto text-gray-200 mb-4" size={48} />
               <h3 className="font-century text-xl font-bold text-slate-700 mb-2">No Courses Found</h3>
-              <p className="font-raleway text-sm text-gray-400 mb-6">Click &quot;Find New Courses&quot; to discover personalized courses based on your profile.</p>
+              <p className="font-raleway text-sm text-gray-500 mb-6">Click &quot;Find New Courses&quot; to discover personalized courses based on your profile.</p>
               <button onClick={runScraper} disabled={scraping} className="font-raleway bg-[#4F46E5] hover:bg-[#4338CA] text-white px-8 py-3 rounded-2xl font-semibold text-sm transition-all disabled:opacity-60">
                 {scraping ? 'Finding Courses...' : 'Find Courses Now'}
               </button>
@@ -402,7 +402,7 @@ export default function CoursesPage() {
                     <div className="flex items-center justify-between gap-2 mb-2">
                       <StarRating value={course.star_rating} />
                       {course.updated_label && (
-                        <span className="font-raleway text-[11px] text-gray-400 flex items-center gap-1">
+                        <span className="font-raleway text-[11px] text-gray-500 flex items-center gap-1">
                           <FiCalendar size={11} /> {course.updated_label.replace('Updated ', '')}
                         </span>
                       )}
@@ -410,7 +410,7 @@ export default function CoursesPage() {
 
                     <h3 className="font-century text-base font-bold text-slate-800 line-clamp-2 group-hover:text-[#4F46E5] transition-colors mb-1">{course.title}</h3>
                     {course.instructor && course.instructor !== 'Not specified' && (
-                      <p className="font-raleway text-xs text-gray-400 mb-2">{course.instructor}</p>
+                      <p className="font-raleway text-xs text-gray-500 mb-2">{course.instructor}</p>
                     )}
 
                     {course.why_recommended && (
@@ -437,7 +437,7 @@ export default function CoursesPage() {
                           </span>
                         )}
                         {course.views_label && (
-                          <span className="font-raleway text-[11px] text-gray-400 flex items-center gap-1">
+                          <span className="font-raleway text-[11px] text-gray-500 flex items-center gap-1">
                             <FiEye size={12} /> {course.views_label}
                           </span>
                         )}
@@ -445,11 +445,11 @@ export default function CoursesPage() {
                     )}
 
                     {course.description && course.description !== 'Not specified' && (
-                      <p className="font-raleway text-xs text-gray-400 line-clamp-2 mb-4">{course.description}</p>
+                      <p className="font-raleway text-xs text-gray-500 line-clamp-2 mb-4">{course.description}</p>
                     )}
 
                     <div className="mt-auto flex items-center justify-between pt-4 border-t border-gray-50">
-                      <span className="font-raleway text-xs text-gray-400 flex items-center gap-1 min-w-0">
+                      <span className="font-raleway text-xs text-gray-500 flex items-center gap-1 min-w-0">
                         <FiClock size={12} className="flex-shrink-0" />
                         <span className="truncate">
                           {course.commitment_label || (course.duration !== 'Not specified' ? course.duration : 'Self-paced')}

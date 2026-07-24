@@ -28,7 +28,7 @@ export default function ScoreRing({
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span className="font-century text-2xl font-black text-slate-800">{score}</span>
-        <span className="font-raleway text-[9px] font-bold text-gray-400 uppercase">/100</span>
+        <span className="font-raleway text-[9px] font-bold text-gray-500 uppercase">/100</span>
       </div>
     </div>
   );
