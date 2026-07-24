@@ -361,11 +361,36 @@ export default function JobsPage() {
   const sourceLabel = (s: string) =>
     s === 'jsearch' ? 'JSearch (mixed boards)' : s.charAt(0).toUpperCase() + s.slice(1);
 
+  /**
+   * Boards report a missing salary as the literal string "Not specified", which
+   * is truthy — so a plain falsy check rendered "$Not specified - $Not
+   * specified" on every card that had no pay data.
+   *
+   * Only currency symbols, separators and whitespace are stripped, and what
+   * remains must be a number END TO END. Mining digits out of anything else
+   * invents figures: "$30 - $130/hour" would read as $30,130. Mirrors
+   * parseSalaryValue in the backend's normalize.ts, so the number shown on the
+   * card is the same one the salary filter compares against.
+   */
+  const parseSalary = (raw: string): number | null => {
+    if (!raw) return null;
+    const cleaned = String(raw).replace(/[\s,$£€]/g, '');
+    if (!/^\d+(\.\d+)?$/.test(cleaned)) return null;
+    const value = parseFloat(cleaned);
+    // A zero salary is a placeholder, not an offer of nothing.
+    return Number.isFinite(value) && value > 0 ? value : null;
+  };
+
+  const money = (n: number) => `$${n.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+
   const formatSalary = (min: string, max: string) => {
-    if (!min && !max) return null;
-    if (min && max) return `$${min} - $${max}`;
-    if (min) return `From $${min}`;
-    return `Up to $${max}`;
+    const low = parseSalary(min);
+    const high = parseSalary(max);
+    if (low === null && high === null) return null;
+    if (low !== null && high !== null) {
+      return low === high ? money(low) : `${money(low)} - ${money(high)}`;
+    }
+    return low !== null ? `From ${money(low)}` : `Up to ${money(high!)}`;
   };
 
   const getTypeBadgeColor = (type: string) => {
