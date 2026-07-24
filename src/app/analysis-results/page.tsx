@@ -71,6 +71,28 @@ interface ResumeContent {
   editedText: string | null;
 }
 
+/**
+ * The structured resume — the same shape the editor works on.
+ *
+ * Preferred over the raw extracted text for the preview: extraction returns the
+ * PDF's visual lines with hard breaks mid-sentence and every trace of headings,
+ * bullets and emphasis stripped, so rendering it faithfully still reads as a
+ * wall of text. This has real sections to lay out.
+ */
+interface StructuredResume {
+  personal: { name: string; email: string; phone: string; location: string; linkedin: string; github: string; website: string };
+  summary: string;
+  skills: string[];
+  experience: { title: string; company: string; location: string; startDate: string; endDate: string; bullets: string[] }[];
+  education: { degree: string; institution: string; location: string; startDate: string; endDate: string; details: string[] }[];
+  projects: { name: string; role: string; link: string; technologies: string[]; bullets: string[] }[];
+  certifications: { name: string; issuer: string; date: string }[];
+  languages: string[];
+  sectionOrder: SectionKey[];
+}
+
+type SectionKey = 'summary' | 'skills' | 'experience' | 'education' | 'projects' | 'certifications' | 'languages';
+
 interface ResumeImprovement {
   category: string;
   severity: 'critical' | 'important' | 'polish';
@@ -97,6 +119,7 @@ function ResultsContent() {
   const [data, setData] = useState<AnalysisResult | null>(null);
   const [fileName, setFileName] = useState('resume.pdf');
   const [resumeContent, setResumeContent] = useState<ResumeContent | null>(null);
+  const [structured, setStructured] = useState<StructuredResume | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [reanalyzing, setReanalyzing] = useState(false);
@@ -128,10 +151,14 @@ function ResultsContent() {
 
       try {
         const headers = { Authorization: `Bearer ${token}` };
-        const [analysisRes, contentRes, fileRes] = await Promise.all([
+        // /structured is the read-only variant — it returns null rather than
+        // calling the LLM to build a document, so a page load never spends
+        // tokens or fails because structuring went wrong.
+        const [analysisRes, contentRes, fileRes, structuredRes] = await Promise.all([
           apiFetch(`/resume/${resumeId}/analyses`, { headers }),
           apiFetch(`/resume/${resumeId}/content`, { headers }),
           apiFetch(`/resume/${resumeId}/file`, { headers }),
+          apiFetch(`/resume/${resumeId}/structured`, { headers }),
         ]);
 
         const analysisResult = await analysisRes.json();
@@ -156,10 +183,22 @@ function ResultsContent() {
           objectUrl = URL.createObjectURL(pdfBlob);
         }
 
+        // Best-effort: no structured document just means the preview falls back
+        // to the extracted text, which is never worth failing the page over.
+        let structuredDoc: StructuredResume | null = null;
+        if (structuredRes.ok) {
+          try {
+            structuredDoc = (await structuredRes.json())?.document ?? null;
+          } catch {
+            structuredDoc = null;
+          }
+        }
+
         if (!cancelled) {
           setData(analysisResult.find((item: AnalysisResult) => item.analysisId === requestedAnalysisId) || analysisResult[0]);
           setFileName(content.fileName || 'resume.pdf');
           setResumeContent(content);
+          setStructured(structuredDoc);
           setPdfUrl(objectUrl);
         }
       } catch (err) {
@@ -351,8 +390,17 @@ function ResultsContent() {
                   </div>
                 )}
               </header>
+              {/* Preview, best available first: the original file, then the
+                  structured document, then raw extracted text. The middle tier
+                  used to be skipped, so losing the file dropped the user
+                  straight to a wall of text that had every heading, bullet and
+                  line break mangled by extraction — even though a clean,
+                  sectioned version of the same resume was already in the
+                  database. */}
               {pdfUrl && resumeContent?.fileType === 'pdf' ? (
                 <PdfPreview url={pdfUrl} title={`Original resume: ${fileName}`} />
+              ) : structured ? (
+                <StructuredResumePreview document={structured} hasOriginal={!!pdfUrl} />
               ) : resumeContent?.extractedText ? (
                 <div className="max-h-[75vh] min-h-[700px] overflow-auto bg-slate-100 p-5 md:p-10">
                   <div className="mx-auto min-h-[650px] max-w-3xl whitespace-pre-wrap rounded-sm bg-white p-8 text-sm leading-7 text-slate-700 shadow-lg md:p-14">
@@ -542,6 +590,169 @@ function RequirementCoveragePanel({
         })}
       </ul>
     </section>
+  );
+}
+
+/**
+ * The resume rendered from its structured sections rather than from extracted
+ * text — real headings, spaced sections and actual bullets.
+ *
+ * This is a readable rendering of the same content, not a facsimile of the
+ * user's original design. The banner says so, because a preview that silently
+ * looked different from the file they uploaded would be worse than one that
+ * explains itself.
+ */
+function StructuredResumePreview({
+  document,
+  hasOriginal,
+}: {
+  document: StructuredResume;
+  hasOriginal: boolean;
+}) {
+  const { personal } = document;
+  const contact = [personal.location, personal.phone, personal.email, personal.linkedin, personal.github, personal.website]
+    .map(value => value?.trim())
+    .filter(Boolean);
+
+  const dates = (start: string, end: string) => [start?.trim(), end?.trim()].filter(Boolean).join(' – ');
+
+  const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
+    <section className="mt-7 first:mt-0">
+      <h3 className="border-b border-slate-200 pb-1.5 text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">{title}</h3>
+      <div className="mt-3">{children}</div>
+    </section>
+  );
+
+  const Bullets = ({ items }: { items: string[] }) => (
+    <ul className="mt-2 space-y-1.5">
+      {items.filter(Boolean).map((item, index) => (
+        <li key={index} className="flex gap-2.5 text-[13px] leading-6 text-slate-700">
+          <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-slate-400" aria-hidden="true" />
+          <span>{item}</span>
+        </li>
+      ))}
+    </ul>
+  );
+
+  const Tags = ({ items }: { items: string[] }) => (
+    <div className="flex flex-wrap gap-1.5">
+      {items.filter(Boolean).map((item, index) => (
+        <span key={index} className="rounded-md bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-600">{item}</span>
+      ))}
+    </div>
+  );
+
+  const sections: Record<SectionKey, React.ReactNode> = {
+    summary: document.summary?.trim() ? (
+      <Section key="summary" title="Professional summary">
+        <p className="text-[13px] leading-6 text-slate-700">{document.summary}</p>
+      </Section>
+    ) : null,
+
+    skills: document.skills?.length ? (
+      <Section key="skills" title="Skills"><Tags items={document.skills} /></Section>
+    ) : null,
+
+    experience: document.experience?.length ? (
+      <Section key="experience" title="Experience">
+        <div className="space-y-5">
+          {document.experience.map((role, index) => (
+            <div key={index}>
+              <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+                <p className="text-sm font-bold text-slate-900">{role.title || 'Role'}</p>
+                <p className="text-[11px] font-semibold text-slate-500">{dates(role.startDate, role.endDate)}</p>
+              </div>
+              <p className="text-[12px] text-slate-500">
+                {[role.company, role.location].map(v => v?.trim()).filter(Boolean).join(' · ')}
+              </p>
+              {role.bullets?.length > 0 && <Bullets items={role.bullets} />}
+            </div>
+          ))}
+        </div>
+      </Section>
+    ) : null,
+
+    projects: document.projects?.length ? (
+      <Section key="projects" title="Projects">
+        <div className="space-y-5">
+          {document.projects.map((project, index) => (
+            <div key={index}>
+              <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+                <p className="text-sm font-bold text-slate-900">{project.name || 'Project'}</p>
+                {project.role?.trim() && <p className="text-[11px] font-semibold text-slate-500">{project.role}</p>}
+              </div>
+              {project.technologies?.length > 0 && <div className="mt-1.5"><Tags items={project.technologies} /></div>}
+              {project.bullets?.length > 0 && <Bullets items={project.bullets} />}
+            </div>
+          ))}
+        </div>
+      </Section>
+    ) : null,
+
+    education: document.education?.length ? (
+      <Section key="education" title="Education">
+        <div className="space-y-4">
+          {document.education.map((entry, index) => (
+            <div key={index}>
+              <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+                <p className="text-sm font-bold text-slate-900">{entry.degree || 'Qualification'}</p>
+                <p className="text-[11px] font-semibold text-slate-500">{dates(entry.startDate, entry.endDate)}</p>
+              </div>
+              <p className="text-[12px] text-slate-500">
+                {[entry.institution, entry.location].map(v => v?.trim()).filter(Boolean).join(' · ')}
+              </p>
+              {entry.details?.length > 0 && <Bullets items={entry.details} />}
+            </div>
+          ))}
+        </div>
+      </Section>
+    ) : null,
+
+    certifications: document.certifications?.length ? (
+      <Section key="certifications" title="Certifications">
+        <div className="space-y-2">
+          {document.certifications.map((cert, index) => (
+            <div key={index} className="flex flex-wrap items-baseline justify-between gap-x-3">
+              <p className="text-[13px] font-semibold text-slate-800">{cert.name}</p>
+              <p className="text-[11px] text-slate-500">
+                {[cert.issuer, cert.date].map(v => v?.trim()).filter(Boolean).join(' · ')}
+              </p>
+            </div>
+          ))}
+        </div>
+      </Section>
+    ) : null,
+
+    languages: document.languages?.length ? (
+      <Section key="languages" title="Languages"><Tags items={document.languages} /></Section>
+    ) : null,
+  };
+
+  // The user's own section order, so the preview matches what an export produces.
+  const ordered = (document.sectionOrder?.length ? document.sectionOrder : (Object.keys(sections) as SectionKey[]))
+    .map(key => sections[key])
+    .filter(Boolean);
+
+  return (
+    <div className="max-h-[75vh] min-h-[700px] overflow-auto bg-slate-100 p-5 md:p-10">
+      {!hasOriginal && (
+        <div className="mx-auto mb-4 max-w-3xl rounded-xl border border-amber-100 bg-amber-50 px-4 py-2.5 text-[11px] leading-5 text-amber-800">
+          Showing a formatted view of your resume content. The original file isn&apos;t stored on the
+          server any more, so your own layout and fonts can&apos;t be displayed.
+        </div>
+      )}
+      <div className="mx-auto min-h-[650px] max-w-3xl rounded-sm bg-white p-8 shadow-lg md:p-14">
+        <header className="border-b border-slate-200 pb-5">
+          <h2 className="font-century text-2xl font-black tracking-tight text-slate-900">
+            {personal.name?.trim() || 'Your name'}
+          </h2>
+          {contact.length > 0 && (
+            <p className="mt-2 text-[11.5px] leading-5 text-slate-500">{contact.join('  ·  ')}</p>
+          )}
+        </header>
+        {ordered}
+      </div>
+    </div>
   );
 }
 
