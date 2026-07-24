@@ -10,6 +10,10 @@ import {
 import { FaStar, FaStarHalfAlt, FaRegStar } from 'react-icons/fa';
 
 import { apiFetch } from '@/lib/api';
+import { Select } from '@/components/ui/Select';
+
+// Shared trigger look for the filter dropdowns (matches the old <select>).
+const FILTER_TRIGGER = 'font-raleway text-sm bg-gray-50 rounded-xl px-4 py-3 text-gray-600 w-full focus:outline-none focus:ring-2 focus:ring-blue-100';
 
 interface Course {
   id: string;
@@ -317,22 +321,22 @@ export default function CoursesPage() {
 
             {showFilters && filters && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mt-5 pt-5 border-t border-gray-50">
-                <select value={platform} onChange={(e) => setPlatform(e.target.value)} className="font-raleway text-sm bg-gray-50 rounded-xl px-4 py-3 text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-100">
-                  <option value="">All Platforms</option>
-                  {filters.platforms.map(p => <option key={p} value={p}>{p}</option>)}
-                </select>
-                <select value={level} onChange={(e) => setLevel(e.target.value)} className="font-raleway text-sm bg-gray-50 rounded-xl px-4 py-3 text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-100">
-                  <option value="">All Levels</option>
-                  {filters.levels.map(l => <option key={l} value={l}>{l}</option>)}
-                </select>
-                <select value={category} onChange={(e) => setCategory(e.target.value)} className="font-raleway text-sm bg-gray-50 rounded-xl px-4 py-3 text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-100">
-                  <option value="">All Categories</option>
-                  {filters.categories.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-                <select value={price} onChange={(e) => setPrice(e.target.value)} className="font-raleway text-sm bg-gray-50 rounded-xl px-4 py-3 text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-100">
-                  <option value="">All Prices</option>
-                  {filters.prices.map(p => <option key={p} value={p}>{p}</option>)}
-                </select>
+                <Select
+                  value={platform} onChange={setPlatform} ariaLabel="Platform" className={FILTER_TRIGGER}
+                  options={[{ value: '', label: 'All Platforms' }, ...filters.platforms.map(p => ({ value: p, label: p }))]}
+                />
+                <Select
+                  value={level} onChange={setLevel} ariaLabel="Level" className={FILTER_TRIGGER}
+                  options={[{ value: '', label: 'All Levels' }, ...filters.levels.map(l => ({ value: l, label: l }))]}
+                />
+                <Select
+                  value={category} onChange={setCategory} ariaLabel="Category" className={FILTER_TRIGGER}
+                  options={[{ value: '', label: 'All Categories' }, ...filters.categories.map(c => ({ value: c, label: c }))]}
+                />
+                <Select
+                  value={price} onChange={setPrice} ariaLabel="Price" className={FILTER_TRIGGER}
+                  options={[{ value: '', label: 'All Prices' }, ...filters.prices.map(p => ({ value: p, label: p }))]}
+                />
               </div>
             )}
           </div>

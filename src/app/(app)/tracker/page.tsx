@@ -9,6 +9,7 @@ import {
 
 import { apiFetch } from '@/lib/api';
 import { useFeedback } from '@/components/ui/feedback';
+import { Select } from '@/components/ui/Select';
 
 const STATUSES = ['saved', 'applied', 'interviewing', 'offer', 'rejected', 'accepted'] as const;
 type Status = (typeof STATUSES)[number];
@@ -323,13 +324,13 @@ export default function ApplicationsPage() {
                   <h3 className="font-century text-base font-bold text-slate-800 truncate group-hover:text-[#4F46E5] transition-colors">{app.title}</h3>
                   <p className="font-raleway text-sm text-gray-400 mt-0.5">{app.company}</p>
                 </div>
-                <select
+                <Select
                   value={app.status}
-                  onChange={(e) => updateStatus(app.id, e.target.value as Status)}
-                  className={`font-raleway text-[11px] font-bold px-3 py-1.5 rounded-lg cursor-pointer focus:outline-none ${STATUS_STYLES[app.status]}`}
-                >
-                  {STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
-                </select>
+                  onChange={(v) => updateStatus(app.id, v as Status)}
+                  ariaLabel="Application status"
+                  className={`font-raleway text-[11px] font-bold px-3 py-1.5 rounded-lg focus:outline-none ${STATUS_STYLES[app.status]}`}
+                  options={STATUSES.map((s) => ({ value: s, label: STATUS_LABELS[s] }))}
+                />
               </div>
 
               <div className="flex flex-wrap items-center gap-2 mt-4">

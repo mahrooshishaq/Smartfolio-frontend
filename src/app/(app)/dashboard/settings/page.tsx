@@ -7,6 +7,7 @@ import {
 } from 'react-icons/fi';
 
 import { apiFetch } from '@/lib/api';
+import { Select } from '@/components/ui/Select';
 
 // --- Enums (matching backend) ---
 const CAREER_STAGES = [
@@ -37,16 +38,13 @@ const INDUSTRIES = [
 const SelectField = ({ label, value, onChange, options }: { label: string; value: string; onChange: (v: string) => void; options: { value: string; label: string }[] }) => (
   <div>
     <label className="font-raleway text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">{label}</label>
-    <select
+    <Select
       value={value}
-      onChange={(e) => onChange(e.target.value)}
+      onChange={onChange}
+      ariaLabel={label}
       className="font-raleway w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent transition-all"
-    >
-      <option value="">Select...</option>
-      {options.map((o) => (
-        <option key={o.value} value={o.value}>{o.label}</option>
-      ))}
-    </select>
+      options={[{ value: '', label: 'Select...' }, ...options]}
+    />
   </div>
 );
 

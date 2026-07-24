@@ -12,6 +12,10 @@ import { apiFetch } from '@/lib/api';
 import { stashJobHandoff, canHandOff, type HandoffIntent } from '@/lib/job-handoff';
 import { companyLogo, sourceLogo } from '@/lib/logo';
 import { useFeedback } from '@/components/ui/feedback';
+import { Select } from '@/components/ui/Select';
+
+// Shared trigger look for the filter dropdowns (matches the old <select>).
+const FILTER_TRIGGER = 'font-raleway text-sm bg-gray-50 rounded-xl px-4 py-3 text-gray-600 w-full focus:outline-none focus:ring-2 focus:ring-blue-100';
 
 interface Job {
   id: string;
@@ -519,35 +523,38 @@ export default function JobsPage() {
 
             {showFilters && filters && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 mt-5 pt-5 border-t border-gray-50">
-                <select value={jobType} onChange={(e) => setJobType(e.target.value)} className="font-raleway text-sm bg-gray-50 rounded-xl px-4 py-3 text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-100">
-                  <option value="">All Job Types</option>
-                  {filters.job_types.map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
-                <select value={country} onChange={(e) => setCountry(e.target.value)} className="font-raleway text-sm bg-gray-50 rounded-xl px-4 py-3 text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-100">
-                  <option value="">All Countries</option>
-                  {filters.countries.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-                <select value={category} onChange={(e) => setCategory(e.target.value)} className="font-raleway text-sm bg-gray-50 rounded-xl px-4 py-3 text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-100">
-                  <option value="">All Categories</option>
-                  {filters.categories.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-                <select value={experienceLevel} onChange={(e) => setExperienceLevel(e.target.value)} className="font-raleway text-sm bg-gray-50 rounded-xl px-4 py-3 text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-100">
-                  <option value="">All Levels</option>
-                  {filters.experience_levels.map(l => <option key={l} value={l}>{l}</option>)}
-                </select>
-                <select value={source} onChange={(e) => setSource(e.target.value)} className="font-raleway text-sm bg-gray-50 rounded-xl px-4 py-3 text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-100">
-                  <option value="">All Platforms</option>
-                  {filters.sources.map(s => <option key={s} value={s}>{sourceLabel(s)}</option>)}
-                </select>
-                <select value={geoRestriction} onChange={(e) => setGeoRestriction(e.target.value)} className="font-raleway text-sm bg-gray-50 rounded-xl px-4 py-3 text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-100">
-                  <option value="">Any Eligibility</option>
-                  {/* Derived from the posting text, so this means "no requirement
-                      stated" rather than a guarantee — the label shouldn't overpromise. */}
-                  <option value="Anywhere">🌍 No location requirement stated</option>
-                  <option value="Country-restricted">📍 In-country only</option>
-                  <option value="Citizenship/visa required">🛂 Citizenship/visa required</option>
-                  <option value="Not specified">Eligibility not stated</option>
-                </select>
+                <Select
+                  value={jobType} onChange={setJobType} ariaLabel="Job type" className={FILTER_TRIGGER}
+                  options={[{ value: '', label: 'All Job Types' }, ...filters.job_types.map(t => ({ value: t, label: t }))]}
+                />
+                <Select
+                  value={country} onChange={setCountry} ariaLabel="Country" className={FILTER_TRIGGER}
+                  options={[{ value: '', label: 'All Countries' }, ...filters.countries.map(c => ({ value: c, label: c }))]}
+                />
+                <Select
+                  value={category} onChange={setCategory} ariaLabel="Category" className={FILTER_TRIGGER}
+                  options={[{ value: '', label: 'All Categories' }, ...filters.categories.map(c => ({ value: c, label: c }))]}
+                />
+                <Select
+                  value={experienceLevel} onChange={setExperienceLevel} ariaLabel="Experience level" className={FILTER_TRIGGER}
+                  options={[{ value: '', label: 'All Levels' }, ...filters.experience_levels.map(l => ({ value: l, label: l }))]}
+                />
+                <Select
+                  value={source} onChange={setSource} ariaLabel="Source" className={FILTER_TRIGGER}
+                  options={[{ value: '', label: 'All Platforms' }, ...filters.sources.map(s => ({ value: s, label: sourceLabel(s) }))]}
+                />
+                {/* Eligibility is derived from the posting text, so "no requirement
+                    stated" rather than a guarantee — the labels shouldn't overpromise. */}
+                <Select
+                  value={geoRestriction} onChange={setGeoRestriction} ariaLabel="Eligibility" className={FILTER_TRIGGER}
+                  options={[
+                    { value: '', label: 'Any Eligibility' },
+                    { value: 'Anywhere', label: '🌍 No location requirement stated' },
+                    { value: 'Country-restricted', label: '📍 In-country only' },
+                    { value: 'Citizenship/visa required', label: '🛂 Citizenship/visa required' },
+                    { value: 'Not specified', label: 'Eligibility not stated' },
+                  ]}
+                />
               </div>
             )}
           </div>
