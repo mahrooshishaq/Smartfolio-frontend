@@ -10,7 +10,21 @@ import AppleSplashLinks from '@/components/AppleSplashLinks';
 import FoliLoader from '@/components/foli/FoliLoader';
 import FoliBoot from '@/components/foli/FoliBoot';
 import { FeedbackProvider } from '@/components/ui/feedback';
+import { ThemeProvider } from '@/components/theme/ThemeProvider';
 import Script from 'next/script';
+
+// Applies the saved (or system) theme to <html> during HTML parse, before the
+// first paint — so a dark-mode user never sees a white flash. Runs as a RAW
+// inline script for the same reason BOOT_REVEAL does: it must not wait on Next's
+// JS bundle. Mirrors the logic in ThemeProvider.
+const THEME_INIT = `
+(function(){try{
+  var s=localStorage.getItem('theme');
+  var d=s?s==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;
+  var r=document.documentElement;
+  if(d)r.classList.add('dark');
+  r.style.colorScheme=d?'dark':'light';
+}catch(e){}})();`;
 
 
 // Chrome fires beforeinstallprompt before React hydrates, so catch it here or the
@@ -39,6 +53,9 @@ const BOOT_CSS = `
 #foli-boot .fb-bar>span{display:block;height:100%;width:40%;border-radius:99px;
   background:linear-gradient(90deg,#818cf8,#c084fc,#ec4899);animation:fb-sl 1.1s ease-in-out infinite}
 @keyframes fb-sl{0%{transform:translateX(-120%)}100%{transform:translateX(340%)}}
+html.dark #foli-boot{background:linear-gradient(160deg,#0b0f19,#0f1424 45%,#141026)}
+html.dark #foli-boot .fb-t{color:#e6ebf3}
+html.dark #foli-boot .fb-s{color:#8792a6}
 @media(prefers-reduced-motion:reduce){#foli-boot svg{animation:none}}`;
 
 const BOOT_HTML = `
@@ -94,7 +111,10 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#eef1ff",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#eef1ff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0b0f19" },
+  ],
 };
 
 export const metadata: Metadata = {
@@ -117,6 +137,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="scroll-smooth">
       <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
         <AppleSplashLinks />
         <style dangerouslySetInnerHTML={{ __html: BOOT_CSS }} />
       </head>
@@ -135,11 +156,13 @@ export default function RootLayout({
         />
         <FoliBoot />
         <SplashScreen />
-        <FeedbackProvider>
-          <React.Suspense fallback={<FoliLoader />}>
-            {children}
-          </React.Suspense>
-        </FeedbackProvider>
+        <ThemeProvider>
+          <FeedbackProvider>
+            <React.Suspense fallback={<FoliLoader />}>
+              {children}
+            </React.Suspense>
+          </FeedbackProvider>
+        </ThemeProvider>
         <ServiceWorkerRegistrar />
         <InstallPrompt />
       </body>

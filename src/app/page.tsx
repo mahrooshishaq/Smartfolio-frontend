@@ -107,7 +107,7 @@ export default function Home() {
             Optimize your resume
           </div>
 
-          <div className="bg-white/40 backdrop-blur-xl rounded-3xl p-8 md:p-12 shadow-lg flex flex-col md:flex-row items-center gap-12 border border-gray-100">
+          <div className="bg-white/40 dark:bg-white/5 backdrop-blur-xl rounded-3xl p-8 md:p-12 shadow-lg flex flex-col md:flex-row items-center gap-12 border border-gray-100 dark:border-white/10">
             <div className="md:w-1/3">
               <h2 className="text-3xl font-bold font-century mb-4">Smart & Effortless</h2>
               <p className="text-gray-600 mb-6 leading-relaxed text-sm">
@@ -120,7 +120,7 @@ export default function Home() {
                 <li className="flex items-center gap-2">⚡ Seamless Live Preview</li>
                 <li className="flex items-center gap-2">👁️ Personalized Cover Letters</li>
               </ul>
-              <button className="mt-8 px-8 py-2 bg-blue-200/50 hover:bg-blue-300/50 rounded-full text-blue-900 text-sm font-semibold tracking-wide transition-colors uppercase">
+              <button className="mt-8 px-8 py-2 bg-blue-200/50 hover:bg-blue-300/50 dark:bg-indigo-500/20 dark:hover:bg-indigo-500/30 rounded-full text-blue-900 dark:text-indigo-100 text-sm font-semibold tracking-wide transition-colors uppercase">
                 Try Now
               </button>
             </div>
@@ -132,13 +132,13 @@ export default function Home() {
       </section>
 
       {/* --- SECTION 3: Documents & Job Hunting --- */}
-      <section className="relative min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex flex-col justify-center px-6 md:px-20 py-20">
+      <section className="relative min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 dark:from-[#0f1728] dark:to-[#17122a] flex flex-col justify-center px-6 md:px-20 py-20">
         <div className="max-w-7xl mx-auto w-full flex flex-col md:flex-row items-center gap-12">
           
           {/* Left: Personalized Documents */}
           <div className="md:w-1/2 relative">
              {/* Decorative glow; clipped by the page's overflow-x guard. */}
-             <div data-audit-ignore className="absolute -top-10 -left-10 w-full h-full bg-orange-100 rounded-full blur-3xl -z-10 opacity-50"></div>
+             <div data-audit-ignore className="absolute -top-10 -left-10 w-full h-full bg-orange-100 dark:bg-indigo-500/10 rounded-full blur-3xl -z-10 opacity-50"></div>
              <h3 className="mb-8 uppercase tracking-widest text-gray-600 font-raleway text-sm">Personalized Documents</h3>
              <div className="bg-white p-4 shadow-xl -rotate-2 w-3/4 mx-auto md:mx-0 rounded-lg">
                <div className="h-64 bg-gray-50 border border-gray-100 overflow-hidden relative rounded">
@@ -148,7 +148,7 @@ export default function Home() {
           </div>
           
           {/* Right: Job Hunting */}
-          <div className="md:w-1/2 bg-blue-100/50 rounded-3xl p-8 md:p-12 relative overflow-hidden">
+          <div className="md:w-1/2 bg-blue-100/50 dark:bg-white/5 rounded-3xl p-8 md:p-12 relative overflow-hidden">
              <h3 className="mb-6 uppercase tracking-widest text-gray-600 font-raleway text-sm text-right">Job Hunting Made Simple</h3>
              <h2 className="text-3xl font-bold font-century mb-4">Tailored Opportunities</h2>
              <ul className="space-y-2 mb-8 text-sm text-gray-600">
@@ -172,14 +172,14 @@ export default function Home() {
       </section>
 
        {/* --- SECTION 4: Courses Grid --- */}
-       <section className="relative min-h-screen bg-gradient-to-br from-orange-50 to-pink-50 flex flex-col justify-center px-6 md:px-20 py-20">
+       <section className="relative min-h-screen bg-gradient-to-br from-orange-50 to-pink-50 dark:from-[#1a1320] dark:to-[#1e1424] flex flex-col justify-center px-6 md:px-20 py-20">
         <div className="max-w-7xl mx-auto w-full flex flex-col md:flex-row gap-12 items-center">
           <div className="md:w-1/3">
              <h2 className="text-2xl font-bold font-century mb-4 uppercase">Find Hundreds of Updated Courses</h2>
              <p className="text-gray-600 mb-6 text-sm">
                Get recommendations and alerts for courses of your preference.
              </p>
-             <button className="px-8 py-2 bg-blue-200/50 hover:bg-blue-300/50 rounded-full text-blue-900 text-sm font-semibold tracking-wide transition-colors uppercase">
+             <button className="px-8 py-2 bg-blue-200/50 hover:bg-blue-300/50 dark:bg-indigo-500/20 dark:hover:bg-indigo-500/30 rounded-full text-blue-900 dark:text-indigo-100 text-sm font-semibold tracking-wide transition-colors uppercase">
                 Try Now
               </button>
           </div>
