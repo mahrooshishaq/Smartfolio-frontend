@@ -486,13 +486,39 @@ html[data-pwa-standalone] .sf-splash {
   --d-faint: #8792a6;    /* faint (400) */
   --d-ring: rgba(129, 140, 248, 0.45);
   color-scheme: dark;
+
+  /* Remap the -50 tint shades at the SOURCE variable, so every utility that
+     uses them flips — crucially including opacity variants like bg-indigo-50/70,
+     which compile to color-mix(var(--color-indigo-50) 70%, transparent) and so
+     are invisible to per-class overrides. This is the fix for faint secondary
+     buttons/chips that used a /NN opacity. -100+ shades are NOT remapped here:
+     they double as light text (e.g. dark:text-indigo-100) and must stay light. */
+  --color-gray-50: #0f1728;
+  --color-slate-50: #0f1728;
+  --color-zinc-50: #0f1728;
+  --color-neutral-50: #0f1728;
+  --color-indigo-50: #29315a;
+  --color-blue-50: #182a48;
+  --color-sky-50: #142d44;
+  --color-emerald-50: #123528;
+  --color-green-50: #123020;
+  --color-teal-50: #123230;
+  --color-violet-50: #271f4a;
+  --color-purple-50: #2a1f45;
+  --color-red-50: #3a1a24;
+  --color-rose-50: #3a1a26;
+  --color-pink-50: #331a2a;
+  --color-amber-50: #322612;
+  --color-orange-50: #331f14;
+  --color-yellow-50: #2c2610;
 }
 
 .dark body { background-color: var(--d-app); color: var(--d-body); }
 
 /* Surfaces --------------------------------------------------------------- */
+/* bg-gray-50 / bg-slate-50 (+ their opacity variants) are handled by the
+   --color-*-50 remaps above. */
 .dark .bg-white { background-color: var(--d-surface); }
-.dark .bg-gray-50, .dark .bg-slate-50 { background-color: var(--d-inset); }
 .dark .bg-gray-100, .dark .bg-slate-100 { background-color: var(--d-inset-2); }
 .dark .bg-gray-200, .dark .bg-slate-200 { background-color: rgba(255, 255, 255, 0.14); }
 .dark .bg-\[\#F8FAFC\] { background-color: var(--d-app); }
@@ -513,27 +539,22 @@ html[data-pwa-standalone] .sf-splash {
 
 /* Borders ---------------------------------------------------------------- */
 .dark .border-gray-50, .dark .border-gray-100, .dark .border-gray-200,
-.dark .border-slate-100, .dark .border-slate-200 { border-color: var(--d-border); }
-.dark .border-indigo-100 { border-color: rgba(99, 102, 241, 0.25); }
+.dark .border-slate-100, .dark .border-slate-200,
+.dark .border-\[\#e5e7eb\], .dark .border { border-color: var(--d-border); }
+.dark .border-indigo-100, .dark .border-indigo-200 { border-color: rgba(99, 102, 241, 0.28); }
+.dark .hover\:border-indigo-200:hover { border-color: rgba(99, 102, 241, 0.45) !important; }
+
+/* -100 opacity fills used as secondary-button hovers (not remapped at the
+   variable, since -100 doubles as light text). */
+.dark .hover\:bg-indigo-100\/80:hover, .dark .hover\:bg-indigo-100:hover {
+  background-color: #333e6b !important;
+}
 
 /* Brand accent text — lift indigo for legibility on dark. */
 .dark .text-\[\#4F46E5\], .dark .text-\[\#4338CA\] { color: #a5b4fc; }
 
-/* Pastel chips: tint the -50 fills, lighten the paired accent text. */
-.dark .bg-indigo-50 { background-color: rgba(99, 102, 241, 0.16); }
-.dark .bg-emerald-50 { background-color: rgba(16, 185, 129, 0.15); }
-.dark .bg-red-50 { background-color: rgba(239, 68, 68, 0.15); }
-.dark .bg-amber-50 { background-color: rgba(245, 158, 11, 0.15); }
-.dark .bg-blue-50 { background-color: rgba(59, 130, 246, 0.15); }
-.dark .bg-purple-50 { background-color: rgba(168, 85, 247, 0.16); }
-.dark .bg-orange-50 { background-color: rgba(249, 115, 22, 0.15); }
-.dark .bg-violet-50 { background-color: rgba(139, 92, 246, 0.16); }
-.dark .bg-rose-50 { background-color: rgba(244, 63, 94, 0.15); }
-.dark .bg-sky-50 { background-color: rgba(14, 165, 233, 0.15); }
-.dark .bg-green-50 { background-color: rgba(34, 197, 94, 0.15); }
-.dark .bg-yellow-50 { background-color: rgba(234, 179, 8, 0.15); }
-.dark .bg-teal-50 { background-color: rgba(20, 184, 166, 0.15); }
-.dark .bg-pink-50 { background-color: rgba(236, 72, 153, 0.15); }
+/* Pastel chips: the -50 fills flip via the --color-*-50 remaps; here we just
+   lighten the paired -600/-700 accent text so it reads on the dark tint. */
 .dark .text-indigo-600, .dark .text-indigo-700 { color: #a5b4fc; }
 .dark .text-emerald-600, .dark .text-emerald-700 { color: #6ee7b7; }
 .dark .text-red-500, .dark .text-red-600 { color: #fca5a5; }
@@ -579,3 +600,14 @@ html[data-pwa-standalone] .sf-splash {
 .dark [data-blob="a"] { background: #16265a !important; opacity: 0.4 !important; }
 .dark [data-blob="b"] { background: #2c1c52 !important; opacity: 0.35 !important; }
 .dark [data-blob="c"] { background: #10233c !important; opacity: 0.45 !important; }
+
+/* Custom-CSS surfaces (loaders / splash / mascot bay) — these carry hardcoded
+   light gradients + dark text in this file, so utility overrides don't reach
+   them. Give each an explicit dark treatment. */
+.dark .foli-bay { background: linear-gradient(160deg, #171f38, #1b1633 55%, #241826); }
+.dark .tk { background: linear-gradient(160deg, #0b0f19, #0f1424 45%, #141026); }
+.dark .tk-title { color: var(--d-head); }
+.dark .tk-sub { color: var(--d-muted); }
+.dark .sf-splash { background: linear-gradient(160deg, #0b0f19 0%, #0f1424 45%, #141026 100%); }
+.dark .sf-splash__wordmark { color: var(--d-head); }
+.dark .sf-splash__tagline { color: var(--d-muted); }
