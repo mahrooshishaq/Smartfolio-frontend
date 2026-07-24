@@ -8,8 +8,6 @@ import {
 
 import { apiFetch } from '@/lib/api';
 import { Select } from '@/components/ui/Select';
-import { useTheme } from '@/components/theme/ThemeProvider';
-import { FiMoon } from 'react-icons/fi';
 
 // --- Enums (matching backend) ---
 const CAREER_STAGES = [
@@ -124,7 +122,6 @@ const ToggleField = ({ label, description, value, onChange }: { label: string; d
 // --- Main Page ---
 export default function SettingsPage() {
   const router = useRouter();
-  const { theme, setTheme } = useTheme();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -283,17 +280,6 @@ export default function SettingsPage() {
 
           {/* Form Sections */}
           <div className="space-y-6">
-
-            {/* Appearance */}
-            <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-50 p-8">
-              <h3 className="font-century text-lg font-bold text-slate-800 mb-2 flex items-center gap-2"><FiMoon size={18} /> Appearance</h3>
-              <ToggleField
-                label="Dark mode"
-                description="Use a darker theme across SmartFolio. Follows your device by default."
-                value={theme === 'dark'}
-                onChange={(v) => setTheme(v ? 'dark' : 'light')}
-              />
-            </div>
 
             {/* Career Info */}
             <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-50 p-8">

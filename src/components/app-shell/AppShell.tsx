@@ -6,7 +6,6 @@ import { FiLogOut, FiMenu, FiMoreHorizontal, FiSettings, FiX } from 'react-icons
 import BrandMark from '@/components/BrandMark';
 import AnimatedBackground from '@/components/AnimatedBackground';
 import SidebarItem from './SidebarItem';
-import ThemeToggle from '@/components/theme/ThemeToggle';
 import { NAV_ITEMS, SUPPORT_ITEMS, isActive, type NavItem } from './nav';
 import { clearSession } from '@/lib/api';
 
@@ -63,7 +62,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         {SUPPORT_ITEMS.map((item) => (
           <SidebarItem key={item.label} icon={item.icon} label={item.label} active={isActive(pathname, item.href)} onClick={() => go(item)} />
         ))}
-        <ThemeToggle />
         <button onClick={handleLogout} className="w-full">
           <SidebarItem icon={FiLogOut} label="Logout" />
         </button>

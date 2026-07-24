@@ -1,9 +1,8 @@
 export default function AnimatedBackground() {
   return (
     <div data-audit-ignore className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
-      {/* Blue Ellipse — colour/opacity overridden for dark in globals.css via data-blob. */}
-      <div
-        data-blob="a"
+      {/* Blue Ellipse */}
+      <div 
         className="absolute w-[800px] h-[800px] rounded-full blur-3xl opacity-60"
         style={{
           background: '#D6E4FF',
@@ -13,8 +12,7 @@ export default function AnimatedBackground() {
         }}
       />
       {/* Purple Ellipse */}
-      <div
-        data-blob="b"
+      <div 
         className="absolute w-[700px] h-[700px] rounded-full blur-3xl opacity-50"
         style={{
           background: '#E5D4FF',
@@ -24,8 +22,7 @@ export default function AnimatedBackground() {
         }}
       />
       {/* Orange Ellipse */}
-      <div
-        data-blob="c"
+      <div 
         className="absolute w-[900px] h-[900px] rounded-full blur-3xl opacity-60"
         style={{
           background: '#FFE4D6',
