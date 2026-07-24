@@ -26,12 +26,21 @@ const csp = [
   // appended only when set (it is inlined at build time) to cover setups that
   // call the backend directly; an unset var must not inject a bogus localhost
   // entry into the production policy.
+  // `blob:` is required for the resume preview: the PDF arrives as an
+  // authenticated fetch, becomes a blob URL, and PDF.js then fetches that URL
+  // back. Without it the preview failed with "Refused to connect" even though
+  // the bytes were already in the page — a blob URL carries no network reach, so
+  // allowing it grants nothing beyond reading what this origin already holds.
   [
-    "connect-src 'self'",
+    "connect-src 'self' blob:",
     process.env.NEXT_PUBLIC_API_URL,
     isDev ? 'http://localhost:3000' : null,
   ].filter(Boolean).join(' '),
   "media-src 'self' blob: data:",
+  // The same preview falls back to framing the blob when PDF.js can't render it.
+  // frame-src was never set, so it inherited default-src 'self' and blocked the
+  // fallback too — leaving "This content is blocked" with no way forward.
+  "frame-src 'self' blob:",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
