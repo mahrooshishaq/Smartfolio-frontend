@@ -9,6 +9,7 @@ import SplashScreen from '@/components/SplashScreen';
 import AppleSplashLinks from '@/components/AppleSplashLinks';
 import FoliLoader from '@/components/foli/FoliLoader';
 import FoliBoot from '@/components/foli/FoliBoot';
+import { FeedbackProvider } from '@/components/ui/feedback';
 import Script from 'next/script';
 
 
@@ -134,9 +135,11 @@ export default function RootLayout({
         />
         <FoliBoot />
         <SplashScreen />
-        <React.Suspense fallback={<FoliLoader />}>
-          {children}
-        </React.Suspense>
+        <FeedbackProvider>
+          <React.Suspense fallback={<FoliLoader />}>
+            {children}
+          </React.Suspense>
+        </FeedbackProvider>
         <ServiceWorkerRegistrar />
         <InstallPrompt />
       </body>

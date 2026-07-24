@@ -8,6 +8,7 @@ import {
 } from 'react-icons/fi';
 
 import { apiFetch } from '@/lib/api';
+import { useFeedback } from '@/components/ui/feedback';
 
 const STATUSES = ['saved', 'applied', 'interviewing', 'offer', 'rejected', 'accepted'] as const;
 type Status = (typeof STATUSES)[number];
@@ -66,6 +67,7 @@ function friendlyError(err: unknown, fallback: string): string {
 
 export default function ApplicationsPage() {
   const router = useRouter();
+  const { confirm } = useFeedback();
   const [apps, setApps] = useState<Application[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [statusFilter, setStatusFilter] = useState<string>('');
@@ -142,7 +144,13 @@ export default function ApplicationsPage() {
 
   const deleteApp = async (id: string) => {
     if (!token) return;
-    if (!window.confirm('Remove this job from your tracker?')) return;
+    const ok = await confirm({
+      title: 'Remove this job?',
+      message: 'This job will be taken off your tracker. You can add it back later.',
+      confirmLabel: 'Remove',
+      variant: 'danger',
+    });
+    if (!ok) return;
     try {
       const res = await apiFetch(`/applications/${id}`, {
         method: 'DELETE',

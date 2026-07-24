@@ -8,6 +8,7 @@ import ResumeProfileReview from '@/components/ResumeProfileReview';
 
 import { apiFetch } from '@/lib/api';
 import { peekJobHandoff, clearJobHandoff, HANDOFF_PARAM, type JobHandoff } from '@/lib/job-handoff';
+import { useFeedback } from '@/components/ui/feedback';
 
 /** The user's stored CV, and whether it can actually be analysed right now. */
 interface SavedResume {
@@ -27,6 +28,7 @@ export default function ResumeUploadPage() {
 }
 
 function ResumeUploadContent() {
+  const { error: showError } = useFeedback();
   const [file, setFile] = useState<File | null>(null);
   const [jobDescription, setJobDescription] = useState('');
   const [jobTitle, setJobTitle] = useState('');
@@ -62,7 +64,7 @@ function ResumeUploadContent() {
       if (!response.ok) throw new Error(result?.message || 'Could not create a resume.');
       router.push(`/resume-editor?resumeId=${result.resumeId}&mode=create`);
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Could not create a resume.');
+      showError(error instanceof Error ? error.message : 'Could not create a resume.');
       setIsUploading(false);
     }
   };
@@ -140,14 +142,14 @@ function ResumeUploadContent() {
       const isSupported = lowerName.endsWith('.pdf') || lowerName.endsWith('.docx');
 
       if (!isSupported) {
-        alert('Only PDF and DOCX files are allowed.');
+        showError('Only PDF and DOCX files are allowed.');
         setFile(null);
         e.target.value = '';
         return;
       }
 
       if (selectedFile.size > MAX_FILE_SIZE_BYTES) {
-        alert('File size must be 5MB or less.');
+        showError('File size must be 5MB or less.');
         setFile(null);
         e.target.value = '';
         return;
@@ -161,11 +163,11 @@ function ResumeUploadContent() {
     if (!file) return;
     const trimmedJobDescription = jobDescription.trim();
     if (trimmedJobDescription.length > 0 && trimmedJobDescription.length < 50) {
-      alert('The target job description must be at least 50 characters.');
+      showError('The target job description must be at least 50 characters.');
       return;
     }
     if (trimmedJobDescription && !jobTitle.trim()) {
-      alert('Enter the job title so SmartFolio can label this evaluation correctly.');
+      showError('Enter the job title so SmartFolio can label this evaluation correctly.');
       return;
     }
     setIsUploading(true);
@@ -173,7 +175,7 @@ function ResumeUploadContent() {
     try {
       const accessToken = localStorage.getItem('accessToken');
       if (!accessToken) {
-        alert("Please login first");
+        showError('Please login first');
         router.push('/login');
         return;
       }
@@ -207,7 +209,7 @@ function ResumeUploadContent() {
 
     } catch (error: unknown) {
       console.error("Upload Error:", error);
-      alert(error instanceof Error ? error.message : 'Something went wrong during upload.');
+      showError(error instanceof Error ? error.message : 'Something went wrong during upload.');
       setIsUploading(false);
     }
   };
@@ -221,11 +223,11 @@ function ResumeUploadContent() {
     if (!savedResume) return;
     const trimmedJobDescription = jobDescription.trim();
     if (trimmedJobDescription.length > 0 && trimmedJobDescription.length < 50) {
-      alert('The target job description must be at least 50 characters.');
+      showError('The target job description must be at least 50 characters.');
       return;
     }
     if (trimmedJobDescription && !jobTitle.trim()) {
-      alert('Enter the job title so SmartFolio can label this evaluation correctly.');
+      showError('Enter the job title so SmartFolio can label this evaluation correctly.');
       return;
     }
     setIsUploading(true);
@@ -264,7 +266,7 @@ function ResumeUploadContent() {
       router.push(`/analysis-results?resumeId=${resumeId}`);
     } catch (error: unknown) {
       console.error("Analysis Error:", error);
-      alert(error instanceof Error ? error.message : 'Something went wrong during analysis.');
+      showError(error instanceof Error ? error.message : 'Something went wrong during analysis.');
       setIsUploading(false);
       setReviewResumeId(null);
     }
