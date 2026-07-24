@@ -1,6 +1,6 @@
 'use client';
 import React, { useEffect, useRef, useState, Suspense } from 'react';
-import { CloudUpload, FileText, X, Loader2, ArrowLeft, FilePlus2, Briefcase, RefreshCw } from 'lucide-react';
+import { CloudUpload, FileText, X, Loader2, ArrowLeft, FilePlus2, Briefcase, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import AnimatedBackground from '@/components/AnimatedBackground';
 import BrandMark from '@/components/BrandMark';
@@ -375,8 +375,12 @@ function ResumeUploadContent() {
                 </div>
               )}
 
-              {/* Dropzone Area */}
-              <div className="relative border-2 border-dashed border-gray-200 rounded-2rem p-12 flex flex-col items-center justify-center transition-colors hover:border-blue-200 group">
+              {/* Dropzone Area.
+                  Confirmation lands HERE, on the zone the user just clicked,
+                  rather than only in the file card further down the page. The
+                  card sits below the job-description box and is routinely off
+                  screen, so picking a file looked like nothing had happened. */}
+              <div className={`relative border-2 border-dashed rounded-2rem p-12 flex flex-col items-center justify-center transition-colors group ${file ? 'border-emerald-300 bg-emerald-50/50' : 'border-gray-200 hover:border-blue-200'}`}>
                 <input
                   type="file"
                   accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -384,13 +388,28 @@ function ResumeUploadContent() {
                   disabled={isUploading}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
                 />
-                <div className="bg-slate-50 p-4 rounded-2xl mb-4 group-hover:bg-blue-50 transition-colors">
-                  <CloudUpload size={32} className="text-gray-400 group-hover:text-blue-500" />
-                </div>
-                <h2 className="font-century text-2xl text-slate-800 mb-1 text-center">Choose a file or drag &amp; drop it here</h2>
-                <p className="font-raleway text-gray-400 text-sm">PDF or DOCX files up to 5MB</p>
+                {file ? (
+                  <>
+                    <div className="mb-4 rounded-2xl bg-emerald-100 p-4">
+                      <CheckCircle2 size={32} className="text-emerald-600" />
+                    </div>
+                    <h2 className="font-century mb-1 text-center text-2xl text-emerald-800">CV attached</h2>
+                    <p className="font-raleway max-w-full truncate px-4 text-sm font-bold text-emerald-700">{file.name}</p>
+                    <p className="font-raleway mt-1 text-xs text-emerald-600">
+                      {(file.size / 1024).toFixed(0)} KB · ready to analyse
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <div className="bg-slate-50 p-4 rounded-2xl mb-4 group-hover:bg-blue-50 transition-colors">
+                      <CloudUpload size={32} className="text-gray-400 group-hover:text-blue-500" />
+                    </div>
+                    <h2 className="font-century text-2xl text-slate-800 mb-1 text-center">Choose a file or drag &amp; drop it here</h2>
+                    <p className="font-raleway text-gray-400 text-sm">PDF or DOCX files up to 5MB</p>
+                  </>
+                )}
 
-                <button className="font-raleway mt-8 bg-slate-200 text-gray-500 px-12 py-3 rounded-full font-bold text-sm tracking-wide">
+                <button className={`font-raleway mt-8 px-12 py-3 rounded-full font-bold text-sm tracking-wide ${file ? 'bg-white text-emerald-700 border border-emerald-200' : 'bg-slate-200 text-gray-500'}`}>
                   {file ? 'Change File' : 'Upload'}
                 </button>
               </div>

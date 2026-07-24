@@ -38,6 +38,10 @@ interface AnalysisResult {
     formatting_clarity: number;
     relevance_match?: number;
   };
+  /** Present when this analysis was scored against a pasted job description. */
+  jobDescription?: string;
+  jobTitle?: string;
+  company?: string;
   interpretationBand: string;
   confidenceLevel: 'High' | 'Medium' | 'Low';
   remarks: {
@@ -97,6 +101,10 @@ function ResultsContent() {
   const [loading, setLoading] = useState(true);
   const [reanalyzing, setReanalyzing] = useState(false);
   const [showReanalysisWarning, setShowReanalysisWarning] = useState(false);
+  // Re-use the job description this analysis was scored against. Ticked by
+  // default: someone who pasted a job description wants to keep being measured
+  // against it, and only shown when there is one to keep.
+  const [keepJobDescription, setKeepJobDescription] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -196,16 +204,37 @@ function ResultsContent() {
   ];
   const issueCount = data.remarks.weaknesses.length;
 
+  /**
+   * Run a fresh analysis of the same resume.
+   *
+   * When this analysis was scored against a pasted job description, that
+   * description is sent again by default. Re-running used to drop it and score
+   * against the profile's target role instead — the same button silently
+   * answered a different question, and the new result was not comparable to the
+   * one it replaced. `keepJobDescription` lets the user opt out and get the
+   * profile-based read deliberately.
+   */
   const reanalyzeForCurrentTarget = async () => {
     const token = localStorage.getItem('accessToken');
     if (!token || !resumeId) return;
     setReanalyzing(true);
     setShowReanalysisWarning(false);
+
+    const reuseJd = Boolean(data?.jobDescription) && keepJobDescription;
     try {
       const response = await apiFetch(`/resume/analyze`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ resumeId }),
+        body: JSON.stringify({
+          resumeId,
+          ...(reuseJd && {
+            jobDescription: data!.jobDescription,
+            // The backend requires a title alongside a description; fall back to
+            // the role this analysis was already labelled with.
+            jobTitle: data!.jobTitle || data!.targetRole,
+            ...(data!.company && { company: data!.company }),
+          }),
+        }),
       });
       if (!response.ok) {
         const result = await response.json();
@@ -305,7 +334,10 @@ function ResultsContent() {
                 {pdfUrl && (
                   <div className="mt-4 grid grid-cols-2 gap-2 border-t border-slate-100 pt-4 sm:grid-cols-4">
                     <button onClick={() => setShowReanalysisWarning(true)} disabled={reanalyzing} className="inline-flex min-w-0 items-center justify-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2.5 text-center text-xs font-bold text-violet-700 hover:bg-violet-100 disabled:opacity-60">
-                      <RefreshCw size={14} className={reanalyzing ? 'animate-spin' : ''} /> {reanalyzing ? 'Analyzing…' : 'Re-analyze with current profile'}
+                      {/* "with current profile" would be a lie once a job
+                          description can be carried over — the dialog is where
+                          the target is actually chosen. */}
+                      <RefreshCw size={14} className={reanalyzing ? 'animate-spin' : ''} /> {reanalyzing ? 'Analyzing…' : data.jobDescription ? 'Re-analyze' : 'Re-analyze with current profile'}
                     </button>
                     <button onClick={() => router.push(`/resume-editor?resumeId=${data.resumeId}&analysisId=${data.analysisId}`)} className="inline-flex min-w-0 items-center justify-center gap-2 rounded-xl bg-slate-800 px-3 py-2.5 text-center text-xs font-bold text-white hover:bg-slate-900">
                       <WandSparkles size={14} /> Edit with SmartFolio
@@ -345,7 +377,34 @@ function ResultsContent() {
               <button onClick={() => setShowReanalysisWarning(false)} className="rounded-full p-2 text-slate-400 hover:bg-slate-100" aria-label="Close"><X size={18} /></button>
             </div>
             <h2 id="reanalysis-title" className="text-xl font-black text-slate-800">Create a fresh analysis?</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600">SmartFolio will analyze this resume again using the target role and career settings currently saved in your profile. This result stays in your history, while a new score and recommendations are created.</p>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              {data.jobDescription
+                ? 'This result stays in your history, while a new score and recommendations are created.'
+                : 'SmartFolio will analyze this resume again using the target role and career settings currently saved in your profile. This result stays in your history, while a new score and recommendations are created.'}
+            </p>
+
+            {/* Only asked when there is a job description to keep. Without one
+                there is nothing to decide, and a question with one sensible
+                answer is just friction. */}
+            {data.jobDescription && (
+              <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border border-violet-100 bg-violet-50/60 p-4">
+                <input
+                  type="checkbox"
+                  checked={keepJobDescription}
+                  onChange={(event) => setKeepJobDescription(event.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 accent-violet-600"
+                />
+                <span className="text-xs leading-5 text-slate-700">
+                  <span className="font-bold">
+                    Score against {data.jobTitle || data.targetRole || 'the same job'} again
+                  </span>
+                  <br />
+                  Keeps the job description this analysis used, so the new score is comparable.
+                  Untick to score against your profile&apos;s target role instead.
+                </span>
+              </label>
+            )}
+
             <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <button onClick={() => setShowReanalysisWarning(false)} className="rounded-xl px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100">Keep this result</button>
               <button onClick={reanalyzeForCurrentTarget} className="inline-flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-violet-700"><RefreshCw size={14} /> Create new analysis</button>
