@@ -124,11 +124,19 @@ function ResultsContent() {
           throw new Error('Analysis not found.');
         }
         if (!contentRes.ok) throw new Error('Resume details could not be loaded.');
-        if (!fileRes.ok) throw new Error('The original resume PDF could not be loaded.');
 
         const content = (await contentRes.json()) as ResumeContent;
-        const pdfBlob = await fileRes.blob();
-        objectUrl = URL.createObjectURL(pdfBlob);
+
+        // The original file is a preview convenience, not the analysis itself —
+        // scoring runs on the extracted text held in the database. Uploaded
+        // files sit on the container disk, which is wiped on every rebuild, so
+        // this 404s routinely for older resumes. Throwing here used to destroy a
+        // results page whose scores had loaded perfectly well; now the preview
+        // pane degrades and the results stay.
+        if (fileRes.ok) {
+          const pdfBlob = await fileRes.blob();
+          objectUrl = URL.createObjectURL(pdfBlob);
+        }
 
         if (!cancelled) {
           setData(analysisResult.find((item: AnalysisResult) => item.analysisId === requestedAnalysisId) || analysisResult[0]);

@@ -10,6 +10,7 @@ import {
 
 import { apiFetch } from '@/lib/api';
 import { stashJobHandoff, canHandOff, type HandoffIntent } from '@/lib/job-handoff';
+import { companyLogo, sourceLogo } from '@/lib/logo';
 
 interface Job {
   id: string;
@@ -599,7 +600,7 @@ export default function JobsPage() {
                 <div key={job.id} className="bg-white rounded-[2rem] shadow-sm border border-gray-50 p-7 hover:shadow-md transition-shadow group">
                   <div className="flex items-start gap-4">
                     <img
-                      src={job.company_logo}
+                      src={companyLogo(job.company_logo, job.company)}
                       alt={job.company}
                       className="w-12 h-12 rounded-xl object-contain bg-gray-50 p-1.5"
                       onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(job.company)}&background=E0E7FF&color=4F46E5&size=48`; }}
@@ -697,7 +698,7 @@ export default function JobsPage() {
                       <span className="font-raleway text-xs text-gray-300">Salary not disclosed</span>
                     )}
                     <div className="flex items-center gap-2">
-                      <img src={job.source_logo} alt={job.source} className="w-4 h-4 rounded" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                      <img src={sourceLogo(job.source_logo, job.source)} alt={job.source} className="w-4 h-4 rounded" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                       <span className="font-raleway text-[10px] text-gray-300 uppercase tracking-wider">{job.source}</span>
                     </div>
                   </div>

@@ -7,7 +7,7 @@ import BrandMark from '@/components/BrandMark';
 import ResumeProfileReview from '@/components/ResumeProfileReview';
 
 import { apiFetch } from '@/lib/api';
-import { consumeJobHandoff, clearHandoffParam, HANDOFF_PARAM, type JobHandoff } from '@/lib/job-handoff';
+import { peekJobHandoff, clearJobHandoff, HANDOFF_PARAM, type JobHandoff } from '@/lib/job-handoff';
 
 /** The user's stored CV, and whether it can actually be analysed right now. */
 interface SavedResume {
@@ -47,9 +47,9 @@ function ResumeUploadContent() {
 
   const router = useRouter();
   const searchParams = useSearchParams();
-  // Reading the handoff destroys it, and StrictMode runs effects twice in dev —
-  // without this the second pass finds an empty stash and drops the job.
-  const handoffConsumed = useRef(false);
+  // Applied once per visit. The stash itself is left in place so a remount can
+  // re-read it; this only stops the prefill overwriting the user's own edits.
+  const handoffApplied = useRef(false);
   const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 
   const createBlankResume = async () => {
@@ -76,24 +76,38 @@ function ResumeUploadContent() {
       .catch(() => undefined);
   }, []);
 
-  // Arrived from a job card: the posting is waiting in sessionStorage. Reading
-  // it consumes it, so a reload starts from a clean form rather than silently
-  // repeating a job the user has moved on from.
+  /**
+   * Arrived from a job card: the posting is waiting in sessionStorage.
+   *
+   * Reading does NOT consume it, and the URL flag stays put. This page reads
+   * useSearchParams inside a Suspense boundary, and a remount after hydration
+   * used to find an empty stash and a stripped URL — so the description the
+   * user had just seen vanished a moment later. Re-reading on every mount makes
+   * the prefill idempotent; `handoffApplied` then stops it fighting the user's
+   * own edits once they start typing.
+   */
   useEffect(() => {
-    if (searchParams.get(HANDOFF_PARAM) !== 'resume' || handoffConsumed.current) return;
-    handoffConsumed.current = true;
+    if (searchParams.get(HANDOFF_PARAM) !== 'resume' || handoffApplied.current) return;
 
-    const job = consumeJobHandoff('resume');
-    if (job) {
-      setHandoffJob(job);
-      setJobDescription(job.description);
-      // The analysis labels itself with this, and the backend requires it
-      // whenever a description is supplied — filling it saves the user typing
-      // out a title we already know.
-      setJobTitle(job.title);
-    }
-    clearHandoffParam('/upload-resume');
+    const job = peekJobHandoff('resume');
+    if (!job) return;
+
+    handoffApplied.current = true;
+    setHandoffJob(job);
+    setJobDescription(job.description);
+    // The analysis labels itself with this, and the backend requires it
+    // whenever a description is supplied — filling it saves the user typing
+    // out a title we already know.
+    setJobTitle(job.title);
   }, [searchParams]);
+
+  /** The user is done with the carried job — stop it coming back on a remount. */
+  const dismissHandoff = () => {
+    clearJobHandoff('resume');
+    setHandoffJob(null);
+    setJobDescription('');
+    setJobTitle('');
+  };
 
   // Look for a CV already on file so the user doesn't re-upload one we hold.
   // `analyzable` is the backend's own verdict, not merely "a row exists":
@@ -227,6 +241,9 @@ function ResumeUploadContent() {
         router.push('/login');
         return;
       }
+      // The carried job has done its job — drop it so navigating back here
+      // later starts clean rather than re-prefilling a finished analysis.
+      clearJobHandoff('resume');
       const trimmedJobDescription = jobDescription.trim();
       const analyzeRes = await apiFetch(`/resume/analyze`, {
         method: 'POST',
@@ -302,7 +319,7 @@ function ResumeUploadContent() {
             </div>
             <button
               type="button"
-              onClick={() => { setHandoffJob(null); setJobDescription(''); setJobTitle(''); }}
+              onClick={dismissHandoff}
               aria-label="Clear this job and analyse against your career target instead"
               className="flex-shrink-0 rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-white hover:text-slate-600"
             >

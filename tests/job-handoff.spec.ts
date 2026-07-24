@@ -75,19 +75,33 @@ test('a stashed job lands in the interview textarea and names itself', async ({ 
   await expect(banner).toContainText(JOB.title);
   await expect(banner).toContainText(JOB.company);
 
-  // Re-assert after the URL settles: stripping the flag used to remount the
-  // page and wipe the description, and every assertion above still passed.
-  await expect(page).toHaveURL(/\/mock-interview$/);
-  await page.waitForTimeout(750);
+  // The description must still be there once the page has settled. Consuming
+  // the stash and stripping the URL on arrival used to leave nothing to recover
+  // from, so any remount after hydration silently emptied the form.
+  await page.waitForTimeout(1000);
   await expect(textarea).toHaveValue(JOB.description);
   await expect(page.getByRole('button', { name: /start interview/i })).toBeEnabled();
 });
 
-test('reloading the interview page gives a clean form', async ({ page }) => {
+test('the interview prefill survives a reload rather than vanishing', async ({ page }) => {
   await auth(page);
   await stash(page, 'interview', JOB);
   await page.goto('/mock-interview?fromJob=interview');
   await expect(page.locator('textarea')).toHaveValue(JOB.description);
+
+  // Idempotent by design: re-reading beats losing the user's description.
+  await page.reload();
+  await expect(page.locator('textarea')).toHaveValue(JOB.description);
+});
+
+test('dismissing the interview prefill stops it coming back', async ({ page }) => {
+  await auth(page);
+  await stash(page, 'interview', JOB);
+  await page.goto('/mock-interview?fromJob=interview');
+  await expect(page.locator('textarea')).toHaveValue(JOB.description);
+
+  await page.getByRole('button', { name: /clear this job/i }).click();
+  await expect(page.locator('textarea')).toHaveValue('');
 
   await page.reload();
   await expect(page.locator('textarea')).toHaveValue('');
@@ -110,9 +124,29 @@ test('a stashed job prefills the analyser and auto-selects the saved CV', async 
   await expect(page.getByText(SAVED_CV.fileName)).toBeVisible();
   await expect(page.getByRole('button', { name: /start ai analysis/i })).toBeVisible();
 
-  await expect(page).toHaveURL(/\/upload-resume$/);
-  await page.waitForTimeout(750);
+  // The reported bug: the description appeared, then a remount wiped it a
+  // moment later. It has to still be here after the page settles, and after a
+  // reload.
+  await page.waitForTimeout(1000);
   await expect(page.locator('textarea')).toHaveValue(JOB.description);
+
+  await page.reload();
+  await expect(page.locator('textarea')).toHaveValue(JOB.description);
+  await expect(page.getByPlaceholder(/MLOps Engineer/i)).toHaveValue(JOB.title);
+});
+
+test('dismissing the tailoring banner stops the job coming back', async ({ page }) => {
+  await auth(page);
+  await stash(page, 'resume', JOB);
+  await stubResumeApi(page, SAVED_CV);
+  await page.goto('/upload-resume?fromJob=resume');
+  await expect(page.locator('textarea')).toHaveValue(JOB.description);
+
+  await page.getByRole('button', { name: /clear this job/i }).click();
+  await expect(page.locator('textarea')).toHaveValue('');
+
+  await page.reload();
+  await expect(page.locator('textarea')).toHaveValue('');
 });
 
 test('a saved CV whose file is gone asks for a re-upload instead', async ({ page }) => {

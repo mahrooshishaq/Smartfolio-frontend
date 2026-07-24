@@ -24,7 +24,7 @@ import {
 import { useAppChrome } from '@/components/app-shell/AppShell';
 
 import { apiFetch } from '@/lib/api';
-import { consumeJobHandoff, clearHandoffParam, HANDOFF_PARAM, type JobHandoff } from '@/lib/job-handoff';
+import { peekJobHandoff, clearJobHandoff, HANDOFF_PARAM, type JobHandoff } from '@/lib/job-handoff';
 
 // Breather between questions: long enough to reset (and for the next question's
 // audio to finish synthesizing in the background), short enough to keep pace.
@@ -209,15 +209,17 @@ function MockInterviewContent() {
     // waiting in sessionStorage. Reading it consumes it, so a later visit or a
     // reload starts from a clean form rather than silently repeating a job the
     // user has moved on from.
+    // Read without consuming, and leave the URL flag alone: this component sits
+    // inside a Suspense boundary, and a remount after hydration used to find an
+    // empty stash and a stripped URL, silently wiping the description. The ref
+    // only stops the prefill overwriting the user's own edits.
     if (searchParams.get(HANDOFF_PARAM) === 'interview' && !prefillConsumed.current) {
-      prefillConsumed.current = true;
-      const prefill = consumeJobHandoff('interview');
+      const prefill = peekJobHandoff('interview');
       if (prefill) {
+        prefillConsumed.current = true;
         setJobDescription(prefill.description);
         setPrefilledFrom(prefill);
       }
-      // Drop the flag so a refresh doesn't look like a second handoff.
-      clearHandoffParam('/mock-interview');
     }
   }, [router, searchParams]);
 
@@ -423,6 +425,9 @@ function MockInterviewContent() {
       setError('Job description must be at least 20 characters.');
       return;
     }
+    // The carried job has done its work — drop it so coming back here later
+    // starts clean rather than re-prefilling a finished interview.
+    clearJobHandoff('interview');
     setStage('loading');
     setError('');
     try {
@@ -840,7 +845,7 @@ function MockInterviewContent() {
               sttSupported={sttSupported}
               progress={progress}
               prefilledFrom={prefilledFrom}
-              onClearPrefill={() => { setPrefilledFrom(null); setJobDescription(''); }}
+              onClearPrefill={() => { clearJobHandoff('interview'); setPrefilledFrom(null); setJobDescription(''); }}
             />
           )}
 

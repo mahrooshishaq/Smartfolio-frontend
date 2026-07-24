@@ -69,15 +69,22 @@ export function stashJobHandoff(job: JobHandoff, intent: HandoffIntent): string 
 }
 
 /**
- * Read and consume a stashed job. Single-use on purpose: reloading the
- * destination or coming back later should be a clean form, not a surprise
- * repeat of a job the user has moved on from.
+ * Read a stashed job WITHOUT destroying it.
+ *
+ * Reading used to also delete, and the destination stripped the URL flag
+ * immediately afterwards. That left nothing to recover from: these pages read
+ * useSearchParams inside a Suspense boundary, and any remount after hydration
+ * came back to an empty stash and a clean URL, so the description the user had
+ * just seen silently vanished. Keeping both the stash and the flag makes the
+ * prefill idempotent — a remount simply reads it again.
+ *
+ * The stash is cleared explicitly instead: when the user dismisses the banner,
+ * or once the work it was carrying has actually begun.
  */
-export function consumeJobHandoff(intent: HandoffIntent): JobHandoff | null {
+export function peekJobHandoff(intent: HandoffIntent): JobHandoff | null {
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY[intent]);
     if (!raw) return null;
-    sessionStorage.removeItem(STORAGE_KEY[intent]);
 
     const parsed = JSON.parse(raw) as Partial<JobHandoff>;
     if (!parsed || typeof parsed.description !== 'string') return null;
@@ -93,13 +100,26 @@ export function consumeJobHandoff(intent: HandoffIntent): JobHandoff | null {
 }
 
 /**
- * Strip the handoff flag from the URL after consuming it.
- *
- * Deliberately history.replaceState and not router.replace: destinations read
- * useSearchParams inside a Suspense boundary, so a router navigation re-renders
- * that boundary and remounts the page — throwing away the state the handoff
- * just set.
+ * Forget a stashed job. Call when the user dismisses it, or once the interview
+ * or analysis it was carrying has started — after that point the form owns the
+ * text and re-applying it on a remount would fight the user's own edits.
  */
-export function clearHandoffParam(pathname: string): void {
-  window.history.replaceState(null, '', pathname);
+export function clearJobHandoff(intent: HandoffIntent): void {
+  try {
+    sessionStorage.removeItem(STORAGE_KEY[intent]);
+  } catch {
+    // Nothing to do — a stale stash is harmless next to a thrown error here.
+  }
+  // Drop the flag too, so a later visit to the bare path starts clean.
+  try {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get(HANDOFF_PARAM) === intent) {
+      url.searchParams.delete(HANDOFF_PARAM);
+      // history.replaceState, never router.replace: a router navigation
+      // re-renders the Suspense boundary these pages sit in and remounts them.
+      window.history.replaceState(null, '', url.pathname + url.search);
+    }
+  } catch {
+    // URL rewriting is cosmetic; never let it break the flow.
+  }
 }
