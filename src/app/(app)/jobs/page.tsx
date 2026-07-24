@@ -5,11 +5,11 @@ import { useRouter } from 'next/navigation';
 import {
   FiBriefcase, FiSearch, FiMapPin, FiExternalLink,
   FiChevronLeft, FiChevronRight, FiFilter, FiX, FiLoader,
-  FiBookmark, FiCheck, FiTrendingUp, FiClock, FiGlobe, FiMic
+  FiBookmark, FiCheck, FiTrendingUp, FiClock, FiGlobe, FiMic, FiEdit3
 } from 'react-icons/fi';
 
 import { apiFetch } from '@/lib/api';
-import { stashInterviewPrefill } from '@/lib/interview-handoff';
+import { stashJobHandoff, canHandOff, type HandoffIntent } from '@/lib/job-handoff';
 
 interface Job {
   id: string;
@@ -327,20 +327,23 @@ export default function JobsPage() {
     }
   };
 
-  // The interview form won't start on fewer than 20 characters, so a posting
-  // that thin can't produce an interview — don't offer the button at all.
-  const canPractice = (job: Job) => (job.description || '').trim().length >= 20;
-
-  // Hand the posting to the mock interview and jump straight to its form, where
-  // the description is already filled in and only Start is left to press.
-  const practiceInterview = (job: Job) => {
-    const href = stashInterviewPrefill({
-      description: job.description,
-      title: job.title,
-      company: job.company,
-    });
+  /**
+   * Hand the posting to another tool and jump straight to it, with the
+   * description already filled in. Each destination has its own minimum length
+   * (the interview needs 20 characters, the resume analyser 50), so a button is
+   * hidden rather than shown-and-broken when the board gave us too little.
+   */
+  const openWithJob = (job: Job, intent: HandoffIntent) => {
+    const href = stashJobHandoff(
+      { description: job.description, title: job.title, company: job.company },
+      intent,
+    );
     if (!href) {
-      setError('This posting doesn’t have enough description to build an interview from.');
+      setError(
+        intent === 'interview'
+          ? 'This posting doesn’t have enough description to build an interview from.'
+          : 'This posting doesn’t have enough description to tailor a CV against.',
+      );
       return;
     }
     router.push(href);
@@ -657,22 +660,33 @@ export default function JobsPage() {
                   </div>
 
                   {/* Secondary actions — things to do with the posting other than
-                      applying to it. Hidden entirely when the board gave us too
-                      little description to build an interview from, since the
-                      interview form would refuse to start anyway. */}
-                  {canPractice(job) && (
+                      applying to it. Each is hidden when the board gave us too
+                      little description for that destination to accept, since it
+                      would only lead to a form that refuses to run. */}
+                  {(canHandOff(job.description, 'interview') || canHandOff(job.description, 'resume')) && (
                     <div className="flex flex-wrap items-center gap-2 mt-4">
-                      {/* Reads as a secondary to Apply's solid fill: same indigo,
-                          carried as a tint and a hairline rather than a block of
-                          colour, so it has real presence without two buttons
-                          competing to be the primary action on one card. */}
-                      <button
-                        onClick={() => practiceInterview(job)}
-                        className="font-raleway group/practice flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-indigo-50/70 text-[#4F46E5] border border-indigo-100 hover:bg-indigo-100/80 hover:border-indigo-200 active:scale-[0.98] transition-all"
-                      >
-                        <FiMic size={14} className="transition-transform group-hover/practice:scale-110 motion-reduce:transition-none motion-reduce:group-hover/practice:scale-100" />
-                        Practice this interview
-                      </button>
+                      {/* Both read as secondaries to Apply's solid fill: same
+                          indigo, carried as a tint and a hairline rather than a
+                          block of colour, so they have real presence without
+                          competing to be the card's primary action. */}
+                      {canHandOff(job.description, 'interview') && (
+                        <button
+                          onClick={() => openWithJob(job, 'interview')}
+                          className="font-raleway group/practice flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-indigo-50/70 text-[#4F46E5] border border-indigo-100 hover:bg-indigo-100/80 hover:border-indigo-200 active:scale-[0.98] transition-all"
+                        >
+                          <FiMic size={14} className="transition-transform group-hover/practice:scale-110 motion-reduce:transition-none motion-reduce:group-hover/practice:scale-100" />
+                          Practice this interview
+                        </button>
+                      )}
+                      {canHandOff(job.description, 'resume') && (
+                        <button
+                          onClick={() => openWithJob(job, 'resume')}
+                          className="font-raleway group/tailor flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-indigo-50/70 text-[#4F46E5] border border-indigo-100 hover:bg-indigo-100/80 hover:border-indigo-200 active:scale-[0.98] transition-all"
+                        >
+                          <FiEdit3 size={14} className="transition-transform group-hover/tailor:scale-110 motion-reduce:transition-none motion-reduce:group-hover/tailor:scale-100" />
+                          Tailor my CV
+                        </button>
+                      )}
                     </div>
                   )}
 

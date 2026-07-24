@@ -24,7 +24,7 @@ import {
 import { useAppChrome } from '@/components/app-shell/AppShell';
 
 import { apiFetch } from '@/lib/api';
-import { consumeInterviewPrefill, PREFILL_PARAM, PREFILL_VALUE, type InterviewPrefill } from '@/lib/interview-handoff';
+import { consumeJobHandoff, clearHandoffParam, HANDOFF_PARAM, type JobHandoff } from '@/lib/job-handoff';
 
 // Breather between questions: long enough to reset (and for the next question's
 // audio to finish synthesizing in the background), short enough to keep pace.
@@ -57,7 +57,7 @@ function MockInterviewContent() {
   const [jobDescription, setJobDescription] = useState('');
   // Set when the user arrived from a job card — names the posting in the form so
   // they can see which job the pre-filled description belongs to.
-  const [prefilledFrom, setPrefilledFrom] = useState<InterviewPrefill | null>(null);
+  const [prefilledFrom, setPrefilledFrom] = useState<JobHandoff | null>(null);
   // Reading the handoff destroys it, and StrictMode runs effects twice in dev —
   // without this the second pass would find an empty stash and the job would
   // silently fail to load.
@@ -209,20 +209,15 @@ function MockInterviewContent() {
     // waiting in sessionStorage. Reading it consumes it, so a later visit or a
     // reload starts from a clean form rather than silently repeating a job the
     // user has moved on from.
-    if (searchParams.get(PREFILL_PARAM) === PREFILL_VALUE && !prefillConsumed.current) {
+    if (searchParams.get(HANDOFF_PARAM) === 'interview' && !prefillConsumed.current) {
       prefillConsumed.current = true;
-      const prefill = consumeInterviewPrefill();
+      const prefill = consumeJobHandoff('interview');
       if (prefill) {
         setJobDescription(prefill.description);
         setPrefilledFrom(prefill);
       }
       // Drop the flag so a refresh doesn't look like a second handoff.
-      //
-      // Deliberately history.replaceState and not router.replace: this component
-      // reads useSearchParams inside a Suspense boundary, so a router navigation
-      // re-renders that boundary and remounts us — throwing away the very state
-      // set two lines above. Rewriting the URL directly leaves React untouched.
-      window.history.replaceState(null, '', '/mock-interview');
+      clearHandoffParam('/mock-interview');
     }
   }, [router, searchParams]);
 

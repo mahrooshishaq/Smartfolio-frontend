@@ -1,7 +1,7 @@
 import { FiVolume2, FiMic, FiZap, FiSend, FiVideo, FiBriefcase, FiX } from 'react-icons/fi';
 import { TIER_OPTIONS, SENIORITY_OPTIONS, INTERVIEWER_STYLE_OPTIONS, INTERVIEWER } from './constants';
 import type { LengthTier, Seniority, InterviewerStyle, ProgressPoint, ProgressSummary } from './types';
-import type { InterviewPrefill } from '@/lib/interview-handoff';
+import type { JobHandoff } from '@/lib/job-handoff';
 
 function Stat({ label, value }: { label: string; value: number | null }) {
   return (
@@ -53,7 +53,7 @@ interface InputStageProps {
   sttSupported: boolean;
   progress: { points: ProgressPoint[]; summary: ProgressSummary } | null;
   /** Set when the user came from "Practice this interview" on a job card. */
-  prefilledFrom?: InterviewPrefill | null;
+  prefilledFrom?: JobHandoff | null;
   onClearPrefill?: () => void;
 }
 

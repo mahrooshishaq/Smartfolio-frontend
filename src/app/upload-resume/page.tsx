@@ -1,14 +1,32 @@
 'use client';
-import React, { useEffect, useState } from 'react';
-import { CloudUpload, FileText, X, Loader2, ArrowLeft, FilePlus2 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import React, { useEffect, useRef, useState, Suspense } from 'react';
+import { CloudUpload, FileText, X, Loader2, ArrowLeft, FilePlus2, Briefcase, RefreshCw } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import AnimatedBackground from '@/components/AnimatedBackground';
 import BrandMark from '@/components/BrandMark';
 import ResumeProfileReview from '@/components/ResumeProfileReview';
 
 import { apiFetch } from '@/lib/api';
+import { consumeJobHandoff, clearHandoffParam, HANDOFF_PARAM, type JobHandoff } from '@/lib/job-handoff';
+
+/** The user's stored CV, and whether it can actually be analysed right now. */
+interface SavedResume {
+  resumeId: string;
+  fileName: string;
+  fileType: string;
+  uploadedAt: string;
+  analyzable: boolean;
+}
 
 export default function ResumeUploadPage() {
+  return (
+    <Suspense fallback={null}>
+      <ResumeUploadContent />
+    </Suspense>
+  );
+}
+
+function ResumeUploadContent() {
   const [file, setFile] = useState<File | null>(null);
   const [jobDescription, setJobDescription] = useState('');
   const [jobTitle, setJobTitle] = useState('');
@@ -17,7 +35,21 @@ export default function ResumeUploadPage() {
   // When set, the profile-review step is shown for this uploaded resume before
   // analysis runs. Cleared once the user confirms or skips.
   const [reviewResumeId, setReviewResumeId] = useState<string | null>(null);
+
+  // Set when the user arrived from "Tailor my CV" on a job card.
+  const [handoffJob, setHandoffJob] = useState<JobHandoff | null>(null);
+  // The CV already on file. `checking` keeps the upload box from flashing into
+  // view before we know whether we can offer the saved one instead.
+  const [savedResume, setSavedResume] = useState<SavedResume | null>(null);
+  const [checkingSaved, setCheckingSaved] = useState(true);
+  // False once the user explicitly chooses to upload a replacement.
+  const [useSaved, setUseSaved] = useState(true);
+
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // Reading the handoff destroys it, and StrictMode runs effects twice in dev —
+  // without this the second pass finds an empty stash and drops the job.
+  const handoffConsumed = useRef(false);
   const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 
   const createBlankResume = async () => {
@@ -43,6 +75,49 @@ export default function ResumeUploadPage() {
       .then(context => setTargetRole(context?.targetRole || ''))
       .catch(() => undefined);
   }, []);
+
+  // Arrived from a job card: the posting is waiting in sessionStorage. Reading
+  // it consumes it, so a reload starts from a clean form rather than silently
+  // repeating a job the user has moved on from.
+  useEffect(() => {
+    if (searchParams.get(HANDOFF_PARAM) !== 'resume' || handoffConsumed.current) return;
+    handoffConsumed.current = true;
+
+    const job = consumeJobHandoff('resume');
+    if (job) {
+      setHandoffJob(job);
+      setJobDescription(job.description);
+      // The analysis labels itself with this, and the backend requires it
+      // whenever a description is supplied — filling it saves the user typing
+      // out a title we already know.
+      setJobTitle(job.title);
+    }
+    clearHandoffParam('/upload-resume');
+  }, [searchParams]);
+
+  // Look for a CV already on file so the user doesn't re-upload one we hold.
+  // `analyzable` is the backend's own verdict, not merely "a row exists":
+  // uploaded files live on the container disk, which is wiped on every rebuild,
+  // so a saved CV can outlive its file. Trusting a row alone would offer a
+  // one-click analysis that then fails.
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) { setCheckingSaved(false); return; }
+
+    let cancelled = false;
+    apiFetch(`/resume/latest`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(response => (response.ok ? response.json() : null))
+      .then((saved: SavedResume | null) => { if (!cancelled) setSavedResume(saved ?? null); })
+      .catch(() => { if (!cancelled) setSavedResume(null); })
+      .finally(() => { if (!cancelled) setCheckingSaved(false); });
+
+    return () => { cancelled = true; };
+  }, []);
+
+  // The saved CV is offered only when the backend says it can actually be
+  // analysed; otherwise the upload box is the honest thing to show.
+  const savedIsUsable = !!savedResume?.analyzable;
+  const showSavedCard = savedIsUsable && useSaved && !file;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -123,6 +198,26 @@ export default function ResumeUploadPage() {
     }
   };
 
+  /**
+   * Analyse the CV we already hold. Validates the same rules handleUpload does,
+   * because the backend rejects a description under 50 characters and requires
+   * a title alongside one — failing here with a clear message beats a 400.
+   */
+  const analyzeSavedResume = async () => {
+    if (!savedResume) return;
+    const trimmedJobDescription = jobDescription.trim();
+    if (trimmedJobDescription.length > 0 && trimmedJobDescription.length < 50) {
+      alert('The target job description must be at least 50 characters.');
+      return;
+    }
+    if (trimmedJobDescription && !jobTitle.trim()) {
+      alert('Enter the job title so SmartFolio can label this evaluation correctly.');
+      return;
+    }
+    setIsUploading(true);
+    await runAnalysisAndRedirect(savedResume.resumeId);
+  };
+
   // Runs the resume analysis (Lens A/B) and navigates to the results page.
   // Called by the review step once the user has confirmed or skipped profile enrichment.
   const runAnalysisAndRedirect = async (resumeId: string) => {
@@ -182,32 +277,115 @@ export default function ResumeUploadPage() {
           <h1 className="font-baloo text-xl ml-4 tracking-wide text-slate-800">SmartFolio - AI</h1>
         </div>
 
-        <div className="mb-5 w-full max-w-3xl rounded-3xl border border-indigo-100 bg-indigo-50/70 p-5 sm:flex sm:items-center sm:justify-between">
-          <div><h2 className="font-century text-lg font-black text-slate-800">Don't have a resume yet?</h2><p className="mt-1 text-sm text-slate-500">Build one step by step with guided sections, examples, and SmartFolio suggestions.</p></div>
-          <button onClick={createBlankResume} disabled={isUploading} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-xs font-bold text-white hover:bg-indigo-700 disabled:opacity-50 sm:mt-0"><FilePlus2 size={16} /> Build with Folio</button>
-        </div>
+        {/* Suppressed once we know a usable CV is on file — "Don't have a resume
+            yet?" directly above "Using your saved CV" contradicts itself. */}
+        {!savedIsUsable && (
+          <div className="mb-5 w-full max-w-3xl rounded-3xl border border-indigo-100 bg-indigo-50/70 p-5 sm:flex sm:items-center sm:justify-between">
+            <div><h2 className="font-century text-lg font-black text-slate-800">Don&apos;t have a resume yet?</h2><p className="mt-1 text-sm text-slate-500">Build one step by step with guided sections, examples, and SmartFolio suggestions.</p></div>
+            <button onClick={createBlankResume} disabled={isUploading} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-xs font-bold text-white hover:bg-indigo-700 disabled:opacity-50 sm:mt-0"><FilePlus2 size={16} /> Build with Folio</button>
+          </div>
+        )}
 
-        <div className="w-full max-w-3xl bg-white rounded-[2.5rem] shadow-xl shadow-slate-100 p-12 border border-gray-50">
-          
-          {/* Dropzone Area */}
-          <div className="relative border-2 border-dashed border-gray-200 rounded-2rem p-12 flex flex-col items-center justify-center transition-colors hover:border-blue-200 group">
-            <input 
-              type="file" 
-              accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-              onChange={handleFileChange}
-              disabled={isUploading}
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
-            />
-            <div className="bg-slate-50 p-4 rounded-2xl mb-4 group-hover:bg-blue-50 transition-colors">
-              <CloudUpload size={32} className="text-gray-400 group-hover:text-blue-500" />
+        {/* Arrived from a job card — name the posting, so a pre-filled
+            description reads as intentional rather than as leftover text. */}
+        {handoffJob && (
+          <div className="mb-5 w-full max-w-3xl flex items-start gap-3 rounded-3xl border border-indigo-100 bg-indigo-50/70 px-5 py-4">
+            <span className="mt-0.5 text-indigo-600"><Briefcase size={16} /></span>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-slate-800 truncate">
+                Tailoring for {handoffJob.title}
+                {handoffJob.company && <span className="font-normal text-slate-500"> · {handoffJob.company}</span>}
+              </p>
+              <p className="mt-0.5 text-xs text-slate-500">
+                The job description below came from your jobs. Adjust anything, then start the analysis.
+              </p>
             </div>
-            <h2 className="font-century text-2xl text-slate-800 mb-1 text-center">Choose a file or drag & drop it here</h2>
-            <p className="font-raleway text-gray-400 text-sm">PDF or DOCX files up to 5MB</p>
-            
-            <button className="font-raleway mt-8 bg-slate-200 text-gray-500 px-12 py-3 rounded-full font-bold text-sm tracking-wide">
-              {file ? 'Change File' : 'Upload'}
+            <button
+              type="button"
+              onClick={() => { setHandoffJob(null); setJobDescription(''); setJobTitle(''); }}
+              aria-label="Clear this job and analyse against your career target instead"
+              className="flex-shrink-0 rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-white hover:text-slate-600"
+            >
+              <X size={16} />
             </button>
           </div>
+        )}
+
+        <div className="w-full max-w-3xl bg-white rounded-[2.5rem] shadow-xl shadow-slate-100 p-12 border border-gray-50">
+
+          {/* A CV we already hold, offered instead of making the user find the
+              file again. Only shown when the backend confirms it is still
+              analysable. */}
+          {checkingSaved ? (
+            <div className="flex items-center justify-center gap-2 rounded-[2rem] border border-slate-100 bg-slate-50/60 p-12 text-sm text-slate-400">
+              <Loader2 size={16} className="animate-spin" /> Checking for a saved CV…
+            </div>
+          ) : showSavedCard ? (
+            <div className="rounded-[2rem] border border-emerald-100 bg-emerald-50/60 p-8">
+              <div className="flex items-start gap-4">
+                <div className="rounded-xl bg-white p-3 text-emerald-600 shadow-sm">
+                  <FileText size={24} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-century text-lg font-black text-slate-800">Using your saved CV</p>
+                  <p className="mt-1 truncate text-sm text-slate-600">{savedResume!.fileName}</p>
+                  <p className="mt-0.5 text-[11px] font-bold uppercase tracking-wider text-emerald-600">
+                    Ready to analyse — no re-upload needed
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setUseSaved(false)}
+                disabled={isUploading}
+                className="mt-6 inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-600 transition-colors hover:border-slate-300 hover:text-slate-800 disabled:opacity-50"
+              >
+                <RefreshCw size={14} /> Use a different CV
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* A CV exists but its file is gone (container disks are wiped on
+                  rebuild). Say so plainly rather than silently showing an empty
+                  upload box as though they had never uploaded anything. */}
+              {savedResume && !savedResume.analyzable && (
+                <div className="mb-6 rounded-2xl border border-amber-100 bg-amber-50 px-5 py-4 text-xs text-amber-800">
+                  We have <span className="font-bold">{savedResume.fileName}</span> on record, but the file
+                  is no longer readable. Please upload it again to run this analysis.
+                </div>
+              )}
+
+              {/* Dropzone Area */}
+              <div className="relative border-2 border-dashed border-gray-200 rounded-2rem p-12 flex flex-col items-center justify-center transition-colors hover:border-blue-200 group">
+                <input
+                  type="file"
+                  accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  onChange={handleFileChange}
+                  disabled={isUploading}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                />
+                <div className="bg-slate-50 p-4 rounded-2xl mb-4 group-hover:bg-blue-50 transition-colors">
+                  <CloudUpload size={32} className="text-gray-400 group-hover:text-blue-500" />
+                </div>
+                <h2 className="font-century text-2xl text-slate-800 mb-1 text-center">Choose a file or drag &amp; drop it here</h2>
+                <p className="font-raleway text-gray-400 text-sm">PDF or DOCX files up to 5MB</p>
+
+                <button className="font-raleway mt-8 bg-slate-200 text-gray-500 px-12 py-3 rounded-full font-bold text-sm tracking-wide">
+                  {file ? 'Change File' : 'Upload'}
+                </button>
+              </div>
+
+              {savedIsUsable && !useSaved && (
+                <button
+                  type="button"
+                  onClick={() => { setUseSaved(true); setFile(null); }}
+                  className="mt-4 text-xs font-bold text-indigo-600 hover:text-indigo-700"
+                >
+                  ← Go back to my saved CV
+                </button>
+              )}
+            </>
+          )}
 
           {/* Optional Job Description Input */}
           <div className="mt-8 px-4">
@@ -264,14 +442,30 @@ export default function ResumeUploadPage() {
             </div>
           )}
 
-          {/* Action Button */}
+          {/* Action Button. The saved-CV path skips upload entirely and goes
+              straight to analysis — that is the whole point of holding a CV.
+              It also skips the profile-review step, which exists to enrich the
+              profile from a NEWLY uploaded resume and has nothing to add here. */}
+          {showSavedCard && !isUploading && (
+            <button
+              onClick={analyzeSavedResume}
+              className="font-raleway w-full mt-6 bg-slate-800 text-white py-4 rounded-2xl font-bold hover:bg-slate-900 transition-all shadow-lg shadow-slate-200 active:scale-[0.98]"
+            >
+              Start AI Analysis
+            </button>
+          )}
           {file && !isUploading && (
-            <button 
+            <button
               onClick={handleUpload}
               className="font-raleway w-full mt-6 bg-slate-800 text-white py-4 rounded-2xl font-bold hover:bg-slate-900 transition-all shadow-lg shadow-slate-200 active:scale-[0.98]"
             >
               Start AI Analysis
             </button>
+          )}
+          {isUploading && (
+            <div className="mt-6 flex items-center justify-center gap-2 text-sm font-bold text-slate-500">
+              <Loader2 size={16} className="animate-spin text-indigo-500" /> Analyzing with AI…
+            </div>
           )}
         </div>
       </div>
