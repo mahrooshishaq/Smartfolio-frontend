@@ -362,13 +362,16 @@ function ResumeUploadContent() {
             </div>
           ) : (
             <>
-              {/* A CV exists but its file is gone (container disks are wiped on
-                  rebuild). Say so plainly rather than silently showing an empty
-                  upload box as though they had never uploaded anything. */}
+              {/* The row survived but the file did not — uploads sit on the
+                  container disk, which is wiped on every rebuild. Name the file
+                  so this reads as "we lost your copy", not "you never uploaded
+                  one", and be honest that a re-upload is the only way forward
+                  until CVs are stored somewhere durable. */}
               {savedResume && !savedResume.analyzable && (
-                <div className="mb-6 rounded-2xl border border-amber-100 bg-amber-50 px-5 py-4 text-xs text-amber-800">
+                <div className="mb-6 rounded-2xl border border-amber-100 bg-amber-50 px-5 py-4 text-xs leading-relaxed text-amber-800">
                   We have <span className="font-bold">{savedResume.fileName}</span> on record, but the file
-                  is no longer readable. Please upload it again to run this analysis.
+                  itself is no longer stored on the server, so it can&apos;t be previewed, downloaded or
+                  edited. Please upload it again to run this analysis.
                 </div>
               )}
 
