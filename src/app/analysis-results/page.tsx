@@ -8,7 +8,6 @@ import {
   AlertTriangle,
   ArrowLeft,
   CheckCircle2,
-  ClipboardCheck,
   Download,
   ExternalLink,
   FileText,
@@ -47,17 +46,8 @@ interface AnalysisResult {
     improvements: ResumeImprovement[];
     positiveHighlights: { text: string; reason: string }[];
   };
-  requirementCoverage?: RequirementCoverage[] | null;
   processingTimeMs: number;
   createdAt: string;
-}
-
-/** One thing the target asks for, and whether the resume evidences it. */
-interface RequirementCoverage {
-  requirement: string;
-  status: 'matched' | 'partial' | 'missing';
-  evidence: string;
-  note: string;
 }
 
 interface ResumeContent {
@@ -257,17 +247,6 @@ function ResultsContent() {
               </div></div>
             </section>
 
-            {/* The itemised gap. Placed above the prose cards because it is the
-                first thing someone who supplied a job description wants: not a
-                score, but which of its requirements they actually meet. */}
-            {data.requirementCoverage && data.requirementCoverage.length > 0 && (
-              <RequirementCoveragePanel
-                items={data.requirementCoverage}
-                targetLabel={data.targetRole}
-                fromJobDescription={data.targetSource === 'job_description'}
-              />
-            )}
-
             {data.remarks.strengths.length > 0 && (
               <FeedbackCard title="Strengths" tone="green" icon={<CheckCircle2 size={21} />} items={data.remarks.strengths} />
             )}
@@ -400,88 +379,6 @@ function FeedbackCard({ title, tone, icon, items, numbered = false }: { title: s
           </div>
         ))}
       </div>
-    </section>
-  );
-}
-
-/**
- * What the target asks for, set against what the resume actually shows.
- *
- * The scores said how well the resume matched but never what the job wanted, so
- * a middling relevance number was a verdict with no reasoning — you could not
- * see which requirements you met, which were thin, or which were simply absent.
- * Missing items lead, because those are the ones worth acting on.
- */
-function RequirementCoveragePanel({
-  items,
-  targetLabel,
-  fromJobDescription,
-}: {
-  items: RequirementCoverage[];
-  targetLabel?: string;
-  fromJobDescription: boolean;
-}) {
-  const order: Record<RequirementCoverage['status'], number> = { missing: 0, partial: 1, matched: 2 };
-  const sorted = [...items].sort((a, b) => order[a.status] - order[b.status]);
-
-  const counts = {
-    matched: items.filter(i => i.status === 'matched').length,
-    partial: items.filter(i => i.status === 'partial').length,
-    missing: items.filter(i => i.status === 'missing').length,
-  };
-
-  const style = {
-    matched: { chip: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500', label: 'You have this' },
-    partial: { chip: 'bg-amber-50 text-amber-700 border-amber-200', dot: 'bg-amber-500', label: 'Thin' },
-    missing: { chip: 'bg-rose-50 text-rose-700 border-rose-200', dot: 'bg-rose-500', label: 'Not shown' },
-  } as const;
-
-  return (
-    <section className="rounded-3xl border border-slate-200 bg-white p-7 shadow-lg md:col-span-2 xl:col-span-3">
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="flex items-center gap-2 text-lg font-bold text-slate-800">
-          <ClipboardCheck size={20} className="text-indigo-600" />
-          {fromJobDescription ? 'What this job asks for' : `What a ${targetLabel || 'this role'} needs`}
-        </h2>
-        <div className="flex flex-wrap items-center gap-2 text-[11px] font-bold">
-          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-emerald-700">{counts.matched} covered</span>
-          <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-amber-700">{counts.partial} thin</span>
-          <span className="rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-rose-700">{counts.missing} missing</span>
-        </div>
-      </div>
-      <p className="mb-6 text-xs text-slate-500">
-        Each requirement below is taken from {fromJobDescription ? 'the job description you supplied' : 'what this role typically expects'} and checked against your CV.
-        {counts.missing + counts.partial > 0
-          ? ' Work top-down — the gaps are listed first, and the improvement plan below turns them into edits.'
-          : ' Your CV evidences everything asked for.'}
-      </p>
-
-      <ul className="space-y-3">
-        {sorted.map((item, index) => {
-          const s = style[item.status];
-          return (
-            <li key={`${item.requirement}-${index}`} className="rounded-2xl border border-slate-200 p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="flex min-w-0 items-start gap-3">
-                  <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${s.dot}`} aria-hidden="true" />
-                  <span className="text-sm font-bold text-slate-800">{item.requirement}</span>
-                </div>
-                <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${s.chip}`}>
-                  {s.label}
-                </span>
-              </div>
-              {item.evidence && (
-                <p className="mt-3 border-l-2 border-slate-200 pl-3 text-xs italic leading-relaxed text-slate-500">
-                  “{item.evidence}”
-                </p>
-              )}
-              {item.note && (
-                <p className="mt-2 text-xs leading-relaxed text-slate-600">{item.note}</p>
-              )}
-            </li>
-          );
-        })}
-      </ul>
     </section>
   );
 }

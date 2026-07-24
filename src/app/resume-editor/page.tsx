@@ -59,9 +59,6 @@ function EditorContent() {
   const [selectedImprovement, setSelectedImprovement] = useState<number | null>(null);
   const [selectedPositive, setSelectedPositive] = useState<number | null>(null);
   const [applied, setApplied] = useState<Set<number>>(new Set());
-  // Ticked for a batch apply. Separate from `applied` so a user can build up a
-  // selection, change their mind, and still see what has already been used.
-  const [selectedForBatch, setSelectedForBatch] = useState<Set<number>>(new Set());
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState<string | null>(null);
   const [status, setStatus] = useState('');
@@ -213,18 +210,10 @@ function EditorContent() {
     finally { setExporting(null); }
   };
 
-  /**
-   * Apply one Magic Edit to a document and hand back the result.
-   *
-   * Pure on purpose. This logic used to read `document` straight from the
-   * closure and call setDocument itself, which made it impossible to apply more
-   * than one edit at a time — a loop would have folded every edit onto the same
-   * stale document and thrown all but the last away. Taking the document as an
-   * argument lets a single edit and "apply all" share the exact same path.
-   */
-  const applyOne = (doc: ResumeDocument, item: Improvement): { next: ResumeDocument; applied: boolean } => {
-    if (!item?.suggestedText) return { next: doc, applied: false };
-    const document = doc;
+  const applySuggestion = (index: number) => {
+    if (!analysis || !document) return;
+    const item = analysis.remarks.improvements[index];
+    if (!item?.suggestedText) return;
     let replacementMade = false;
     const category = `${item.category} ${item.title}`.toLowerCase();
     let next = document;
@@ -262,63 +251,16 @@ function EditorContent() {
       }
     }
     if (!replacementMade) {
-      if (category.includes('summary')) { next = { ...next, summary: item.suggestedText }; replacementMade = true; }
+      if (category.includes('summary')) next = { ...next, summary: item.suggestedText };
       else if (category.includes('experience') || category.includes('achievement')) {
-        if (!next.experience.length) return { next: document, applied: false };
+        if (!next.experience.length) return;
         next = { ...next, experience: next.experience.map((entry, entryIndex) => entryIndex === 0 ? { ...entry, bullets: entry.bullets.some(bullet => bullet.trim().toLowerCase() === item.suggestedText.trim().toLowerCase()) ? entry.bullets : [...entry.bullets, item.suggestedText] } : entry) };
-        replacementMade = true;
       } else {
-        return { next: document, applied: false };
+        setStatus('Select the matching field before applying this Magic Edit.');
+        return;
       }
     }
-    return { next, applied: true };
-  };
-
-  const applySuggestion = (index: number) => {
-    if (!analysis || !document) return;
-    const { next, applied: didApply } = applyOne(document, analysis.remarks.improvements[index]);
-    if (!didApply) {
-      setStatus('Select the matching field before applying this Magic Edit.');
-      return;
-    }
-    setDocument(next);
-    setApplied(current => new Set(current).add(index));
-    setDirty(true);
-    setStatus('Suggestion applied · saving automatically…');
-  };
-
-  /**
-   * Apply a batch in one pass, folding each edit onto the result of the last so
-   * they compose instead of overwriting each other. Anything that can't be
-   * placed is skipped and counted rather than aborting the batch — one
-   * unplaceable edit shouldn't cost the user the other seven.
-   */
-  const applyMany = (indices: number[]) => {
-    if (!analysis || !document || indices.length === 0) return;
-
-    let working = document;
-    const newlyApplied: number[] = [];
-    for (const index of indices) {
-      if (applied.has(index)) continue;
-      const { next, applied: didApply } = applyOne(working, analysis.remarks.improvements[index]);
-      if (didApply) { working = next; newlyApplied.push(index); }
-    }
-
-    if (newlyApplied.length === 0) {
-      setStatus('None of those Magic Edits could be placed automatically. Apply them individually.');
-      return;
-    }
-
-    setDocument(working);
-    setApplied(current => { const nextSet = new Set(current); newlyApplied.forEach(i => nextSet.add(i)); return nextSet; });
-    setSelectedForBatch(new Set());
-    setDirty(true);
-
-    const skipped = indices.filter(i => !applied.has(i)).length - newlyApplied.length;
-    setStatus(
-      `${newlyApplied.length} Magic Edit${newlyApplied.length === 1 ? '' : 's'} applied` +
-      `${skipped > 0 ? ` · ${skipped} needed a field chosen manually` : ''} · saving automatically…`,
-    );
+    setDocument(next); setApplied(current => new Set(current).add(index)); setDirty(true); setStatus('Suggestion applied · saving automatically…');
   };
 
   if (loading) return <LoadingState />;
@@ -326,9 +268,6 @@ function EditorContent() {
   const currentImprovement = selectedImprovement != null ? analysis.remarks.improvements[selectedImprovement] : null;
   const currentPositive = selectedPositive != null ? analysis.remarks.positiveHighlights[selectedPositive] : null;
   const applicableImprovements = analysis.remarks.improvements.map((item, index) => ({ item, index })).filter(({ item }) => canApplySuggestion(item, document));
-  // Already-applied edits are excluded from the batch actions — "Apply all"
-  // should mean the ones still outstanding, not re-run everything.
-  const pendingImprovements = applicableImprovements.filter(({ index }) => !applied.has(index));
 
   return (
     <div className="min-h-screen bg-[#EFF6F2] p-4 font-raleway md:p-8">
@@ -364,66 +303,7 @@ function EditorContent() {
 
           <aside className="sticky top-6 space-y-5 xl:col-span-4">
             <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">{currentImprovement ? <><div className="mb-3 flex items-center justify-between"><span className={`rounded-full px-2.5 py-1 text-[9px] font-black uppercase ${severityBadge(currentImprovement.severity)}`}>{currentImprovement.severity}</span><span className="text-[10px] font-bold uppercase text-slate-400">{currentImprovement.category}</span></div><h2 className="text-lg font-black text-slate-800">{currentImprovement.title}</h2><p className="mt-3 text-sm leading-relaxed text-slate-600">{currentImprovement.explanation}</p>{currentImprovement.impact && <p className="mt-3 rounded-xl bg-slate-50 p-3 text-xs text-slate-500"><strong>Career impact:</strong> {currentImprovement.impact}</p>}<div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4"><p className="mb-2 text-[9px] font-black uppercase text-slate-500">Proposed Magic Edit</p><p className="text-sm font-semibold text-slate-700">{currentImprovement.suggestedText}</p><button onClick={() => applySuggestion(selectedImprovement!)} disabled={applied.has(selectedImprovement!)} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-slate-800 px-4 py-3 text-xs font-bold text-white disabled:bg-emerald-600">{applied.has(selectedImprovement!) ? <><Check size={15} /> Magic Edit applied</> : <><WandSparkles size={15} /> Apply Magic Edit</>}</button></div></> : currentPositive ? <><span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[9px] font-black uppercase text-emerald-700">Strong — retain</span><h2 className="mt-4 text-lg font-black text-slate-800">This content is working</h2><p className="mt-3 text-sm text-slate-600">{currentPositive.reason}</p></> : <div className="py-8 text-center"><Sparkles className="mx-auto mb-3 text-slate-500" size={30} /><h2 className="font-bold text-slate-800">Choose a Magic Edit</h2><p className="mt-2 text-xs text-slate-400">Review the exact change before applying it to the mapped resume field.</p></div>}</section>
-            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h3 className="text-xs font-black uppercase text-slate-600">Magic Edits</h3>
-              <p className="mb-4 mt-1 text-xs leading-5 text-slate-400">Only one-click changes that map to a visible resume field are shown.</p>
-
-              {/* Batch controls. Reviewing eight edits one at a time is the slow
-                  path; most people want all of them, and the rest want a few.
-                  Both are one click from here, and every edit stays individually
-                  reviewable below. */}
-              {pendingImprovements.length > 0 && (
-                <div className="mb-4 space-y-2 rounded-2xl border border-indigo-100 bg-indigo-50/60 p-3">
-                  <button
-                    onClick={() => applyMany(pendingImprovements.map(({ index }) => index))}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-3 py-2.5 text-xs font-bold text-white transition-colors hover:bg-indigo-700"
-                  >
-                    <WandSparkles size={14} /> Apply all {pendingImprovements.length} Magic Edits
-                  </button>
-                  <button
-                    onClick={() => applyMany([...selectedForBatch])}
-                    disabled={selectedForBatch.size === 0}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-indigo-200 bg-white px-3 py-2.5 text-xs font-bold text-indigo-700 transition-colors hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <Check size={14} /> Apply selected{selectedForBatch.size > 0 ? ` (${selectedForBatch.size})` : ''}
-                  </button>
-                  <p className="text-center text-[10px] leading-4 text-slate-500">
-                    Tick the ones you want, or apply them all. Every change is still editable afterwards.
-                  </p>
-                </div>
-              )}
-
-              <div className="space-y-2">
-                {applicableImprovements.map(({ item, index }) => {
-                  const isApplied = applied.has(index);
-                  return (
-                    <div key={`${item.title}-${index}`} className="flex items-center gap-2 rounded-xl bg-slate-50 p-3 hover:bg-slate-100">
-                      <input
-                        type="checkbox"
-                        checked={selectedForBatch.has(index)}
-                        disabled={isApplied}
-                        onChange={(event) => setSelectedForBatch(current => {
-                          const nextSet = new Set(current);
-                          if (event.target.checked) nextSet.add(index); else nextSet.delete(index);
-                          return nextSet;
-                        })}
-                        aria-label={`Select "${item.title}" for batch apply`}
-                        className="h-4 w-4 shrink-0 accent-indigo-600 disabled:opacity-40"
-                      />
-                      <button
-                        onClick={() => { setSelectedImprovement(index); setSelectedPositive(null); }}
-                        className="flex flex-1 items-center gap-3 text-left"
-                      >
-                        <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${severityDot(item.severity)}`} />
-                        <span className="flex-1 text-xs font-bold text-slate-700">{item.title}</span>
-                        {isApplied && <Check size={14} className="shrink-0 text-emerald-500" />}
-                      </button>
-                    </div>
-                  );
-                })}
-                {!applicableImprovements.length && <p className="rounded-xl bg-slate-50 p-4 text-xs leading-5 text-slate-400">No safe one-click edits are available. Use the guidance in each section to edit manually.</p>}
-              </div>
-            </section>
+            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><h3 className="text-xs font-black uppercase text-slate-600">Magic Edits</h3><p className="mb-4 mt-1 text-xs leading-5 text-slate-400">Only one-click changes that map to a visible resume field are shown.</p><div className="space-y-2">{applicableImprovements.map(({ item, index }) => <button key={`${item.title}-${index}`} onClick={() => { setSelectedImprovement(index); setSelectedPositive(null); }} className="flex w-full items-center gap-3 rounded-xl bg-slate-50 p-3 text-left hover:bg-slate-100"><span className={`h-2.5 w-2.5 rounded-full ${severityDot(item.severity)}`} /><span className="flex-1 text-xs font-bold text-slate-700">{item.title}</span>{applied.has(index) && <Check size={14} className="text-emerald-500" />}</button>)}{!applicableImprovements.length && <p className="rounded-xl bg-slate-50 p-4 text-xs leading-5 text-slate-400">No safe one-click edits are available. Use the guidance in each section to edit manually.</p>}</div></section>
           </aside>
         </div>
       </div>
