@@ -120,3 +120,39 @@ export async function apiFetch(path: string, init?: RequestInit): Promise<Respon
 }
 
 export { API };
+
+// ─── Job apply-link resolution (JIT liveness at click time) ───────────────────
+
+export interface JobLinkResolution {
+  status: 'live' | 'dead' | 'unknown' | 'pending' | 'not_found';
+  /** Where the apply link actually lands after redirects — open THIS, not the raw url. */
+  finalUrl: string;
+  applyUrl: string;
+  reason?: string;
+}
+
+/**
+ * Verify a job's apply link right before opening it. Bounded by `timeoutMs` so a
+ * slow/bot-blocked board never leaves the user staring at a spinner — the caller
+ * falls back to the raw apply URL on null. The backend still finishes and records
+ * the verdict even if we stopped waiting, so the feed benefits either way.
+ */
+export async function resolveJobLink(
+  jobId: string,
+  timeoutMs = 4000,
+): Promise<JobLinkResolution | null> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await apiFetch(`/scraper/jobs/${jobId}/resolve`, {
+      method: 'POST',
+      signal: controller.signal,
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as JobLinkResolution;
+  } catch {
+    return null; // timeout, network, or aborted — caller opens the raw URL
+  } finally {
+    clearTimeout(timer);
+  }
+}

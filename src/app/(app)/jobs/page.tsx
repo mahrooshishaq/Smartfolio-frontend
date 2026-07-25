@@ -8,7 +8,7 @@ import {
   FiBookmark, FiCheck, FiTrendingUp, FiClock, FiGlobe, FiMic, FiEdit3
 } from 'react-icons/fi';
 
-import { apiFetch } from '@/lib/api';
+import { apiFetch, resolveJobLink } from '@/lib/api';
 import { stashJobHandoff, canHandOff, type HandoffIntent } from '@/lib/job-handoff';
 import { companyLogo, sourceLogo } from '@/lib/logo';
 import { useFeedback } from '@/components/ui/feedback';
@@ -60,7 +60,7 @@ interface JobsResponse {
 
 export default function JobsPage() {
   const router = useRouter();
-  const { success: notifySuccess, error: notifyError } = useFeedback();
+  const { success: notifySuccess, error: notifyError, confirm: confirmDialog } = useFeedback();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [filters, setFilters] = useState<Filters | null>(null);
   const [total, setTotal] = useState(0);
@@ -89,6 +89,10 @@ export default function JobsPage() {
   // Jobs with a save/unsave request in flight — guards against a double-click
   // firing a second POST/DELETE before the first settles.
   const savingRef = useRef<Set<string>>(new Set());
+
+  // Jobs whose apply link is being verified at click time (spinner on Apply).
+  const [applying, setApplying] = useState<Record<string, boolean>>({});
+  const applyingRef = useRef<Set<string>>(new Set());
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
 
@@ -385,6 +389,58 @@ export default function JobsPage() {
       notifyError(friendlyMsg(err, applicationId ? 'Couldn’t remove this job. Please try again.' : 'Couldn’t save this job. Please try again.'));
     } finally {
       savingRef.current.delete(jobId);
+    }
+  };
+
+  /**
+   * Apply, but verify the link first (Phase 3 JIT liveness).
+   *
+   * The feed already hides links our worker confirmed dead; this catches the ones
+   * that died *since* the last check, and lands the user on the resolved final URL
+   * rather than an aggregator redirector. We open a blank tab synchronously inside
+   * the click — a popup opened after an await is blocked — then steer it once the
+   * check returns. If the check is slow or fails, we open the raw URL anyway: a
+   * verification hiccup must never stop someone applying.
+   */
+  const handleApply = async (e: React.MouseEvent<HTMLAnchorElement>, job: Job) => {
+    // Let modified clicks (new-tab, download) and middle-clicks behave natively.
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+    e.preventDefault();
+    if (applyingRef.current.has(job.id)) return;
+    applyingRef.current.add(job.id);
+    setApplying(prev => ({ ...prev, [job.id]: true }));
+
+    const tab = window.open('', '_blank'); // synchronous → not popup-blocked
+    try {
+      const resolution = await resolveJobLink(job.id);
+      const target = resolution?.finalUrl || job.apply_url;
+
+      if (resolution?.status === 'dead') {
+        if (tab && !tab.closed) tab.close();
+        // Server already marked it dead, so it's gone from the feed on next load —
+        // drop it here too so the card doesn't linger.
+        setJobs(prev => prev.filter(j => j.id !== job.id));
+        const openAnyway = await confirmDialog({
+          title: 'This posting looks closed',
+          message: 'The job board says this listing is no longer available, so we’ve removed it from your feed. Open it anyway?',
+          confirmLabel: 'Open anyway',
+          cancelLabel: 'Not now',
+        });
+        if (openAnyway) window.open(job.apply_url, '_blank', 'noopener,noreferrer');
+      } else {
+        // live / unknown / unchecked / check failed → proceed to the best URL we have.
+        if (tab && !tab.closed) {
+          try { (tab as Window).opener = null; } catch { /* cross-origin, ignore */ }
+          tab.location.replace(target);
+        } else {
+          window.open(target, '_blank', 'noopener,noreferrer');
+        }
+      }
+    } catch {
+      if (tab && !tab.closed) tab.location.replace(job.apply_url);
+    } finally {
+      applyingRef.current.delete(job.id);
+      setApplying(prev => { const next = { ...prev }; delete next[job.id]; return next; });
     }
   };
 
@@ -691,9 +747,13 @@ export default function JobsPage() {
                         href={job.apply_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="bg-[#4F46E5] hover:bg-[#4338CA] text-white px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all"
+                        onClick={(e) => handleApply(e, job)}
+                        aria-busy={!!applying[job.id]}
+                        className="bg-[#4F46E5] hover:bg-[#4338CA] text-white px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all disabled:opacity-70"
                       >
-                        Apply <FiExternalLink size={12} />
+                        {applying[job.id]
+                          ? (<>Checking… <FiLoader size={12} className="animate-spin" /></>)
+                          : (<>Apply <FiExternalLink size={12} /></>)}
                       </a>
                     </div>
                   </div>
