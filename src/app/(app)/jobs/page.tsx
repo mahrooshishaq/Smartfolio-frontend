@@ -164,17 +164,20 @@ export default function JobsPage() {
     return false;
   };
 
-  /** The on-screen filters the job boards can actually act on. `source` and
-   *  `geo_restriction` are display-only — they describe results we already have,
-   *  so they stay out of the scrape request. */
+  /** The on-screen filters sent with a web search. The board APIs act on what
+   *  they can (country/type/level); the backend also filters the RESULTS by these
+   *  at ingest, so eligibility (`geo_restriction`) and level narrow the remote
+   *  boards too — a search now targets the filters instead of just the profile
+   *  role. `source` stays out: it's a post-hoc view over sources we already have. */
   const scrapeFilters = useCallback(() => {
     const f: Record<string, string> = {};
     if (country)         f.country          = country;
     if (jobType)         f.job_type         = jobType;
     if (experienceLevel) f.experience_level = experienceLevel;
     if (category)        f.category         = category;
+    if (geoRestriction)  f.geo_restriction  = geoRestriction;
     return f;
-  }, [country, jobType, experienceLevel, category]);
+  }, [country, jobType, experienceLevel, category, geoRestriction]);
 
   /** Poll a custom search to completion. POST /scraper/search returns a jobId
    *  immediately — it has NOT scraped anything yet — so treating the 201 as
