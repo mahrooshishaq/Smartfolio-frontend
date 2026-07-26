@@ -1,54 +1,67 @@
-// src/app/signup/page.tsx
-'use client';
+"use client";
+
 import axios from "axios";
-import { useState } from 'react';
-import { FaGoogle, FaEye, FaEyeSlash } from 'react-icons/fa';
-import { ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import Foli, { FoliState } from '@/components/foli/Foli';
-import FoliSuccessTakeover from '@/components/foli/FoliSuccessTakeover';
+import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { FaEye, FaEyeSlash, FaGoogle } from "react-icons/fa";
+import AuthShell from "@/components/auth/AuthShell";
+import type { FoliState } from "@/components/foli/Foli";
+import FoliSuccessTakeover from "@/components/foli/FoliSuccessTakeover";
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
 
-const STRENGTH_LABELS = ['', 'Weak — add length', 'Getting there', 'Strong', 'Excellent 💪'];
-function scorePassword(v: string): number {
-  let s = 0;
-  if (v.length >= 6) s++;
-  if (/[A-Z]/.test(v) && /[a-z]/.test(v)) s++;
-  if (/\d/.test(v)) s++;
-  if (/[^A-Za-z0-9]/.test(v) && v.length >= 10) s++;
-  return s;
+const STRENGTH_LABELS = ["", "Add a little more", "Getting there", "Strong", "Excellent"];
+const STRENGTH_COLORS = ["#e5e0ea", "#b98da0", "#a99878", "#8f96b8", "#789a8e"];
+
+const inputClass =
+  "auth-input w-full rounded-lg border border-[#ddd8e4] bg-white px-3.5 py-2.5 text-[15px] text-[#343044] outline-none transition-colors placeholder:text-[#aaa4b5] focus:border-[#9a8db7] focus:ring-4 focus:ring-[#ece7f2]";
+
+function scorePassword(value: string): number {
+  let score = 0;
+  if (value.length >= 6) score += 1;
+  if (/[A-Z]/.test(value) && /[a-z]/.test(value)) score += 1;
+  if (/\d/.test(value)) score += 1;
+  if (/[^A-Za-z0-9]/.test(value) && value.length >= 10) score += 1;
+  return score;
 }
 
 export default function SignupPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({
-    firstName: '', lastName: '', email: '', password: '', confirmPassword: '',
+    firstName: "",
+    lastName: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [foli, setFoli] = useState<FoliState>('idle');
+  const [foli, setFoli] = useState<FoliState>("idle");
   const [done, setDone] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const strength = scorePassword(formData.password);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData((current) => ({ ...current, [event.target.name]: event.target.value }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     setError(null);
 
     if (formData.password !== formData.confirmPassword) {
-      setError("Passwords don't match — please re-enter them.");
-      setFoli('error');
-      setTimeout(() => setFoli('idle'), 900);
+      setError("Passwords do not match. Please re-enter them.");
+      setFoli("error");
+      window.setTimeout(() => setFoli("idle"), 900);
       return;
     }
+
+    setIsSubmitting(true);
+    setFoli("typing");
 
     try {
       await axios.post(`${API}/auth/signup`, {
@@ -56,132 +69,256 @@ export default function SignupPage() {
         email: formData.email,
         password: formData.password,
       });
-      setFoli('success');
+      setFoli("success");
       setDone(true);
-    } catch (err: any) {
-      const backendMessage = err.response?.data?.message;
-      setError(Array.isArray(backendMessage) ? backendMessage.join(', ') : (backendMessage || 'Signup failed'));
-      setFoli('error');
-      setTimeout(() => setFoli('idle'), 900);
+    } catch (requestError: unknown) {
+      const backendMessage = axios.isAxiosError(requestError)
+        ? requestError.response?.data?.message
+        : undefined;
+      setError(
+        Array.isArray(backendMessage)
+          ? backendMessage.join(", ")
+          : backendMessage || "Signup failed",
+      );
+      setFoli("error");
+      window.setTimeout(() => setFoli("idle"), 900);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center p-4 overflow-hidden font-raleway bg-[#f5f4fb]">
+    <AuthShell foli={foli}>
       <FoliSuccessTakeover
         show={done}
-        title="Account created! 🎉"
-        subtitle="Sending your verification code…"
+        title="Account created."
+        subtitle="Sending your verification code..."
         onDone={() => router.push(`/verify-otp?email=${encodeURIComponent(formData.email)}`)}
       />
 
-      <div className="bg-white rounded-[26px] shadow-2xl w-full max-w-[460px] z-10 relative overflow-hidden">
-        <div className="foli-bay h-40">
-          <Link href="/" aria-label="Back to home"
-            className="absolute left-4 top-4 text-gray-500/80 hover:text-gray-700 transition-colors z-10">
-            <ArrowLeft size={22} />
+      <header className="mb-4">
+        <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#8a7392]">
+          Start your journey
+        </p>
+        <h1 className="mt-2 font-century text-4xl font-bold tracking-[0.04em] text-[#2b2440]">
+          Sign Up
+        </h1>
+        <p className="mt-1.5 text-sm text-[#6b6580]">
+          Already have an account?{" "}
+          <Link
+            href="/login"
+            className="font-bold text-[#776a96] transition-colors hover:text-[#685a88]"
+          >
+            Log in
           </Link>
-          <Foli state={foli} className="w-[132px] h-[132px]" />
+        </p>
+      </header>
+
+      <button
+        type="button"
+        className="flex w-full items-center justify-center gap-3 rounded-lg border border-[#d9d5df] bg-white/65 px-4 py-2.5 text-sm font-semibold text-[#514c60] transition-colors hover:border-[#c9c1cd] hover:bg-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#eee8f1]"
+        onClick={() => {
+          window.location.href = `${BACKEND_URL}/auth/google`;
+        }}
+      >
+        <FaGoogle className="text-base" />
+        Continue with Google
+      </button>
+
+      <div className="my-4 flex items-center gap-4">
+        <div className="h-px flex-1 bg-[#e4dfe8]" />
+        <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#9891a2]">
+          Or use email
+        </span>
+        <div className="h-px flex-1 bg-[#e4dfe8]" />
+      </div>
+
+      {error && (
+        <div
+          role="alert"
+          className="mb-4 rounded-lg border border-[#ead7df] bg-[#f8edf1] px-4 py-3 text-sm font-medium text-[#8d5f70]"
+        >
+          {error}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-3">
+        <div className="grid grid-cols-2 gap-3">
+          <AuthInput
+            label="First name"
+            id="firstName"
+            value={formData.firstName}
+            placeholder="Ada"
+            onChange={handleChange}
+            onFocus={() => setFoli("typing")}
+            onBlur={() => setFoli("idle")}
+          />
+          <AuthInput
+            label="Last name"
+            id="lastName"
+            value={formData.lastName}
+            placeholder="Lovelace"
+            onChange={handleChange}
+            onFocus={() => setFoli("typing")}
+            onBlur={() => setFoli("idle")}
+          />
         </div>
 
-        <div className="p-6 md:p-8">
-          <div className="mb-5">
-            <h1 className="text-2xl font-semibold text-gray-800 mb-1">Create account</h1>
-            <p className="text-sm text-gray-500">
-              Already have an account? <a href="/login" className="font-semibold text-purple-600 hover:text-purple-700">Log in</a>
+        <AuthInput
+          label="Email"
+          id="email"
+          type="email"
+          value={formData.email}
+          placeholder="you@example.com"
+          autoComplete="email"
+          onChange={handleChange}
+          onFocus={() => setFoli("typing")}
+          onBlur={() => setFoli("idle")}
+        />
+
+        <PasswordField
+          label="Password"
+          id="password"
+          value={formData.password}
+          visible={showPassword}
+          onToggle={() => setShowPassword((current) => !current)}
+          onChange={handleChange}
+          onFocus={() => setFoli("peek")}
+          onBlur={() => setFoli("idle")}
+        />
+
+        {formData.password && (
+          <div>
+            <div className="flex gap-1.5" aria-hidden="true">
+              {[0, 1, 2, 3].map((index) => (
+                <span
+                  key={index}
+                  className="h-1 flex-1 rounded-full transition-colors"
+                  style={{
+                    backgroundColor:
+                      index < strength ? STRENGTH_COLORS[strength] : STRENGTH_COLORS[0],
+                  }}
+                />
+              ))}
+            </div>
+            <p className="mt-1.5 text-[11px] font-medium text-[#817a8b]">
+              {STRENGTH_LABELS[strength]}
             </p>
           </div>
+        )}
 
-          <button
-            type="button"
-            className="w-full py-2.5 px-4 border border-gray-300 rounded-xl flex items-center justify-center gap-3 text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 font-medium"
-            onClick={() => { window.location.href = `${BACKEND_URL}/auth/google`; }}
-          >
-            <FaGoogle className="text-lg" /> Continue with Google
-          </button>
+        <PasswordField
+          label="Confirm password"
+          id="confirmPassword"
+          value={formData.confirmPassword}
+          visible={showConfirmPassword}
+          onToggle={() => setShowConfirmPassword((current) => !current)}
+          onChange={handleChange}
+          onFocus={() => setFoli("peek")}
+          onBlur={() => setFoli("idle")}
+        />
 
-          <div className="my-5 flex items-center gap-4">
-            <div className="flex-1 border-t border-gray-200"></div>
-            <span className="text-gray-500 text-xs font-medium">OR</span>
-            <div className="flex-1 border-t border-gray-200"></div>
-          </div>
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="spectrum-primary auth-spectrum w-full rounded-lg px-5 py-3 text-sm font-bold"
+        >
+          {isSubmitting ? "Creating your account..." : "Create account"}
+        </button>
+      </form>
+    </AuthShell>
+  );
+}
 
-          {error && (
-            <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-xl flex items-center gap-2 font-medium">
-              <span aria-hidden>✕</span>{error}
-            </div>
-          )}
+function AuthInput({
+  label,
+  id,
+  type = "text",
+  value,
+  placeholder,
+  autoComplete,
+  onChange,
+  onFocus,
+  onBlur,
+}: {
+  label: string;
+  id: string;
+  type?: string;
+  value: string;
+  placeholder: string;
+  autoComplete?: string;
+  onChange: React.ChangeEventHandler<HTMLInputElement>;
+  onFocus: React.FocusEventHandler<HTMLInputElement>;
+  onBlur: React.FocusEventHandler<HTMLInputElement>;
+}) {
+  return (
+    <div>
+      <label htmlFor={id} className="mb-1.5 block text-xs font-bold text-[#615b6d]">
+        {label}
+      </label>
+      <input
+        id={id}
+        name={id}
+        type={type}
+        value={value}
+        placeholder={placeholder}
+        autoComplete={autoComplete}
+        required
+        onChange={onChange}
+        onFocus={onFocus}
+        onBlur={onBlur}
+        className={inputClass}
+      />
+    </div>
+  );
+}
 
-          <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label htmlFor="firstName" className="block text-xs font-semibold text-gray-500 mb-1.5">First name</label>
-                <input type="text" id="firstName" name="firstName" value={formData.firstName} onChange={handleChange} required
-                  placeholder="Ada" onFocus={() => setFoli('typing')} onBlur={() => setFoli('idle')}
-                  className="w-full text-[15px] text-gray-800 bg-[#fbfaff] border-[1.5px] border-gray-200 rounded-xl px-3.5 py-3 focus:outline-none focus:border-purple-400 focus:ring-4 focus:ring-purple-100 transition" />
-              </div>
-              <div>
-                <label htmlFor="lastName" className="block text-xs font-semibold text-gray-500 mb-1.5">Last name</label>
-                <input type="text" id="lastName" name="lastName" value={formData.lastName} onChange={handleChange} required
-                  placeholder="Lovelace" onFocus={() => setFoli('typing')} onBlur={() => setFoli('idle')}
-                  className="w-full text-[15px] text-gray-800 bg-[#fbfaff] border-[1.5px] border-gray-200 rounded-xl px-3.5 py-3 focus:outline-none focus:border-purple-400 focus:ring-4 focus:ring-purple-100 transition" />
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="email" className="block text-xs font-semibold text-gray-500 mb-1.5">Email</label>
-              <input type="email" id="email" name="email" value={formData.email} onChange={handleChange} required
-                placeholder="you@example.com" autoComplete="email" onFocus={() => setFoli('typing')} onBlur={() => setFoli('idle')}
-                className="w-full text-[15px] text-gray-800 bg-[#fbfaff] border-[1.5px] border-gray-200 rounded-xl px-3.5 py-3 focus:outline-none focus:border-purple-400 focus:ring-4 focus:ring-purple-100 transition" />
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-xs font-semibold text-gray-500 mb-1.5">Password</label>
-              <div className="relative">
-                <input type={showPassword ? "text" : "password"} id="password" name="password" value={formData.password} onChange={handleChange} required
-                  placeholder="••••••••" autoComplete="new-password" onFocus={() => setFoli('peek')} onBlur={() => setFoli('idle')}
-                  className="w-full text-[15px] text-gray-800 bg-[#fbfaff] border-[1.5px] border-gray-200 rounded-xl px-3.5 py-3 pr-11 focus:outline-none focus:border-purple-400 focus:ring-4 focus:ring-purple-100 transition" />
-                <button type="button" onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 grid place-items-center text-gray-500 hover:text-gray-600 rounded-lg">
-                  {showPassword ? <FaEyeSlash /> : <FaEye />}
-                </button>
-              </div>
-              {formData.password && (
-                <>
-                  <div className="flex gap-1.5 mt-2" aria-hidden>
-                    {[0, 1, 2, 3].map((i) => (
-                      <span key={i} className="h-1.5 flex-1 rounded-full transition-colors"
-                        style={{ background: i < strength
-                          ? (strength <= 1 ? '#f43f5e' : strength === 2 ? '#f59e0b' : strength === 3 ? '#c084fc' : '#12b981')
-                          : '#e5e0f0' }} />
-                    ))}
-                  </div>
-                  <p className="text-[11.5px] text-gray-500 mt-1.5">{STRENGTH_LABELS[strength]}</p>
-                </>
-              )}
-            </div>
-
-            <div>
-              <label htmlFor="confirmPassword" className="block text-xs font-semibold text-gray-500 mb-1.5">Confirm password</label>
-              <div className="relative">
-                <input type={showConfirmPassword ? "text" : "password"} id="confirmPassword" name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} required
-                  placeholder="••••••••" onFocus={() => setFoli('peek')} onBlur={() => setFoli('idle')}
-                  className="w-full text-[15px] text-gray-800 bg-[#fbfaff] border-[1.5px] border-gray-200 rounded-xl px-3.5 py-3 pr-11 focus:outline-none focus:border-purple-400 focus:ring-4 focus:ring-purple-100 transition" />
-                <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 grid place-items-center text-gray-500 hover:text-gray-600 rounded-lg">
-                  {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
-                </button>
-              </div>
-            </div>
-
-            <button type="submit"
-              className="w-full py-3.5 text-white text-[15px] font-bold rounded-xl bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-500 shadow-lg shadow-purple-200 hover:brightness-105 active:translate-y-px transition">
-              Create account
-            </button>
-          </form>
-        </div>
+function PasswordField({
+  label,
+  id,
+  value,
+  visible,
+  onToggle,
+  onChange,
+  onFocus,
+  onBlur,
+}: {
+  label: string;
+  id: string;
+  value: string;
+  visible: boolean;
+  onToggle: () => void;
+  onChange: React.ChangeEventHandler<HTMLInputElement>;
+  onFocus: React.FocusEventHandler<HTMLInputElement>;
+  onBlur: React.FocusEventHandler<HTMLInputElement>;
+}) {
+  return (
+    <div>
+      <label htmlFor={id} className="mb-1.5 block text-xs font-bold text-[#615b6d]">
+        {label}
+      </label>
+      <div className="relative">
+        <input
+          id={id}
+          name={id}
+          type={visible ? "text" : "password"}
+          value={value}
+          required
+          placeholder="Enter a secure password"
+          autoComplete="new-password"
+          onChange={onChange}
+          onFocus={onFocus}
+          onBlur={onBlur}
+          className={`${inputClass} pr-11`}
+        />
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-label={visible ? "Hide password" : "Show password"}
+          className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-md text-[#817a8b] transition-colors hover:bg-[#f0ebf4] hover:text-[#776a96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e8e1f1]"
+        >
+          {visible ? <FaEyeSlash /> : <FaEye />}
+        </button>
       </div>
     </div>
   );

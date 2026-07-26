@@ -44,7 +44,7 @@ export default function FoliLoader({
 
   const body = (
     <div className="tk-inner">
-      <div className="tk-foli">
+      <div className="tk-foli tk-foli--loader">
         {/* The loader drives the mood itself, so the idle personality loop stays off. */}
         <Foli state={mood} interactive={false} />
       </div>

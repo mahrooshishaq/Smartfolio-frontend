@@ -30,10 +30,13 @@ try{
 }catch(e){}`;
 
 const primaryAction =
-  "inline-flex items-center justify-center gap-2 rounded-lg bg-[#9b6f82] px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-[#eadde3] transition-colors hover:bg-[#8d6275] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#eadde3]";
+  "spectrum-primary landing-spectrum inline-flex items-center justify-center gap-2 rounded-lg px-6 py-3.5 text-sm font-bold";
 
 const featureAction =
-  "mt-7 inline-flex items-center gap-2 text-sm font-bold text-[#8d6d82] transition-colors hover:text-[#74799f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d9d9e8]";
+  "mt-7 inline-flex items-center gap-2 bg-[linear-gradient(90deg,#CF9FFF_0%,#D18AD7_100%)] bg-clip-text text-sm font-bold text-transparent transition-opacity hover:opacity-75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ead9f5]";
+
+const journeyDot =
+  "bg-[linear-gradient(135deg,#6E7FB8_0%,#D6E4FF_32%,#E5D4FF_66%,#FFE4D6_100%)]";
 
 const TYPEWRITER_PHRASES = [
   "Optimize your resume",
@@ -151,7 +154,7 @@ export default function Home() {
               description="Get a clear view of your strengths, gaps, and readiness before your next application."
               action="Analyze my resume"
               tone="from-[#eef1ff] to-[#f7f4ff]"
-              dot="bg-[#858db8]"
+              dot={journeyDot}
               visual={<ResumeVisual />}
             />
 
@@ -163,7 +166,7 @@ export default function Home() {
               description="Turn your experience into editable cover letters and application documents for each role."
               action="Create a document"
               tone="from-[#f4efff] to-[#ffeef5]"
-              dot="bg-[#9a82ac]"
+              dot={journeyDot}
               visual={<DocumentVisual />}
               reverse
             />
@@ -176,7 +179,7 @@ export default function Home() {
               description="Connect resume insights to relevant learning instead of searching through an endless catalogue."
               action="Explore learning paths"
               tone="from-[#fff5ee] to-[#fff0f5]"
-              dot="bg-[#aa809d]"
+              dot={journeyDot}
               visual={<LearningVisual />}
             />
 
@@ -188,7 +191,7 @@ export default function Home() {
               description="Explore roles shaped around your skills, goals, location, and experience."
               action="Explore matching jobs"
               tone="from-[#eef4ff] to-[#f4f0ff]"
-              dot="bg-[#8e94b6]"
+              dot={journeyDot}
               visual={<JobsVisual />}
               reverse
             />
@@ -201,7 +204,7 @@ export default function Home() {
               description="Rehearse role-specific questions in a calm, guided voice interview."
               action="Start practicing"
               tone="from-[#ffeef5] to-[#f4efff]"
-              dot="bg-[#b57b8e]"
+              dot={journeyDot}
               visual={<InterviewVisual />}
             />
           </JourneyTimeline>
@@ -230,7 +233,7 @@ export default function Home() {
               career preparation from a collection of disconnected tasks into a calm, purposeful
               journey while keeping people in control of every decision.
             </p>
-            <p className="border-l-2 border-[#b98da0] pl-5 font-century text-xl font-bold leading-8 text-[#4a4059]">
+            <p className="relative pl-5 font-century text-xl font-bold leading-8 text-[#4a4059] before:absolute before:bottom-0 before:left-0 before:top-0 before:w-[2px] before:bg-[linear-gradient(to_bottom,#6E7FB8_0%,#D6E4FF_32%,#E5D4FF_66%,#FFE4D6_100%)]">
               Technology should make ambition feel clearer, never more overwhelming.
             </p>
           </div>
@@ -329,7 +332,7 @@ function JourneyTimeline({ children }: { children: React.ReactNode }) {
       <div className="absolute bottom-20 left-[17px] top-8 w-[2px] overflow-hidden lg:left-1/2">
         <div
           ref={progressRef}
-          className="h-full w-full origin-top bg-gradient-to-b from-[#858db8] via-[#a889b0] to-[#b57b8e] shadow-[0_0_14px_rgba(168,137,176,0.32)] will-change-transform"
+          className="h-full w-full origin-top bg-[linear-gradient(to_bottom,#6E7FB8_0%,#D6E4FF_32%,#E5D4FF_66%,#FFE4D6_100%)] shadow-[0_0_14px_rgba(110,127,184,0.22)] will-change-transform"
           style={{ transform: "scaleY(0)" }}
         />
       </div>
@@ -595,11 +598,10 @@ function LearningVisual() {
 
 function InterviewVisual() {
   const bars = [18, 30, 46, 64, 38, 72, 54, 82, 44, 66, 34, 52, 24];
-  const barColors = ["#8f96b8", "#a789a0", "#9b8fb2"];
 
   return (
     <div className="rounded-lg border border-white/80 bg-white p-6 text-center shadow-[0_16px_45px_rgba(119,85,150,0.10)] sm:p-9">
-      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#f0eaf3] text-[#8a7392]">
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[linear-gradient(135deg,rgba(207,159,255,0.28),rgba(218,112,214,0.12))] text-[#86668e]">
         <Mic2 size={21} />
       </div>
       <p className="mx-auto mt-5 max-w-sm font-century text-lg font-bold leading-7 text-[#2b2440]">
@@ -609,13 +611,17 @@ function InterviewVisual() {
         {bars.map((height, index) => (
           <span
             key={`${height}-${index}`}
-            className="w-1.5 rounded-full opacity-80"
-            style={{ height, backgroundColor: barColors[index % barColors.length] }}
+            className="w-1.5 rounded-full opacity-90"
+            style={{
+              height,
+              backgroundImage:
+                "linear-gradient(to top, #CF9FFF 0%, #D18AD7 100%)",
+            }}
           />
         ))}
       </div>
-      <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#f7edf2] px-4 py-2 text-xs font-bold text-[#8f6d7d]">
-        <span className="h-2 w-2 rounded-full bg-[#b98da0]" />
+      <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-[linear-gradient(135deg,rgba(207,159,255,0.20),rgba(218,112,214,0.08))] px-4 py-2 text-xs font-bold text-[#80637d]">
+        <span className="h-2 w-2 rounded-full bg-[linear-gradient(135deg,#CF9FFF_0%,#D18AD7_100%)]" />
         Listening to your response
       </div>
     </div>

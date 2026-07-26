@@ -82,6 +82,8 @@ export default function Foli({
   const uid = React.useId().replace(/:/g, '');
   const bodyG = `foliBody-${uid}`;
   const lineG = `foliLine-${uid}`;
+  const foldG = `foliFold-${uid}`;
+  const pawG = `foliPaw-${uid}`;
 
   const svgRef = useRef<SVGSVGElement>(null);
   const [vignette, setVignette] = useState<FoliState | null>(null);
@@ -202,16 +204,27 @@ export default function Foli({
     >
       <defs>
         <linearGradient id={bodyG} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#fdfbff" />
-          <stop offset="1" stopColor="#f2ecff" />
+          <stop offset="0" stopColor="#ffffff" />
+          <stop offset=".52" stopColor="#f9f6ff" />
+          <stop offset="1" stopColor="#ebe5f7" />
         </linearGradient>
         <linearGradient id={lineG} x1="0" y1="1" x2="1" y2="0">
-          <stop offset="0" stopColor="#818cf8" />
-          <stop offset=".5" stopColor="#c084fc" />
-          <stop offset="1" stopColor="#ec4899" />
+          <stop offset="0" stopColor="#5D3FD3" />
+          <stop offset=".32" stopColor="#5D3FD3" />
+          <stop offset=".48" stopColor="#BF40BF" />
+          <stop offset=".64" stopColor="#CF9FFF" />
+          <stop offset="1" stopColor="#CF9FFF" />
         </linearGradient>
+        <linearGradient id={foldG} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#f0e4ff" />
+          <stop offset="1" stopColor="#f4d8ef" />
+        </linearGradient>
+        <radialGradient id={pawG} cx=".36" cy=".28" r=".8">
+          <stop offset="0" stopColor="#faf8ff" />
+          <stop offset="1" stopColor="#eadff4" />
+        </radialGradient>
       </defs>
-      <ellipse cx="100" cy="178" rx="46" ry="8" fill="#7c5cc0" opacity="0.16" />
+      <ellipse cx="100" cy="178" rx="46" ry="8" fill="#CF9FFF" opacity="0.14" />
       <g className="foli-float">
         <path
           d="M36 44 Q36 26 54 26 L128 26 L164 62 L164 150 Q164 168 146 168 L54 168 Q36 168 36 150 Z"
@@ -219,42 +232,58 @@ export default function Foli({
           stroke="#e4d8fb"
           strokeWidth="2"
         />
-        <path d="M128 26 L164 62 L128 62 Z" fill="#ffd7c2" />
+        <path d="M128 26 L164 62 L128 62 Z" fill={`url(#${foldG})`} />
+        <path
+          d="M53 32 H123"
+          fill="none"
+          stroke="#ffffff"
+          strokeWidth="3"
+          strokeLinecap="round"
+          opacity=".72"
+        />
+        <path
+          d="M157 68 V145"
+          fill="none"
+          stroke="#d7cee8"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          opacity=".55"
+        />
 
         {/* AI spark — twinkles at rest, orbits the head during spark-play */}
         <g className="spark-orbit">
           <path
             className="spark"
             d="M150 40 L154 52 L166 56 L154 60 L150 72 L146 60 L134 56 L146 52 Z"
-            fill="#a855f7"
+            fill={`url(#${lineG})`}
           />
         </g>
 
         {/* Zzz — only while asleep */}
-        <g className="zzz" aria-hidden="true" fill="#a78bda" fontFamily="ui-sans-serif, system-ui" fontWeight="700">
+        <g className="zzz" aria-hidden="true" fill="#5D3FD3" fontFamily="ui-sans-serif, system-ui" fontWeight="700">
           <text className="z1" x="150" y="60" fontSize="15">z</text>
           <text className="z2" x="162" y="46" fontSize="19">z</text>
           <text className="z3" x="176" y="30" fontSize="23">z</text>
         </g>
 
-        <rect className="brow browL" x="66" y="72" width="20" height="5" rx="2.5" fill="#b8a6e0" />
-        <rect className="brow browR" x="114" y="72" width="20" height="5" rx="2.5" fill="#b8a6e0" />
+        <rect className="brow browL" x="66" y="72" width="20" height="5" rx="2.5" fill="#5D3FD3" />
+        <rect className="brow browR" x="114" y="72" width="20" height="5" rx="2.5" fill="#5D3FD3" />
 
         <g className="eye-open">
           <g className="eye eyeL">
             <circle cx="78" cy="92" r="13" fill="#fff" stroke="#e4d8fb" strokeWidth="1.5" />
-            <circle className="pupil" cx="78" cy="92" r="6" fill="#3a2e5c" />
+            <circle className="pupil" cx="78" cy="92" r="6" fill="#5D3FD3" />
             <circle className="glint" cx="81" cy="89" r="2" fill="#fff" />
           </g>
           <g className="eye eyeR">
             <circle cx="122" cy="92" r="13" fill="#fff" stroke="#e4d8fb" strokeWidth="1.5" />
-            <circle className="pupil" cx="122" cy="92" r="6" fill="#3a2e5c" />
+            <circle className="pupil" cx="122" cy="92" r="6" fill="#5D3FD3" />
             <circle className="glint" cx="125" cy="89" r="2" fill="#fff" />
           </g>
         </g>
 
         {/* closed/curved eyes for success, giggle, wink and sleep */}
-        <g className="eye-happy" fill="none" stroke="#3a2e5c" strokeWidth="4" strokeLinecap="round">
+        <g className="eye-happy" fill="none" stroke="#5D3FD3" strokeWidth="4" strokeLinecap="round">
           <path className="happyL" d="M69 94 Q78 84 87 94" />
           <path className="happyR" d="M113 94 Q122 84 131 94" />
         </g>
@@ -263,15 +292,15 @@ export default function Foli({
           className="mouth"
           d={mouthFor(shown)}
           fill="none"
-          stroke={`url(#${lineG})`}
+          stroke="#5D3FD3"
           strokeWidth="5"
           strokeLinecap="round"
         />
         {/* open mouth used by the yawn */}
-        <ellipse className="mouth-yawn" cx="100" cy="122" rx="9" ry="11" fill="#4b3a6b" />
+        <ellipse className="mouth-yawn" cx="100" cy="122" rx="9" ry="11" fill="#5D3FD3" />
 
-        <circle className="paw pawL" cx="52" cy="150" r="15" fill="#efe6ff" stroke="#e0d3f8" strokeWidth="2" />
-        <circle className="paw pawR" cx="148" cy="150" r="15" fill="#efe6ff" stroke="#e0d3f8" strokeWidth="2" />
+        <circle className="paw pawL" cx="52" cy="150" r="15" fill={`url(#${pawG})`} stroke="#d8cdea" strokeWidth="2" />
+        <circle className="paw pawR" cx="148" cy="150" r="15" fill={`url(#${pawG})`} stroke="#d8cdea" strokeWidth="2" />
       </g>
     </svg>
   );

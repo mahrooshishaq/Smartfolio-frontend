@@ -1,159 +1,201 @@
-// src/app/login/page.tsx
-'use client';
-import axios from "axios";
-import { useState } from 'react';
-import { FaGoogle, FaEye, FaEyeSlash } from 'react-icons/fa';
-import { ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
-import Foli, { FoliState } from '@/components/foli/Foli';
-import FoliSuccessTakeover from '@/components/foli/FoliSuccessTakeover';
+"use client";
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+import axios from "axios";
+import { useState } from "react";
+import Link from "next/link";
+import { FaEye, FaEyeSlash, FaGoogle } from "react-icons/fa";
+import AuthShell from "@/components/auth/AuthShell";
+import type { FoliState } from "@/components/foli/Foli";
+import FoliSuccessTakeover from "@/components/foli/FoliSuccessTakeover";
+
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
+
+const inputClass =
+  "auth-input w-full rounded-lg border border-[#ddd8e4] bg-white px-3.5 py-3 text-[15px] text-[#343044] outline-none transition-colors placeholder:text-[#aaa4b5] focus:border-[#9a8db7] focus:ring-4 focus:ring-[#ece7f2]";
 
 export default function LoginPage() {
-  const [formData, setFormData] = useState({ email: '', password: '' });
+  const [formData, setFormData] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [foli, setFoli] = useState<FoliState>('idle');
+  const [foli, setFoli] = useState<FoliState>("idle");
   const [redirectTo, setRedirectTo] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData((current) => ({ ...current, [event.target.name]: event.target.value }));
   };
 
   const togglePasswordVisibility = () => {
     const next = !showPassword;
     setShowPassword(next);
-    // Foli peeks through when the password is revealed.
-    if (document.activeElement === document.getElementById('password')) {
-      setFoli(next ? 'typing' : 'peek');
+    if (document.activeElement === document.getElementById("password")) {
+      setFoli(next ? "typing" : "peek");
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     setError(null);
+    setIsSubmitting(true);
+    setFoli("typing");
 
     try {
-      const res = await axios.post(`${API}/auth/login`, formData);
-      const { accessToken, refreshToken } = res.data;
-      localStorage.setItem('accessToken', accessToken);
-      localStorage.setItem('refreshToken', refreshToken);
+      const response = await axios.post(`${API}/auth/login`, formData);
+      const { accessToken, refreshToken } = response.data;
+      localStorage.setItem("accessToken", accessToken);
+      localStorage.setItem("refreshToken", refreshToken);
 
-      let target = '/dashboard';
+      let target = "/dashboard";
       try {
-        const statusRes = await axios.get(`${API}/onboarding/status`, {
+        const statusResponse = await axios.get(`${API}/onboarding/status`, {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
-        target = statusRes.data?.completed ? '/dashboard' : '/onboarding';
+        target = statusResponse.data?.completed ? "/dashboard" : "/onboarding";
       } catch {
-        target = '/dashboard';
+        target = "/dashboard";
       }
-      // Celebrate, then the takeover's onDone performs the redirect.
-      setFoli('success');
+
+      setFoli("success");
       setRedirectTo(target);
-    } catch (err: any) {
-      const backendMessage = err.response?.data?.message;
-      setError(Array.isArray(backendMessage) ? backendMessage.join(', ') : (backendMessage || 'Login failed'));
-      setFoli('error');
-      setTimeout(() => setFoli('idle'), 900);
+    } catch (requestError: unknown) {
+      const backendMessage = axios.isAxiosError(requestError)
+        ? requestError.response?.data?.message
+        : undefined;
+      setError(
+        Array.isArray(backendMessage)
+          ? backendMessage.join(", ")
+          : backendMessage || "Login failed",
+      );
+      setFoli("error");
+      window.setTimeout(() => setFoli("idle"), 900);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center p-4 overflow-hidden font-raleway bg-[#f5f4fb]">
+    <AuthShell foli={foli}>
       <FoliSuccessTakeover
         show={!!redirectTo}
-        title="Welcome back! 🎉"
-        subtitle="Taking you to your dashboard…"
-        onDone={() => { if (redirectTo) window.location.href = redirectTo; }}
+        title="Welcome back."
+        subtitle="Taking you to your dashboard..."
+        onDone={() => {
+          if (redirectTo) window.location.href = redirectTo;
+        }}
       />
 
-      <div className="bg-white rounded-[26px] shadow-2xl w-full max-w-[440px] z-10 relative overflow-hidden">
-        {/* Mascot bay */}
-        <div className="foli-bay h-44">
-          <Link href="/" aria-label="Back to home"
-            className="absolute left-4 top-4 text-gray-500/80 hover:text-gray-700 transition-colors z-10">
-            <ArrowLeft size={22} />
-          </Link>
-          <Foli state={foli} className="w-[150px] h-[150px]" />
-        </div>
-
-        <div className="p-6 md:p-8">
-          <div className="mb-5">
-            <h1 className="text-2xl font-semibold text-gray-800 mb-1">Log in</h1>
-            <p className="text-sm text-gray-500">
-              Don&apos;t have an account? <a href="/signup" className="font-semibold text-purple-600 hover:text-purple-700">Sign up</a>
-            </p>
-          </div>
-
-          <button
-            type="button"
-            className="w-full py-2.5 px-4 border border-gray-300 rounded-xl flex items-center justify-center gap-3 text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 font-medium"
-            onClick={() => { window.location.href = `${BACKEND_URL}/auth/google`; }}
+      <header className="mb-7">
+        <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#8a7392]">
+          Welcome back
+        </p>
+        <h1 className="mt-3 font-century text-4xl font-bold tracking-[0.04em] text-[#2b2440]">
+          Login
+        </h1>
+        <p className="mt-2 text-sm text-[#6b6580]">
+          New to Smartfolio-AI?{" "}
+          <Link
+            href="/signup"
+            className="font-bold text-[#776a96] transition-colors hover:text-[#685a88]"
           >
-            <FaGoogle className="text-lg" /> Continue with Google
-          </button>
+            Create an account
+          </Link>
+        </p>
+      </header>
 
-          <div className="my-5 flex items-center gap-4">
-            <div className="flex-1 border-t border-gray-200"></div>
-            <span className="text-gray-500 text-xs font-medium">OR</span>
-            <div className="flex-1 border-t border-gray-200"></div>
-          </div>
+      <button
+        type="button"
+        className="flex w-full items-center justify-center gap-3 rounded-lg border border-[#d9d5df] bg-white/65 px-4 py-3 text-sm font-semibold text-[#514c60] transition-colors hover:border-[#c9c1cd] hover:bg-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#eee8f1]"
+        onClick={() => {
+          window.location.href = `${BACKEND_URL}/auth/google`;
+        }}
+      >
+        <FaGoogle className="text-base" />
+        Continue with Google
+      </button>
 
-          {error && (
-            <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-xl flex items-center gap-2 font-medium">
-              <span aria-hidden>✕</span>{error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
-            <div>
-              <label htmlFor="email" className="block text-xs font-semibold text-gray-500 mb-1.5">Email</label>
-              <input
-                type="email" id="email" name="email" value={formData.email} onChange={handleChange} required
-                placeholder="you@example.com" autoComplete="email"
-                onFocus={() => setFoli('typing')}
-                onBlur={() => setFoli('idle')}
-                className="w-full text-[15px] text-gray-800 bg-[#fbfaff] border-[1.5px] border-gray-200 rounded-xl px-3.5 py-3 focus:outline-none focus:border-purple-400 focus:ring-4 focus:ring-purple-100 transition"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-xs font-semibold text-gray-500 mb-1.5">Password</label>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"} id="password" name="password"
-                  value={formData.password} onChange={handleChange} required
-                  placeholder="••••••••" autoComplete="new-password"
-                  onFocus={() => setFoli('peek')}
-                  onBlur={() => setFoli('idle')}
-                  className="w-full text-[15px] text-gray-800 bg-[#fbfaff] border-[1.5px] border-gray-200 rounded-xl px-3.5 py-3 pr-11 focus:outline-none focus:border-purple-400 focus:ring-4 focus:ring-purple-100 transition"
-                />
-                <button type="button" onClick={togglePasswordVisibility}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 grid place-items-center text-gray-500 hover:text-gray-600 rounded-lg">
-                  {showPassword ? <FaEyeSlash /> : <FaEye />}
-                </button>
-              </div>
-            </div>
-
-            <div className="flex justify-end">
-              <Link href="/forgot-password" className="text-sm text-gray-500 hover:text-purple-600">
-                Forgot your password?
-              </Link>
-            </div>
-
-            <button
-              type="submit"
-              className="w-full py-3.5 text-white text-[15px] font-bold rounded-xl bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-500 shadow-lg shadow-purple-200 hover:brightness-105 active:translate-y-px transition"
-            >
-              Log in
-            </button>
-          </form>
-        </div>
+      <div className="my-6 flex items-center gap-4">
+        <div className="h-px flex-1 bg-[#e4dfe8]" />
+        <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#9891a2]">
+          Or use email
+        </span>
+        <div className="h-px flex-1 bg-[#e4dfe8]" />
       </div>
-    </div>
+
+      {error && (
+        <div
+          role="alert"
+          className="mb-5 rounded-lg border border-[#ead7df] bg-[#f8edf1] px-4 py-3 text-sm font-medium text-[#8d5f70]"
+        >
+          {error}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div>
+          <label htmlFor="email" className="mb-2 block text-xs font-bold text-[#615b6d]">
+            Email
+          </label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
+            required
+            placeholder="you@example.com"
+            autoComplete="email"
+            onFocus={() => setFoli("typing")}
+            onBlur={() => setFoli("idle")}
+            className={inputClass}
+          />
+        </div>
+
+        <div>
+          <div className="mb-2 flex items-center justify-between gap-4">
+            <label htmlFor="password" className="text-xs font-bold text-[#615b6d]">
+              Password
+            </label>
+            <Link
+              href="/forgot-password"
+              className="text-xs font-semibold text-[#7c758b] transition-colors hover:text-[#776a96]"
+            >
+              Forgot password?
+            </Link>
+          </div>
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              id="password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              required
+              placeholder="Enter your password"
+              autoComplete="current-password"
+              onFocus={() => setFoli("peek")}
+              onBlur={() => setFoli("idle")}
+              className={`${inputClass} pr-11`}
+            />
+            <button
+              type="button"
+              onClick={togglePasswordVisibility}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-md text-[#817a8b] transition-colors hover:bg-[#f0ebf4] hover:text-[#776a96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e8e1f1]"
+            >
+              {showPassword ? <FaEyeSlash /> : <FaEye />}
+            </button>
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="spectrum-primary auth-spectrum w-full rounded-lg px-5 py-3.5 text-sm font-bold"
+        >
+          {isSubmitting ? "Signing in..." : "Log in"}
+        </button>
+      </form>
+    </AuthShell>
   );
 }

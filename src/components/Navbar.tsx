@@ -87,7 +87,7 @@ export default function Navbar() {
           </Link>
           <Link
             href="/signup"
-            className="rounded-lg bg-[#9b6f82] px-6 py-2.5 text-white shadow-[0_8px_24px_rgba(155,111,130,0.18)] transition-colors hover:bg-[#8d6275] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#eadde3]"
+            className="spectrum-primary landing-spectrum inline-flex min-w-[132px] items-center justify-center gap-2 rounded-lg px-7 py-2.5 text-sm font-bold"
           >
             SIGN UP
           </Link>
@@ -133,7 +133,7 @@ export default function Navbar() {
               </Link>
               <Link
                 href="/signup"
-                className="rounded-lg bg-[#9b6f82] px-4 py-3 text-white shadow-[0_8px_24px_rgba(155,111,130,0.16)] hover:bg-[#8d6275] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#eadde3]"
+                className="spectrum-primary landing-spectrum inline-flex min-w-[132px] items-center justify-center gap-2 rounded-lg px-7 py-2.5 text-sm font-bold"
               >
                 SIGN UP
               </Link>

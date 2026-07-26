@@ -4,7 +4,7 @@ export function burstConfetti(host: HTMLElement | null, count = 60) {
   if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
     return;
   }
-  const colors = ['#818cf8', '#c084fc', '#ec4899', '#a855f7', '#f59e0b', '#12b981'];
+  const colors = ['#5D3FD3', '#CF9FFF', '#CF9FFF', '#BF40BF', '#E7D8F3', '#BFA6EB'];
   for (let i = 0; i < count; i++) {
     const c = document.createElement('i');
     c.style.background = colors[i % colors.length];

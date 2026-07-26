@@ -1,103 +1,149 @@
-// src/app/forgot-password/page.tsx
-'use client';
-import { useState } from 'react';
-import { ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
-import Foli, { FoliState } from '@/components/foli/Foli';
+"use client";
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+import { useState } from "react";
+import Link from "next/link";
+import AuthShell from "@/components/auth/AuthShell";
+import type { FoliState } from "@/components/foli/Foli";
+
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+
+const inputClass =
+  "auth-input w-full rounded-lg border border-[#ddd8e4] bg-white px-3.5 py-3 text-[15px] text-[#343044] outline-none transition-colors placeholder:text-[#aaa4b5] focus:border-[#9a8db7] focus:ring-4 focus:ring-[#ece7f2]";
 
 export default function ForgotPasswordPage() {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Resting expression is disappointed — you've forgotten your password, and Foli
-  // feels for you. It brightens while you type, and cheers once the link is sent.
-  const [foli, setFoli] = useState<FoliState>('sad');
+  const [foli, setFoli] = useState<FoliState>("sad");
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     setError(null);
+    setIsSubmitting(true);
+    setFoli("typing");
+
     try {
       const response = await fetch(`${API}/auth/forgot-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
+
       if (!response.ok) {
-        const data = await response.json();
+        const data: { message?: string } = await response.json();
         setError(data.message || "Something went wrong.");
-        setFoli('error');
-        setTimeout(() => setFoli('sad'), 900);
+        setFoli("error");
+        window.setTimeout(() => setFoli("sad"), 900);
         return;
       }
-      setFoli('happy');
+
+      setFoli("happy");
       setIsSubmitted(true);
     } catch {
-      setError("Couldn't send the reset email. Try again.");
-      setFoli('error');
-      setTimeout(() => setFoli('sad'), 900);
+      setError("Could not send the reset email. Please try again.");
+      setFoli("error");
+      window.setTimeout(() => setFoli("sad"), 900);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center p-4 overflow-hidden font-raleway bg-[#f5f4fb]">
-      <div className="bg-white rounded-[26px] shadow-2xl w-full max-w-[440px] z-10 relative overflow-hidden">
-        <div className="foli-bay h-40">
-          <Link href="/login" aria-label="Back to log in"
-            className="absolute left-4 top-4 text-gray-500/80 hover:text-gray-700 transition-colors z-10">
-            <ArrowLeft size={22} />
-          </Link>
-          <Foli state={isSubmitted ? 'happy' : foli} className="w-[128px] h-[128px]" />
-        </div>
+    <AuthShell foli={isSubmitted ? "happy" : foli} backHref="/login">
+      {!isSubmitted ? (
+        <>
+          <header className="mb-7">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#8a7392]">
+              Account recovery
+            </p>
+            <h1 className="mt-3 font-century text-4xl font-bold tracking-[0.04em] text-[#2b2440]">
+              Forgot password?
+            </h1>
+            <p className="mt-2 max-w-sm text-sm leading-6 text-[#6b6580]">
+              Enter your email and we will send you a secure link to reset your password.
+            </p>
+          </header>
 
-        <div className="p-6 md:p-8">
-          {!isSubmitted ? (
-            <>
-              <div className="mb-6">
-                <h1 className="text-2xl font-semibold text-gray-800 mb-1">Forgot password?</h1>
-                <p className="text-sm text-gray-500">Enter your email and we&apos;ll send you a reset link.</p>
-              </div>
-
-              {error && (
-                <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-xl text-center font-medium">{error}</div>
-              )}
-
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label htmlFor="email" className="block text-xs font-semibold text-gray-500 mb-1.5">Email</label>
-                  <input type="email" id="email" name="email" value={email} onChange={(e) => setEmail(e.target.value)} required
-                    placeholder="you@example.com" autoComplete="email" onFocus={() => setFoli('typing')} onBlur={() => setFoli('sad')}
-                    className="w-full text-[15px] text-gray-800 bg-[#fbfaff] border-[1.5px] border-gray-200 rounded-xl px-3.5 py-3 focus:outline-none focus:border-purple-400 focus:ring-4 focus:ring-purple-100 transition" />
-                </div>
-                <button type="submit"
-                  className="w-full py-3.5 text-white text-[15px] font-bold rounded-xl bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-500 shadow-lg shadow-purple-200 hover:brightness-105 active:translate-y-px transition">
-                  Send reset link
-                </button>
-              </form>
-
-              <div className="mt-5 text-center">
-                <Link href="/login" className="text-sm text-gray-500 hover:text-purple-600">Back to log in</Link>
-              </div>
-            </>
-          ) : (
-            <div className="text-center">
-              <h1 className="text-2xl font-semibold text-gray-800 mb-2">Check your email</h1>
-              <p className="text-sm text-gray-600 mb-1">We&apos;ve sent a reset link to</p>
-              <p className="text-sm font-semibold text-gray-800 mb-4">{email}</p>
-              <p className="text-sm text-gray-500 mb-6">Don&apos;t see it? Check spam, or try again.</p>
-              <Link href="/login"
-                className="block w-full py-3.5 text-white text-[15px] font-bold rounded-xl bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-500 shadow-lg shadow-purple-200 hover:brightness-105 transition text-center">
-                Back to log in
-              </Link>
-              <button onClick={() => { setIsSubmitted(false); setFoli('sad'); }}
-                className="mt-4 w-full text-sm text-gray-500 hover:text-purple-600">
-                Try a different email
-              </button>
+          {error && (
+            <div
+              role="alert"
+              className="mb-5 rounded-lg border border-[#ead7df] bg-[#f8edf1] px-4 py-3 text-sm font-medium text-[#8d5f70]"
+            >
+              {error}
             </div>
           )}
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label htmlFor="email" className="mb-2 block text-xs font-bold text-[#615b6d]">
+                Email
+              </label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                required
+                placeholder="you@example.com"
+                autoComplete="email"
+                onFocus={() => setFoli("typing")}
+                onBlur={() => setFoli("sad")}
+                className={inputClass}
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="spectrum-primary auth-spectrum w-full rounded-lg px-5 py-3.5 text-sm font-bold"
+            >
+              {isSubmitting ? "Sending reset link..." : "Send reset link"}
+            </button>
+          </form>
+
+          <div className="mt-6 text-center">
+            <Link
+              href="/login"
+              className="text-sm font-semibold text-[#776a96] transition-colors hover:text-[#685a88]"
+            >
+              Back to Login
+            </Link>
+          </div>
+        </>
+      ) : (
+        <div className="py-2 text-center">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#8a7392]">
+            Email sent
+          </p>
+          <h1 className="mt-3 font-century text-4xl font-bold tracking-[0.04em] text-[#2b2440]">
+            Check your email
+          </h1>
+          <p className="mt-4 text-sm leading-6 text-[#6b6580]">We sent a reset link to</p>
+          <p className="mt-1 break-all text-sm font-bold text-[#3f3a50]">{email}</p>
+          <p className="mt-4 text-sm leading-6 text-[#7c758b]">
+            It may take a moment to arrive. Please check your spam folder as well.
+          </p>
+
+          <Link
+            href="/login"
+            className="spectrum-primary auth-spectrum mt-7 block w-full rounded-lg px-5 py-3.5 text-sm font-bold"
+          >
+            Back to Login
+          </Link>
+          <button
+            type="button"
+            onClick={() => {
+              setIsSubmitted(false);
+              setFoli("sad");
+            }}
+            className="mt-4 text-sm font-semibold text-[#776a96] transition-colors hover:text-[#685a88] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e8e1f1]"
+          >
+            Try a different email
+          </button>
         </div>
-      </div>
-    </div>
+      )}
+    </AuthShell>
   );
 }

@@ -12,9 +12,31 @@ export default function ServiceWorkerRegistrar() {
   const reloading = useRef(false);
 
   useEffect(() => {
-    // Registering in dev fights with HMR — test the PWA against `npm run build && npm start`.
-    if (process.env.NODE_ENV !== 'production') return;
+    // Never register a worker during development; clear production-preview workers instead.
     if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+
+    // A worker installed by a production preview can keep controlling localhost
+    // and serve stale Next chunks. Development must always use the live server.
+    if (process.env.NODE_ENV !== 'production') {
+      navigator.serviceWorker.getRegistrations()
+        .then((registrations) =>
+          Promise.all(registrations.map((registration) => registration.unregister())),
+        )
+        .catch(() => {});
+
+      if ('caches' in window) {
+        window.caches.keys()
+          .then((keys) =>
+            Promise.all(
+              keys
+                .filter((key) => key.startsWith('sf-static-'))
+                .map((key) => window.caches.delete(key)),
+            ),
+          )
+          .catch(() => {});
+      }
+      return;
+    }
 
     let registration: ServiceWorkerRegistration | undefined;
 
