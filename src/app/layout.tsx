@@ -126,7 +126,11 @@ export default function RootLayout({
             is a RAW inline <script> so it runs during HTML parse — a next/script
             beforeInteractive tag loads through Next's own JS, which is exactly what
             is slow on a bad connection, so the timer would never start in time. */}
-        <div id="foli-boot" dangerouslySetInnerHTML={{ __html: BOOT_HTML }} />
+        <div
+          id="foli-boot"
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{ __html: BOOT_HTML }}
+        />
         <script dangerouslySetInnerHTML={{ __html: BOOT_REVEAL }} />
         <Script
           id="pwa-install-capture"

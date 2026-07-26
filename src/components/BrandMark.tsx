@@ -7,7 +7,7 @@ import React from "react";
  */
 export default function BrandMark({
   className = "w-7 h-7",
-  title = "SmartFolio",
+  title = "Smartfolio-AI",
 }: {
   className?: string;
   title?: string;

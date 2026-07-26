@@ -6,6 +6,10 @@ body {
   overflow-x: clip;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 /* Prevent iOS focus-zoom on form fields (fires when font-size < 16px) */
 @media (max-width: 1023px) {
   input,
@@ -261,9 +265,12 @@ select {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
   .foli .foli-float, .foli .eye-open, .tk-foli .foli,
   .foli.idle .pupil, .foli.idle .spark, .foli.idle .foli-float { animation: none !important; }
   [class*="animate-[toastIn"] { animation: none !important; }
+  [data-audit-ignore] > div,
+  .animate-bounce { animation: none !important; }
 }
 
 /* ---------------------------------------------------------------------------
@@ -456,4 +463,42 @@ html[data-pwa-standalone] .sf-splash {
 
 .font-century {
   font-family: var(--font-century), sans-serif;
+}
+
+/* Landing hero atmosphere: fine texture and restrained motion only. */
+.hero-grain {
+  background-image: radial-gradient(rgba(56, 50, 76, 0.22) 0.45px, transparent 0.55px);
+  background-size: 4px 4px;
+  mask-image: linear-gradient(to bottom, transparent 2%, black 22%, black 78%, transparent 98%);
+}
+
+.hero-light-trail {
+  filter: blur(1.5px);
+  animation: hero-trail-drift 14s ease-in-out infinite alternate;
+}
+
+.hero-light-trail-delayed {
+  animation-delay: -7s;
+  animation-duration: 18s;
+}
+
+.hero-scroll-cue {
+  animation: hero-scroll-float 2.8s ease-in-out infinite;
+}
+
+@keyframes hero-trail-drift {
+  from { margin-left: -7px; opacity: 0.45; }
+  to { margin-left: 7px; opacity: 0.8; }
+}
+
+@keyframes hero-scroll-float {
+  0%, 100% { transform: translateY(0); opacity: 0.62; }
+  50% { transform: translateY(6px); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-light-trail,
+  .hero-scroll-cue {
+    animation: none;
+  }
 }
