@@ -8,7 +8,6 @@ import {
   FiArrowRight, FiUpload, FiSearch,
   FiExternalLink,
 } from 'react-icons/fi';
-import ScoreRing from '@/components/ScoreRing';
 import { apiFetch, getAccessToken } from '@/lib/api';
 
 // --- Sub-components ---
@@ -36,6 +35,7 @@ const metricTones: Record<string, string> = {
   Best: 'sf-primary ring-[#eadff3] shadow-sm',
 };
 const chartColors = ['#EAF4FF', '#DCEEFF', '#CFE7FF', '#C2DFFF', '#B5D8FF', '#A8D0FF', '#9BC9FF', '#8EC2FF'];
+const categoryBarColors = ['#2563EB', '#10B981', '#F59E0B', '#8B5CF6', '#F43F5E', '#0EA5E9'];
 const categoryLabels: Record<string, string> = { ats_compatibility: 'ATS', content_quality: 'Content', experience_strength: 'Experience', skills_alignment: 'Skills', achievement_impact: 'Impact', formatting_clarity: 'Formatting' };
 const scoreAccentColor = (score = 0) => {
   if (score >= 80) return '#10B981';
@@ -329,22 +329,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Row 2: Stats Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
-            {/* Resume Score Card */}
-            <div 
-              onClick={() => latestAnalysis && router.push(`/analysis-results?resumeId=${latestAnalysis.resumeId}`)}
-              className="bg-white p-5 rounded-3xl shadow-sm border border-gray-50 flex flex-col items-center justify-center text-center cursor-pointer hover:shadow-md transition-all"
-            >
-              <h3 className="font-raleway text-gray-500 text-[9px] font-bold mb-3 uppercase tracking-widest">Resume</h3>
-              {latestAnalysis ? (
-                <ScoreRing score={latestAnalysis.overallScore} size={80} strokeWidth={6} />
-              ) : (
-                <div className="w-20 h-20 rounded-full bg-gray-50 flex items-center justify-center text-gray-500">
-                  <FiFileText size={24} />
-                </div>
-              )}
-            </div>
-
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             <StatCard
               title="Interviews"
               value={interviewSessions.length}
@@ -430,12 +415,12 @@ export default function DashboardPage() {
                     <div className="mt-2 flex gap-2 px-1">{[...resumeDashboard.analyses].slice(0, 8).reverse().map((analysis) => <span key={analysis.analysisId} className="min-w-0 flex-1 truncate text-center text-[10px] font-bold text-slate-500">{new Date(analysis.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>)}</div>
                   </div>
                   <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    {Object.entries(resumeDashboard.summary.categoryAverages).map(([key, score], index) => <div key={key} className="rounded-xl border border-white bg-white/80 p-2.5 shadow-sm"><div className="mb-1.5 flex items-center justify-between gap-2"><span className="truncate text-[10px] font-bold text-slate-500">{categoryLabels[key] || key}</span><span className="text-[10px] font-black" style={{ color: scoreAccentColor(score || 0) }}>{score ?? '—'}%</span></div><div className="h-1.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full" style={{ width: `${score || 0}%`, backgroundColor: chartColors[index % chartColors.length] }} /></div></div>)}
+                    {Object.entries(resumeDashboard.summary.categoryAverages).map(([key, score], index) => <div key={key} className="rounded-xl border border-white bg-white/80 p-2.5 shadow-sm"><div className="mb-1.5 flex items-center justify-between gap-2"><span className="truncate text-[10px] font-bold text-slate-500">{categoryLabels[key] || key}</span><span className="text-[10px] font-black" style={{ color: categoryBarColors[index % categoryBarColors.length] }}>{score ?? '—'}%</span></div><div className="h-1.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full" style={{ width: `${score || 0}%`, backgroundColor: categoryBarColors[index % categoryBarColors.length] }} /></div></div>)}
                   </div>
                 </div>
 
                 <div>
-                  <h4 className="mb-4 font-raleway text-[10px] font-bold uppercase tracking-widest text-gray-500">Resume library</h4>
+                  <h4 className="mb-4 font-raleway text-[10px] font-bold uppercase tracking-widest text-gray-500">Recent resume reviews</h4>
                   <div className="max-h-52 space-y-2 overflow-auto pr-1">
                     {resumeDashboard.resumes.map((resume) => (
                       <button key={resume.resumeId} onClick={() => resume.latestAnalysis ? router.push(`/analysis-results?resumeId=${resume.resumeId}`) : router.push('/upload-resume')} className="flex w-full items-center gap-3 rounded-2xl border border-violet-100 bg-white/70 p-3 text-left transition hover:border-violet-200 hover:bg-violet-50/60 hover:shadow-sm">
@@ -451,21 +436,6 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {resumeDashboard.analyses.length > 0 && (
-                <div className="mt-7 border-t border-slate-100 pt-6">
-                  <h4 className="mb-4 font-raleway text-[10px] font-bold uppercase tracking-widest text-gray-500">Complete review history</h4>
-                  <div className="max-h-72 space-y-2 overflow-auto pr-1">
-                    {resumeDashboard.analyses.map((analysis) => (
-                      <button key={analysis.analysisId} onClick={() => router.push(`/analysis-results?resumeId=${analysis.resumeId}&analysisId=${analysis.analysisId}`)} className="grid w-full grid-cols-[1fr_auto] items-center gap-3 rounded-xl bg-slate-50 px-4 py-3 text-left transition hover:bg-indigo-50 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto]">
-                        <span className="truncate font-century text-sm font-bold text-slate-700">{analysis.fileName || 'Resume'}</span>
-                        <span className="hidden truncate font-raleway text-xs font-semibold text-slate-500 sm:block">{analysis.targetSource === 'job_description' ? `Job: ${analysis.targetRole || 'Supplied job description'}` : analysis.targetSource === 'profile_target' ? `Target: ${analysis.targetRole || 'Profile role'}` : 'General readiness'}</span>
-                        <span className="hidden font-raleway text-xs text-slate-500 sm:block">{new Date(analysis.createdAt).toLocaleDateString()}</span>
-                        <span className="font-century text-sm font-black text-indigo-600">{analysis.overallScore}%</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           )}
 

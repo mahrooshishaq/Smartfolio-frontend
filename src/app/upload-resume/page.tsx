@@ -296,9 +296,8 @@ function ResumeUploadContent() {
           <h1 className="font-baloo text-xl ml-4 tracking-wide text-slate-800">SmartFolio - AI</h1>
         </div>
 
-        {/* Suppressed once we know a usable CV is on file — "Don't have a resume
-            yet?" directly above "Using your saved CV" contradicts itself. */}
-        {!savedIsUsable && (
+        {/* Show the builder whenever there is no active saved-CV shortcut. */}
+        {(!savedIsUsable || !useSaved) && (
           <div className="mb-5 w-full max-w-3xl rounded-3xl border border-indigo-100 bg-indigo-50/70 p-5 sm:flex sm:items-center sm:justify-between">
             <div><h2 className="font-century text-lg font-black text-slate-800">Don&apos;t have a resume yet?</h2><p className="mt-1 text-sm text-slate-500">Build one step by step with guided sections, examples, and SmartFolio suggestions.</p></div>
             <button onClick={createBlankResume} disabled={isUploading} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-xs font-bold text-white hover:bg-indigo-700 disabled:opacity-50 sm:mt-0"><FilePlus2 size={16} /> Build with Folio</button>
@@ -428,10 +427,17 @@ function ResumeUploadContent() {
             </>
           )}
 
-          {/* Optional Job Description Input */}
+          {/* Analysis lens */}
           <div className="mt-8 px-4">
+            <div className="mb-3 rounded-2xl border border-blue-100 bg-blue-50/60 px-4 py-3">
+              <p className="font-century text-sm font-black text-slate-800">How SmartFolio will analyze this resume</p>
+              <p className="mt-1 text-xs leading-5 text-slate-600">
+                Leave this blank to score your resume against your saved career target
+                {targetRole ? ` (${targetRole})` : ''}. Paste a job description to switch into a targeted match lens that checks your CV against that role&apos;s requirements.
+              </p>
+            </div>
             <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3">
-              Target Job Description <span className="normal-case tracking-normal">— optional</span>
+              Job description for targeted analysis
             </label>
             <textarea 
               placeholder={`Paste at least 50 characters for a specific job match. Leave blank to analyze for ${targetRole || 'your career target'}.`}
@@ -490,7 +496,7 @@ function ResumeUploadContent() {
           {showSavedCard && !isUploading && (
             <button
               onClick={analyzeSavedResume}
-              className="font-raleway mx-auto mt-6 flex w-full max-w-xs items-center justify-center gap-2 bg-[#4F46E5] hover:bg-[#4338CA] text-white px-6 py-3 rounded-2xl text-sm font-semibold transition-all shadow-lg shadow-blue-100 active:scale-[0.98]"
+              className="sf-dark-cta font-raleway mt-6 flex items-center justify-center gap-2 rounded-2xl px-6 py-3.5 text-sm font-semibold transition-all active:scale-[0.98]"
             >
               Start AI Analysis
             </button>
@@ -498,7 +504,7 @@ function ResumeUploadContent() {
           {file && !isUploading && (
             <button
               onClick={handleUpload}
-              className="font-raleway mx-auto mt-6 flex w-full max-w-xs items-center justify-center gap-2 bg-[#4F46E5] hover:bg-[#4338CA] text-white px-6 py-3 rounded-2xl text-sm font-semibold transition-all shadow-lg shadow-blue-100 active:scale-[0.98]"
+              className="sf-dark-cta font-raleway mt-6 flex items-center justify-center gap-2 rounded-2xl px-6 py-3.5 text-sm font-semibold transition-all active:scale-[0.98]"
             >
               Start AI Analysis
             </button>

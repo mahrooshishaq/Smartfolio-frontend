@@ -1,12 +1,12 @@
-import { FiVolume2, FiMic, FiZap, FiSend, FiVideo, FiBriefcase, FiX } from 'react-icons/fi';
-import { TIER_OPTIONS, SENIORITY_OPTIONS, INTERVIEWER_STYLE_OPTIONS, INTERVIEWER } from './constants';
-import type { LengthTier, Seniority, InterviewerStyle, ProgressPoint, ProgressSummary } from './types';
+﻿import { FiVolume2, FiMic, FiZap, FiSend, FiBriefcase, FiX } from 'react-icons/fi';
+import { TIER_OPTIONS, SENIORITY_OPTIONS } from './constants';
+import type { LengthTier, Seniority, ProgressPoint, ProgressSummary } from './types';
 import type { JobHandoff } from '@/lib/job-handoff';
 
 function Stat({ label, value }: { label: string; value: number | null }) {
   return (
     <div className="bg-gray-50 rounded-xl p-3 text-center">
-      <p className="font-century text-2xl font-black text-slate-800 tabular-nums">{value ?? '—'}</p>
+      <p className="font-century text-2xl font-black text-slate-800 tabular-nums">{value == null ? '—' : `${value}%`}</p>
       <p className="font-raleway text-[10px] uppercase tracking-wider text-gray-400">{label}</p>
     </div>
   );
@@ -29,7 +29,7 @@ function Sparkline({ scores, delta }: { scores: number[]; delta: number | null }
       </svg>
       {delta !== null && (
         <span className={`font-raleway text-xs font-bold whitespace-nowrap ${up ? 'text-emerald-600' : 'text-rose-500'}`}>
-          {up ? '▲' : '▼'} {Math.abs(delta)}
+          {up ? 'Up' : 'Down'} {Math.abs(delta)}%
         </span>
       )}
     </div>
@@ -47,8 +47,6 @@ interface InputStageProps {
   setFocusInput: (v: string) => void;
   useResume: boolean;
   setUseResume: (v: boolean) => void;
-  interviewerStyle: InterviewerStyle;
-  setInterviewerStyle: (v: InterviewerStyle) => void;
   onStart: () => void;
   sttSupported: boolean;
   progress: { points: ProgressPoint[]; summary: ProgressSummary } | null;
@@ -60,7 +58,6 @@ interface InputStageProps {
 export function InputStage({
   jobDescription, setJobDescription, lengthTier, setLengthTier,
   seniority, setSeniority, focusInput, setFocusInput, useResume, setUseResume,
-  interviewerStyle, setInterviewerStyle,
   onStart, sttSupported, progress,
   prefilledFrom, onClearPrefill,
 }: InputStageProps) {
@@ -94,7 +91,7 @@ export function InputStage({
           </div>
         )}
 
-        {/* Arrived from a job card — say which posting was loaded, so a
+        {/* Arrived from a job card - say which posting was loaded, so a
             pre-filled textarea reads as intentional rather than as leftover
             text from a previous session. */}
         {prefilledFrom && (
@@ -103,7 +100,7 @@ export function InputStage({
             <div className="flex-1 min-w-0">
               <p className="font-raleway text-xs font-bold text-slate-700 truncate">
                 {prefilledFrom.title}
-                {prefilledFrom.company && <span className="font-normal text-gray-500"> · {prefilledFrom.company}</span>}
+                {prefilledFrom.company && <span className="font-normal text-gray-500"> - {prefilledFrom.company}</span>}
               </p>
               <p className="font-raleway text-[11px] text-gray-500 mt-0.5">
                 Description loaded from your jobs. Adjust anything below, then start.
@@ -154,36 +151,6 @@ export function InputStage({
                   </div>
                   <p className="font-raleway text-[11px] text-gray-500 mb-1">{t.count}</p>
                   <p className="font-raleway text-[11px] text-gray-400 leading-snug">{t.desc}</p>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* INTERVIEWER STYLE — how Folio appears on the call (5.1 slot) */}
-        <div className="mt-6">
-          <label className="font-raleway block text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
-            Your interviewer
-          </label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" role="tablist" aria-label="Interviewer style">
-            {INTERVIEWER_STYLE_OPTIONS.map((s) => {
-              const selected = interviewerStyle === s.id;
-              return (
-                <button
-                  key={s.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={selected}
-                  onClick={() => setInterviewerStyle(s.id)}
-                  className={`text-left rounded-2xl border p-4 transition-all ${selected ? 'border-indigo-500 bg-indigo-50 shadow-sm' : 'border-gray-200 bg-white hover:border-indigo-300'}`}
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className={`w-7 h-7 grid place-items-center rounded-lg ${selected ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-100 text-gray-400'}`}>
-                      {s.id === 'avatar' ? <FiVideo size={14} /> : <FiVolume2 size={14} />}
-                    </span>
-                    <span className="font-century text-sm font-bold text-slate-800">{s.label}</span>
-                  </div>
-                  <p className="font-raleway text-[11px] text-gray-400 leading-snug">{s.desc.replace('Folio', INTERVIEWER.name)}</p>
                 </button>
               );
             })}
@@ -244,7 +211,7 @@ export function InputStage({
           <button
             onClick={onStart}
             disabled={jobDescription.trim().length < 20}
-            className="font-raleway flex items-center gap-2 bg-[#4F46E5] hover:bg-[#4338CA] text-white px-8 py-3 rounded-2xl font-semibold text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="sf-dark-cta font-raleway flex items-center justify-center gap-2 rounded-2xl px-8 py-3.5 text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-50"
           >
             <FiSend size={16} /> Start Interview
           </button>

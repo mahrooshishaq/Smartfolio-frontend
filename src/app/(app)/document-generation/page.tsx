@@ -246,11 +246,11 @@ export default function DocumentGenerationPage() {
                 {DOC_TYPES.find((d) => d.type === docType)?.title}
               </h3>
               {renderFormFields()}
-              <div className="flex justify-end pt-2">
+              <div className="pt-2">
                 <button
                   onClick={generate}
                   disabled={!isFormValid()}
-                  className="font-raleway flex items-center gap-2 bg-[#4F46E5] hover:bg-[#4338CA] text-white px-10 py-4 rounded-2xl font-semibold text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="sf-dark-cta font-raleway flex items-center justify-center gap-2 rounded-2xl px-10 py-4 text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <FiSend size={16} /> Generate
                 </button>
@@ -293,7 +293,7 @@ export default function DocumentGenerationPage() {
                 </button>
                 <button
                   onClick={restart}
-                  className="font-raleway flex items-center gap-2 bg-white border border-gray-200 hover:bg-gray-50 text-slate-700 px-8 py-3 rounded-2xl font-semibold text-sm transition-all"
+                  className="sf-dark-cta font-raleway flex items-center justify-center gap-2 rounded-2xl px-8 py-3 text-sm font-semibold transition-all sm:w-auto"
                 >
                   <FiRefreshCw size={16} /> Generate Another
                 </button>

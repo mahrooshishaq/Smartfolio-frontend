@@ -3,21 +3,16 @@
 import { useEffect, useState } from 'react';
 import Foli from './Foli';
 
-/**
- * Full-screen transition shown after successful auth before the app redirects.
- * Foli fills the screen with a happy expression,
- * holds for `durationMs`, then fades and calls `onDone` (do the redirect there).
- */
-export default function FoliSuccessTakeover({
+export default function AuthTransition({
   show,
-  title = "You're in!",
-  subtitle = 'Taking you to your dashboard…',
-  durationMs = 2600,
+  title,
+  subtitle,
+  durationMs = 1500,
   onDone,
 }: {
   show: boolean;
-  title?: string;
-  subtitle?: string;
+  title: string;
+  subtitle: string;
   durationMs?: number;
   onDone?: () => void;
 }) {
@@ -25,13 +20,14 @@ export default function FoliSuccessTakeover({
 
   useEffect(() => {
     if (!show) return;
-    const fade = setTimeout(() => setLeaving(true), durationMs);
-    const done = setTimeout(() => onDone?.(), durationMs + 500);
+    setLeaving(false);
+    const fade = window.setTimeout(() => setLeaving(true), durationMs);
+    const done = window.setTimeout(() => onDone?.(), durationMs + 320);
     return () => {
-      clearTimeout(fade);
-      clearTimeout(done);
+      window.clearTimeout(fade);
+      window.clearTimeout(done);
     };
-    // onDone intentionally excluded — a new closure each render must not re-arm timers.
+    // onDone intentionally excluded so a fresh closure does not restart timers.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [show, durationMs]);
 

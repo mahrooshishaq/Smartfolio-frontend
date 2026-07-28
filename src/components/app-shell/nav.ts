@@ -7,7 +7,6 @@ import {
   FiFile,
   FiBriefcase,
   FiClipboard,
-  FiHelpCircle,
   FiSettings,
 } from 'react-icons/fi';
 
@@ -38,7 +37,6 @@ export const NAV_ITEMS: NavItem[] = [
 ];
 
 export const SUPPORT_ITEMS: NavItem[] = [
-  { href: '#', label: 'Get Started', icon: FiHelpCircle, placement: 'more' },
   { href: '/dashboard/settings', label: 'Settings', icon: FiSettings, placement: 'more' },
 ];
 

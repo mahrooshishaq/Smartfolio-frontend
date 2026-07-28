@@ -288,7 +288,7 @@ function ResultsContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#EFF6F2] p-3 font-raleway text-slate-900 md:p-5 xl:p-6">
+    <div className="min-h-screen bg-[var(--sf-bg)] p-3 font-raleway text-slate-900 md:p-5 xl:p-6">
       <div className="w-full">
         <div className="mb-6 flex items-center justify-between gap-4">
           <button onClick={() => router.back()} className="rounded-full bg-white p-2.5 shadow-sm transition hover:shadow-md" aria-label="Go back">
@@ -758,14 +758,22 @@ function StructuredResumePreview({
 
 function ScoreItem({ label, score }: { label: string; score: number }) {
   return (
-    <div className="flex items-center justify-between gap-4 border-b border-gray-50 py-3.5 last:border-0">
-      <div className="min-w-0">
-        <span className="text-sm font-bold text-slate-700">{label}</span>
-        <span className={`ml-2 whitespace-nowrap rounded-md px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide ${scoreBadge(score)}`}>
-          {score >= 70 ? 'Strong' : score < 40 ? 'Needs work' : 'Developing'}
-        </span>
+    <div className="border-b border-gray-50 py-3.5 last:border-0">
+      <div className="mb-2 flex items-center justify-between gap-4">
+        <div className="min-w-0">
+          <span className="text-sm font-bold text-slate-700">{label}</span>
+          <span className={`ml-2 whitespace-nowrap rounded-md px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide ${scoreBadge(score)}`}>
+            {score >= 70 ? 'Strong' : score < 40 ? 'Needs work' : 'Developing'}
+          </span>
+        </div>
+        <span className="shrink-0 text-sm font-bold text-slate-800">{score}%</span>
       </div>
-      <span className="shrink-0 text-sm font-bold text-slate-800">{score}/100</span>
+      <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+        <div
+          className="h-full rounded-full transition-all"
+          style={{ width: `${Math.max(0, Math.min(100, score))}%`, backgroundColor: scoreColor(score) }}
+        />
+      </div>
     </div>
   );
 }

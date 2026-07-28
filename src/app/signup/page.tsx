@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { FaEye, FaEyeSlash, FaGoogle } from "react-icons/fa";
 import AuthShell from "@/components/auth/AuthShell";
 import type { FoliState } from "@/components/foli/Foli";
-import FoliSuccessTakeover from "@/components/foli/FoliSuccessTakeover";
+import AuthTransition from "@/components/foli/AuthTransition";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
@@ -89,7 +89,7 @@ export default function SignupPage() {
 
   return (
     <AuthShell foli={foli}>
-      <FoliSuccessTakeover
+      <AuthTransition
         show={done}
         title="Account created."
         subtitle="Sending your verification code..."

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AnimatedBackground from '@/components/AnimatedBackground';
@@ -183,8 +183,8 @@ export default function OnboardingPage() {
         <div className="relative z-10 flex flex-col items-center justify-center min-h-screen p-4">
           <div className="text-center animate-fade-in">
             <div className="mb-6">
-              <div className="w-20 h-20 mx-auto bg-indigo-100 rounded-full flex items-center justify-center mb-6">
-                <span className="text-3xl">🎉</span>
+              <div className="w-20 h-20 mx-auto sf-primary rounded-3xl flex items-center justify-center mb-6 shadow-lg">
+                <span className="font-century text-2xl font-black text-white">SF</span>
               </div>
               <h1 className="font-century text-4xl font-black text-slate-800 mb-3">
                 Welcome aboard, {displayName}!

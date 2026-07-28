@@ -16,8 +16,10 @@
   --sf-action-ink: #2b2440;
   --sf-action-gradient: linear-gradient(135deg, #d6e4ff 0%, #cf9fff 42%, #d18ad7 100%);
   --sf-action-gradient-hover: linear-gradient(135deg, #cbdcff 0%, #c994f6 42%, #ca7fd0 100%);
-  --sf-blue-action-gradient: linear-gradient(135deg, #93c5fd 0%, #3b82f6 48%, #2563eb 100%);
-  --sf-blue-action-gradient-hover: linear-gradient(135deg, #7db8fd 0%, #2563eb 52%, #1d4ed8 100%);
+  --sf-blue-action-gradient: linear-gradient(135deg, #93c5fd 0%, #3b82f6 42%, #1d4ed8 72%, #0f2f73 100%);
+  --sf-blue-action-gradient-hover: linear-gradient(135deg, #7db8fd 0%, #2563eb 42%, #1e40af 72%, #0b245b 100%);
+  --sf-dark-action: #172338;
+  --sf-dark-action-hover: #0f172a;
   --sf-blue: #6e7fb8;
   --sf-blue-soft: #f7faff;
   --sf-green: #10b981;
@@ -541,6 +543,18 @@ html[data-pwa-standalone] .sf-splash {
 
 .sf-primary:hover {
   filter: brightness(0.96) saturate(1.04);
+  transform: translateY(-1px);
+}
+
+.sf-dark-cta {
+  width: 100%;
+  color: white;
+  background: var(--sf-dark-action);
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.18);
+}
+
+.sf-dark-cta:hover {
+  background: var(--sf-dark-action-hover);
   transform: translateY(-1px);
 }
 

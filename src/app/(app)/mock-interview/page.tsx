@@ -3,7 +3,6 @@ import FoliLoader from '@/components/foli/FoliLoader';
 import { MockInterviewSkeleton } from '@/components/SkeletonScreens';
 import { useEffect, useState, useCallback, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useWebcam } from './useWebcam';
 import { ResultsStage } from './ResultsStage';
 import { InputStage } from './InputStage';
 import {
@@ -11,12 +10,12 @@ import {
   FiLoader, FiCheckCircle, FiXCircle, FiAlertCircle,
   FiRefreshCw, FiSend, FiArrowLeft, FiUser, FiCpu, FiZap, FiArrowRight,
   FiStar, FiTrendingUp, FiVolume2, FiSquare, FiRotateCcw,
-  FiVideo, FiVideoOff, FiPhoneOff, FiMessageSquare, FiWifi, FiX, FiClock
+  FiPhoneOff, FiMessageSquare, FiX, FiClock
 } from 'react-icons/fi';
 import { useSpeech, mcqSpeechText } from './useSpeech';
 import { InterviewerTile } from './InterviewerTile';
 import type {
-  Round, LengthTier, Seniority, InterviewerStyle, PublicQuestion, Evaluation, ProgressPoint, ProgressSummary,
+  Round, LengthTier, Seniority, PublicQuestion, Evaluation, ProgressPoint, ProgressSummary,
 } from './types';
 import {
   ROUND_META, ROUND_ORDER, TIER_OPTIONS, SENIORITY_OPTIONS, INTERVIEWER, fmtTime,
@@ -67,17 +66,6 @@ function MockInterviewContent() {
   const [seniority, setSeniority] = useState<Seniority | ''>('');
   const [focusInput, setFocusInput] = useState('');
   const [useResume, setUseResume] = useState(true);
-  // Interviewer look (orb vs animated avatar) — the user's choice, remembered
-  // across sessions. Read from localStorage after mount (SSR-safe).
-  const [interviewerStyle, setInterviewerStyle] = useState<InterviewerStyle>('avatar');
-  useEffect(() => {
-    const saved = localStorage.getItem('interviewerStyle');
-    if (saved === 'orb' || saved === 'avatar') setInterviewerStyle(saved);
-  }, []);
-  const chooseInterviewerStyle = (s: InterviewerStyle) => {
-    setInterviewerStyle(s);
-    localStorage.setItem('interviewerStyle', s);
-  };
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [questions, setQuestions] = useState<PublicQuestion[]>([]);
   const [answers, setAnswers] = useState<Record<number, string | number>>({});
@@ -92,8 +80,7 @@ function MockInterviewContent() {
   const [followUpAnswers, setFollowUpAnswers] = useState<Record<number, string>>({});
   const [awaitingFollowUp, setAwaitingFollowUp] = useState(false);
 
-  // Video-call experience (Phase 3)
-  const { videoRef, cameraOn, cameraError, start: startCamera, stop: stopCamera, toggle: toggleCamera } = useWebcam();
+  // Voice-call experience.
   const [captionsOn, setCaptionsOn] = useState(true);
   const [elapsed, setElapsed] = useState(0); // seconds since the call began
   const [connectPhase, setConnectPhase] = useState<'dialing' | 'joined'>('dialing');
@@ -386,7 +373,6 @@ function MockInterviewContent() {
   useEffect(() => {
     if (stage !== 'connecting') return;
     setConnectPhase('dialing');
-    startCamera();
     const t1 = setTimeout(() => setConnectPhase('joined'), 1800);
     const t2 = setTimeout(() => setStage('round_intro'), 3200);
     return () => { clearTimeout(t1); clearTimeout(t2); };
@@ -408,12 +394,6 @@ function MockInterviewContent() {
     setImmersive(inCall);
     return () => setImmersive(false);
   }, [stage, setImmersive]);
-
-  // Release the camera once the call is over.
-  useEffect(() => {
-    if (stage === 'results' || stage === 'input') stopCamera();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stage]);
 
   // Reset the typed-answer fallback per question; default it ON when STT is unsupported (Phase 4.3).
   useEffect(() => {
@@ -708,7 +688,6 @@ function MockInterviewContent() {
     setRestHolding(false);
     setQuestionTimeLeft(null);
     restActionRef.current = null;
-    stopCamera();
     setElapsed(0);
     setCaptionsOn(true);
     setConnectPhase('dialing');
@@ -791,16 +770,16 @@ function MockInterviewContent() {
           {/* End-interview confirm — platform-styled, replaces window.confirm */}
           {confirmEnd && (
             <div className="fixed inset-0 z-[70] grid place-items-center bg-black/60 backdrop-blur-sm p-4">
-              <div role="dialog" aria-modal="true" aria-label="End interview" className="w-full max-w-sm rounded-3xl bg-[#0F1424] border border-white/10 p-6 shadow-2xl text-center">
+              <div role="dialog" aria-modal="true" aria-label="End interview" className="w-full max-w-sm rounded-3xl border border-rose-100 bg-white p-6 shadow-2xl text-center">
                 <div className="mx-auto mb-3 w-12 h-12 grid place-items-center rounded-2xl bg-rose-500/15 text-rose-400"><FiPhoneOff size={22} /></div>
-                <h4 className="font-century text-white font-bold text-lg">End the interview?</h4>
+                <h4 className="font-century text-slate-800 font-bold text-lg">End the interview?</h4>
                 <p className="font-raleway text-slate-400 text-sm mt-1.5">
                   You&apos;ll get your evaluation right away. Questions you haven&apos;t answered will be scored as skipped.
                 </p>
                 <div className="mt-5 flex gap-3">
                   <button
                     onClick={() => setConfirmEnd(false)}
-                    className="font-raleway flex-1 h-11 rounded-2xl bg-white/5 border border-white/10 text-slate-200 font-semibold text-sm hover:bg-white/10 transition"
+                    className="font-raleway flex-1 h-11 rounded-2xl border border-slate-200 bg-white text-slate-600 font-semibold text-sm hover:bg-slate-50 transition"
                   >
                     Keep going
                   </button>
@@ -841,7 +820,6 @@ function MockInterviewContent() {
               seniority={seniority} setSeniority={setSeniority}
               focusInput={focusInput} setFocusInput={setFocusInput}
               useResume={useResume} setUseResume={setUseResume}
-              interviewerStyle={interviewerStyle} setInterviewerStyle={chooseInterviewerStyle}
               onStart={generateTest}
               sttSupported={sttSupported}
               progress={progress}
@@ -858,23 +836,22 @@ function MockInterviewContent() {
           {/* CONNECTING (call ceremony) */}
           {stage === 'connecting' && (
             <div className="max-w-4xl mx-auto">
-              <div className="relative overflow-hidden rounded-[2rem] bg-[#0A0E1A] border border-white/5 p-8 md:p-14 text-center shadow-2xl">
-                <div className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-96 rounded-full bg-indigo-500/20 blur-3xl" />
+              <div className="relative overflow-hidden rounded-[2rem] border border-violet-100 bg-white/90 p-8 text-center shadow-sm md:p-14">
                 <div className="relative z-10 flex flex-col items-center">
                   <div className="relative mb-6 grid place-items-center">
-                    {connectPhase === 'dialing' && <span className="absolute inset-0 m-auto w-24 h-24 rounded-full bg-indigo-500/30 animate-ping" />}
-                    <div className="relative w-24 h-24 rounded-full grid place-items-center bg-gradient-to-br from-indigo-400 via-violet-500 to-blue-500 shadow-lg">
+                    {connectPhase === 'dialing' && <span className="absolute inset-0 m-auto w-24 h-24 rounded-full bg-blue-300/25 animate-ping" />}
+                    <div className="relative w-24 h-24 rounded-full grid place-items-center sf-primary shadow-lg">
                       <FiUser className="text-white" size={40} />
                     </div>
                   </div>
-                  <p className="font-century text-2xl font-black text-white mb-2">
+                  <p className="font-century text-2xl font-black text-slate-800 mb-2">
                     {connectPhase === 'dialing' ? `Connecting to ${INTERVIEWER.name}…` : `${INTERVIEWER.name} has joined`}
                   </p>
-                  <p className="font-raleway text-sm text-slate-400">
-                    {connectPhase === 'dialing' ? 'Setting up your interview room' : 'Your interview is about to begin'}
+                  <p className="font-raleway text-sm text-slate-500">
+                    {connectPhase === 'dialing' ? 'Setting up your voice interview' : 'Your interview is about to begin'}
                   </p>
-                  <div className="mt-8 inline-flex items-center gap-2 text-slate-500 text-xs font-raleway">
-                    <FiVideo size={14} /> {cameraOn ? 'Camera ready' : (cameraError || 'Waiting for camera…')}
+                  <div className="mt-8 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700">
+                    <FiMic size={14} /> Voice-only session
                   </div>
                 </div>
               </div>
@@ -911,18 +888,15 @@ function MockInterviewContent() {
           {/* ROUND STAGE — VIDEO CALL */}
           {stage === 'round' && activeQuestion && (
             <div className="max-w-5xl mx-auto">
-              <div className="relative overflow-hidden rounded-[2rem] bg-[#0A0E1A] border border-white/5 shadow-2xl">
-                {/* ambient glows */}
-                <div className="pointer-events-none absolute -top-24 -left-16 w-96 h-96 rounded-full bg-indigo-600/15 blur-3xl" />
-                <div className="pointer-events-none absolute -bottom-24 -right-10 w-96 h-96 rounded-full bg-blue-600/10 blur-3xl" />
+              <div className="relative overflow-hidden rounded-[2rem] border border-violet-100 bg-gradient-to-br from-white via-[#fbfaff] to-blue-50/60 shadow-sm">
 
                 {/* TOP BAR */}
                 <div className="relative z-10 flex items-center gap-3 px-6 py-4 flex-wrap">
                   <span className="inline-flex items-center gap-2 rounded-full bg-rose-500/10 border border-rose-500/25 px-3 py-1.5 text-rose-400 text-[11px] font-bold tracking-wide">
                     <span className="w-2 h-2 rounded-full bg-rose-400 animate-pulse" /> REC
                   </span>
-                  <span className="text-slate-200 text-xs font-bold tabular-nums">{fmtTime(elapsed)}</span>
-                  <span className="inline-flex items-center gap-2 rounded-full bg-white/5 border border-white/10 px-3 py-1.5 text-slate-300 text-[11px] font-semibold">
+                  <span className="text-slate-600 text-xs font-bold tabular-nums">{fmtTime(elapsed)}</span>
+                  <span className="inline-flex items-center gap-2 rounded-full bg-white/80 border border-slate-100 px-3 py-1.5 text-slate-600 text-[11px] font-semibold">
                     {ROUND_META[currentRound].title}
                     <span className="text-slate-500">· Q{currentQuestionIdx + 1}/{currentRoundQuestions.length}</span>
                   </span>
@@ -933,7 +907,7 @@ function MockInterviewContent() {
                       className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-bold tabular-nums border ${
                         questionTimeLeft <= TIMER_WARN_SECONDS
                           ? 'bg-amber-500/15 border-amber-400/40 text-amber-300'
-                          : 'bg-white/5 border-white/10 text-slate-300'
+                          : 'bg-white/80 border-slate-100 text-slate-600'
                       }`}
                     >
                       <FiClock size={12} /> {fmtTime(Math.max(0, questionTimeLeft))}
@@ -941,17 +915,17 @@ function MockInterviewContent() {
                     </span>
                   )}
                   <div className="flex-1" />
-                  <span className="inline-flex items-center gap-1.5 text-slate-400 text-[11px] font-semibold"><FiWifi size={13} /> Connected</span>
+                  <span className="inline-flex items-center gap-1.5 text-slate-500 text-[11px] font-semibold"><FiVolume2 size={13} /> Voice connected</span>
                 </div>
 
                 {/* MAIN */}
                 <div className="relative z-10 px-6 pb-2 min-h-[300px] flex flex-col items-center justify-center">
                   {/* Interviewer tile */}
                   <div className="flex flex-col items-center gap-3 pt-2">
-                    <InterviewerTile style={interviewerStyle} isSpeaking={isSpeaking} />
+                    <InterviewerTile style="orb" isSpeaking={isSpeaking} />
                     <div className="text-center">
-                      <p className="text-white font-century font-bold text-base">{INTERVIEWER.name}</p>
-                      <p className="text-slate-400 text-xs font-raleway inline-flex items-center gap-2">
+                      <p className="text-slate-800 font-century font-bold text-base">{INTERVIEWER.name}</p>
+                      <p className="text-slate-500 text-xs font-raleway inline-flex items-center gap-2">
                         {INTERVIEWER.role}
                         {isSpeaking && <span className="text-indigo-300 font-semibold">· speaking</span>}
                         {isListening && <span className="text-emerald-300 font-semibold">· listening</span>}
@@ -963,16 +937,16 @@ function MockInterviewContent() {
                       next question's audio synthesizes in the background */}
                   {resting && (
                     <div className="mt-6 text-center max-w-2xl flex flex-col items-center">
-                      <span className={`inline-block font-raleway text-[10px] font-bold uppercase tracking-[0.2em] px-3 py-1 rounded-full mb-4 ${restMeta.next === 'start' ? 'bg-indigo-500/15 text-indigo-300' : restMeta.saved ? 'bg-emerald-500/15 text-emerald-300' : 'bg-white/10 text-slate-300'}`}>
+                      <span className={`inline-block font-raleway text-[10px] font-bold uppercase tracking-[0.2em] px-3 py-1 rounded-full mb-4 ${restMeta.next === 'start' ? 'bg-blue-50 text-blue-700' : restMeta.saved ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
                         {restMeta.next === 'start' ? `Round ${currentRoundIdx + 1} · ${ROUND_META[currentRound].title}` : restMeta.saved ? 'Answer saved' : 'Question skipped'}
                       </span>
                       <div className="relative grid place-items-center mb-4">
                         <span className="absolute w-20 h-20 rounded-full bg-indigo-500/20 animate-ping" />
-                        <div className="relative w-20 h-20 rounded-full grid place-items-center bg-white/5 border border-white/15">
-                          <span className="font-century text-3xl font-black text-white tabular-nums">{restHolding ? '…' : restCountdown}</span>
+                        <div className="relative w-20 h-20 rounded-full grid place-items-center bg-white border border-blue-100">
+                          <span className="font-century text-3xl font-black text-slate-800 tabular-nums">{restHolding ? '…' : restCountdown}</span>
                         </div>
                       </div>
-                      <h3 className="font-century text-xl font-black text-white">
+                      <h3 className="font-century text-xl font-black text-slate-800">
                         {restMeta.next === 'finish' ? 'That was the last question!'
                           : restMeta.next === 'start' ? 'Starting…'
                           : 'Take a moment to rest'}
@@ -997,10 +971,10 @@ function MockInterviewContent() {
                   {/* Question badge + text */}
                   {!resting && (
                   <div className="mt-6 text-center max-w-2xl">
-                    <span className={`inline-block font-raleway text-[10px] font-bold uppercase tracking-[0.2em] px-3 py-1 rounded-full mb-3 ${followUpQ ? 'bg-indigo-500/20 text-indigo-300' : 'bg-white/5 text-slate-300'}`}>
+                    <span className={`inline-block font-raleway text-[10px] font-bold uppercase tracking-[0.2em] px-3 py-1 rounded-full mb-3 ${followUpQ ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-600'}`}>
                       {followUpQ ? 'Follow-up' : activeQuestion.type.replace('_', ' ')}
                     </span>
-                    <h3 className="font-century text-xl md:text-2xl font-black text-white leading-relaxed">
+                    <h3 className="font-century text-xl md:text-2xl font-black text-slate-800 leading-relaxed">
                       {followUpQ ? followUpQ.question : activeQuestion.question}
                     </h3>
                   </div>
@@ -1015,9 +989,9 @@ function MockInterviewContent() {
                           <button
                             key={i}
                             onClick={() => setAnswers(prev => ({ ...prev, [activeQuestion.id]: i }))}
-                            className={`font-raleway flex items-center gap-3 text-left px-4 py-3 rounded-2xl border transition-all ${selected ? 'border-indigo-400 bg-indigo-500/15 text-white' : 'border-white/10 bg-white/5 text-slate-300 hover:border-indigo-400/50'}`}
+                            className={`font-raleway flex items-center gap-3 text-left px-4 py-3 rounded-2xl border transition-all ${selected ? 'border-blue-300 bg-blue-50 text-blue-800' : 'border-slate-200 bg-white text-slate-600 hover:border-blue-200'}`}
                           >
-                            <span className={`flex-shrink-0 w-7 h-7 rounded-full grid place-items-center text-xs font-bold ${selected ? 'bg-indigo-500 text-white' : 'bg-white/10 text-slate-300'}`}>{String.fromCharCode(65 + i)}</span>
+                            <span className={`flex-shrink-0 w-7 h-7 rounded-full grid place-items-center text-xs font-bold ${selected ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500'}`}>{String.fromCharCode(65 + i)}</span>
                             <span className="text-sm">{opt}</span>
                           </button>
                         );
@@ -1025,32 +999,16 @@ function MockInterviewContent() {
                     </div>
                   )}
 
-                  {/* Candidate self-view PiP — anchored top-right beside the interviewer
-                      tile row, where nothing else renders, so it never covers the
-                      question text (which is centered lower and can grow long). */}
-                  <div className="absolute right-3 top-3 w-24 sm:w-32 md:w-48 aspect-[4/3] rounded-2xl overflow-hidden border border-white/15 bg-slate-900 shadow-xl">
-                    {/* scale-x-[-1] mirrors the self-view like every video-call app —
-                        without it your movements appear reversed and feel wrong */}
-                    <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
-                    {!cameraOn && (
-                      <div className="absolute inset-0 grid place-items-center bg-gradient-to-br from-slate-700 to-slate-900">
-                        <FiVideoOff className="text-slate-400" size={22} />
-                      </div>
-                    )}
-                    <span className="absolute left-2 bottom-1.5 flex items-center gap-1.5 rounded-md bg-black/50 px-2 py-0.5 text-[10px] font-bold text-white">
-                      {isListening ? <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> : <FiMic size={10} />} You
-                    </span>
-                  </div>
                 </div>
 
                 {/* CAPTIONS */}
                 {captionsOn && !resting && (
-                  <div className="relative z-10 mx-3 md:mx-6 mb-3 rounded-2xl bg-black/30 border border-white/10 px-4 py-3 backdrop-blur-sm min-h-[52px] flex items-center">
+                  <div className="relative z-10 mx-3 md:mx-6 mb-3 rounded-2xl border border-slate-100 bg-white/86 px-4 py-3 backdrop-blur-sm min-h-[52px] flex items-center">
                     {isSpeaking ? (
-                      <p className="font-raleway text-sm text-slate-100"><span className="text-indigo-300 font-bold mr-2">{INTERVIEWER.name}:</span>{followUpQ ? followUpQ.question : activeQuestion.question}</p>
+                      <p className="font-raleway text-sm text-slate-700"><span className="text-blue-700 font-bold mr-2">{INTERVIEWER.name}:</span>{followUpQ ? followUpQ.question : activeQuestion.question}</p>
                     ) : transcript ? (
-                      <p className="font-raleway text-sm text-slate-200">
-                        <span className="text-emerald-300 font-bold mr-2">You:</span>{transcript}
+                      <p className="font-raleway text-sm text-slate-700">
+                        <span className="text-emerald-600 font-bold mr-2">You:</span>{transcript}
                         {isTranscribing && <span className="text-slate-400 italic ml-2">refining…</span>}
                       </p>
                     ) : isTranscribing ? (
@@ -1072,7 +1030,7 @@ function MockInterviewContent() {
                     : isListening ? 'text-emerald-300 bg-emerald-500/10 border-emerald-400/30'
                     : isTranscribing ? 'text-indigo-300 bg-indigo-500/10 border-indigo-400/30'
                     : answerReady ? 'text-emerald-300 bg-emerald-500/10 border-emerald-400/30'
-                    : 'text-slate-400 bg-white/5 border-white/10'
+                    : 'text-slate-500 bg-white/80 border-slate-100'
                   }`}>
                     {awaitingFollowUp ? <>{INTERVIEWER.name} is thinking…</>
                       : isSpeaking ? <><span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />{INTERVIEWER.name} is asking — listen…</>
@@ -1091,7 +1049,7 @@ function MockInterviewContent() {
                   <button
                     onClick={() => (activeQuestion.type === 'mcq' ? speakMcq(activeQuestion) : (followUpQ ? speak(followUpQ.question) : speak(activeQuestion.question)))}
                     title="Replay question"
-                    className="w-12 h-12 grid place-items-center rounded-2xl bg-white/5 border border-white/10 text-slate-200 hover:bg-white/10 transition"
+                    className="w-12 h-12 grid place-items-center rounded-2xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition"
                   >
                     <FiRotateCcw size={20} />
                   </button>
@@ -1108,20 +1066,11 @@ function MockInterviewContent() {
                   )}
 
                   <button
-                    onClick={toggleCamera}
-                    aria-label="Toggle camera"
-                    title={cameraOn ? 'Turn camera off' : 'Turn camera on'}
-                    className="w-12 h-12 grid place-items-center rounded-2xl bg-white/5 border border-white/10 text-slate-200 hover:bg-white/10 transition"
-                  >
-                    {cameraOn ? <FiVideo size={20} /> : <FiVideoOff size={20} />}
-                  </button>
-
-                  <button
                     onClick={() => setCaptionsOn(v => !v)}
                     aria-label="Toggle captions"
                     aria-pressed={captionsOn}
                     title="Toggle captions"
-                    className={`w-12 h-12 grid place-items-center rounded-2xl border transition ${captionsOn ? 'bg-indigo-500/15 border-indigo-400/40 text-indigo-300' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'}`}
+                    className={`w-12 h-12 grid place-items-center rounded-2xl border transition ${captionsOn ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}
                   >
                     <FiMessageSquare size={20} />
                   </button>
@@ -1129,7 +1078,7 @@ function MockInterviewContent() {
                   <button
                     onClick={handleNext}
                     disabled={awaitingFollowUp || (activeQuestion.type === 'mcq' && !followUpQ && answers[activeQuestion.id] === undefined)}
-                    className={`font-raleway inline-flex items-center gap-2 bg-white text-slate-900 hover:bg-slate-100 px-6 h-12 rounded-2xl font-bold text-sm transition disabled:opacity-40 disabled:cursor-not-allowed ${answerReady ? 'ring-4 ring-emerald-400/50' : ''}`}
+                    className={`font-raleway inline-flex items-center gap-2 bg-white text-slate-900 hover:bg-slate-100 px-6 h-12 rounded-2xl font-bold text-sm transition disabled:opacity-40 disabled:cursor-not-allowed ${answerReady ? 'ring-4 ring-emerald-200' : ''}`}
                   >
                     {advanceLabel}
                     {!awaitingFollowUp && (

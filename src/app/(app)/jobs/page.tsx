@@ -537,13 +537,21 @@ export default function JobsPage() {
               <h2 className="font-century text-2xl md:text-3xl font-black text-slate-800">Jobs For You</h2>
               <p className="font-raleway text-sm text-gray-500 mt-1">Personalized job recommendations based on your profile</p>
             </div>
-            <button
-              onClick={runScraper}
-              disabled={scraping}
-              className="sf-primary font-raleway flex items-center justify-center gap-2 self-start px-6 py-3 rounded-2xl font-semibold text-sm transition-all disabled:opacity-60"
-            >
-              {scraping ? <><FiLoader className="animate-spin" size={16} /> Finding Jobs...</> : <><FiSearch size={16} /> Find Jobs For Me</>}
-            </button>
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={runScraper}
+                disabled={scraping}
+                className="sf-primary font-raleway flex items-center justify-center gap-2 px-6 py-3 rounded-2xl font-semibold text-sm transition-all disabled:opacity-60"
+              >
+                {scraping ? <><FiLoader className="animate-spin" size={16} /> Finding Jobs...</> : <><FiSearch size={16} /> Find Jobs For Me</>}
+              </button>
+              <button
+                onClick={() => router.push('/tracker')}
+                className="sf-subtle-control font-raleway flex items-center justify-center gap-2 px-6 py-3 rounded-2xl font-semibold text-sm transition-all"
+              >
+                <FiBriefcase size={16} /> Job Tracker
+              </button>
+            </div>
           </div>
 
           {/* Search & Filter Bar */}
