@@ -16,6 +16,8 @@
   --sf-action-ink: #2b2440;
   --sf-action-gradient: linear-gradient(135deg, #d6e4ff 0%, #cf9fff 42%, #d18ad7 100%);
   --sf-action-gradient-hover: linear-gradient(135deg, #cbdcff 0%, #c994f6 42%, #ca7fd0 100%);
+  --sf-blue-action-gradient: linear-gradient(135deg, #93c5fd 0%, #3b82f6 48%, #2563eb 100%);
+  --sf-blue-action-gradient-hover: linear-gradient(135deg, #7db8fd 0%, #2563eb 52%, #1d4ed8 100%);
   --sf-blue: #6e7fb8;
   --sf-blue-soft: #f7faff;
   --sf-green: #10b981;
@@ -530,11 +532,11 @@ html[data-pwa-standalone] .sf-splash {
 }
 
 .sf-primary {
-  color: var(--sf-action-ink);
-  background: var(--sf-action-gradient);
+  color: white;
+  background: var(--sf-blue-action-gradient);
   box-shadow:
-    0 12px 30px rgba(166, 113, 183, 0.22),
-    0 4px 12px rgba(207, 159, 255, 0.20);
+    0 14px 32px rgba(37, 99, 235, 0.24),
+    0 5px 14px rgba(147, 197, 253, 0.24);
 }
 
 .sf-primary:hover {
@@ -564,12 +566,12 @@ html[data-pwa-standalone] .sf-splash {
   color: var(--sf-ink);
 }
 
-.bg-\[\#4F46E5\] { background: var(--sf-action-gradient) !important; }
-.hover\:bg-\[\#4338CA\]:hover { background: var(--sf-action-gradient-hover) !important; }
+.bg-\[\#4F46E5\] { background: var(--sf-blue-action-gradient) !important; }
+.hover\:bg-\[\#4338CA\]:hover { background: var(--sf-blue-action-gradient-hover) !important; }
 .bg-\[\#4F46E5\].text-white,
 .bg-indigo-500.text-white,
 .bg-indigo-600.text-white {
-  color: var(--sf-action-ink) !important;
+  color: white !important;
 }
 .text-\[\#4F46E5\] { color: var(--sf-primary) !important; }
 .hover\:text-\[\#4338CA\]:hover { color: var(--sf-primary-dark) !important; }
@@ -583,9 +585,9 @@ html[data-pwa-standalone] .sf-splash {
 .bg-indigo-50\/70 { background-color: color-mix(in srgb, var(--sf-primary-soft) 82%, white) !important; }
 .bg-indigo-100 { background-color: #e8e1f1 !important; }
 .bg-indigo-500,
-.bg-indigo-600 { background: var(--sf-action-gradient) !important; }
+.bg-indigo-600 { background: var(--sf-blue-action-gradient) !important; }
 .hover\:bg-indigo-700:hover,
-.hover\:bg-indigo-600:hover { background: var(--sf-action-gradient-hover) !important; }
+.hover\:bg-indigo-600:hover { background: var(--sf-blue-action-gradient-hover) !important; }
 .text-indigo-300,
 .text-indigo-500,
 .text-indigo-600,

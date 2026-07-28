@@ -35,9 +35,13 @@ const metricTones: Record<string, string> = {
   Average: 'sf-accent-yellow ring-[#f2e6c9]',
   Best: 'sf-primary ring-[#eadff3] shadow-sm',
 };
-const chartColors = ['#D6E4FF', '#F3E8FF', '#FFE4E9', '#DCFCE7', '#FEF3C7', '#EDE9FE', '#E8F7F2', '#FFF1D6'];
-const chartTextColors = ['#5B6FA6', '#7C5FA8', '#B85D70', '#3F8C6E', '#A87325', '#7459B6', '#43836F', '#A86F28'];
+const chartColors = ['#EAF4FF', '#DCEEFF', '#CFE7FF', '#C2DFFF', '#B5D8FF', '#A8D0FF', '#9BC9FF', '#8EC2FF'];
 const categoryLabels: Record<string, string> = { ats_compatibility: 'ATS', content_quality: 'Content', experience_strength: 'Experience', skills_alignment: 'Skills', achievement_impact: 'Impact', formatting_clarity: 'Formatting' };
+const scoreAccentColor = (score = 0) => {
+  if (score >= 80) return '#10B981';
+  if (score >= 60) return '#F59E0B';
+  return '#F43F5E';
+};
 
 const ResumeMetric = ({ label, value, accent = false }: { label: string; value: string | number; accent?: boolean }) => (
   <div className={`rounded-2xl p-4 ring-1 ${metricTones[label] || (accent ? 'sf-primary ring-[#eadff3]' : 'bg-[#fbfaff] text-[var(--sf-ink)] ring-[var(--sf-border)]')}`}>
@@ -418,7 +422,7 @@ export default function DashboardPage() {
                               backgroundColor: chartColors[index % chartColors.length],
                             }}
                           >
-                            <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-black text-slate-600">{analysis.overallScore}</span>
+                            <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-black" style={{ color: scoreAccentColor(analysis.overallScore) }}>{analysis.overallScore}</span>
                           </span>
                         </button>
                       ))}
@@ -426,7 +430,7 @@ export default function DashboardPage() {
                     <div className="mt-2 flex gap-2 px-1">{[...resumeDashboard.analyses].slice(0, 8).reverse().map((analysis) => <span key={analysis.analysisId} className="min-w-0 flex-1 truncate text-center text-[10px] font-bold text-slate-500">{new Date(analysis.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>)}</div>
                   </div>
                   <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    {Object.entries(resumeDashboard.summary.categoryAverages).map(([key, score], index) => <div key={key} className="rounded-xl border border-white bg-white/80 p-2.5 shadow-sm"><div className="mb-1.5 flex items-center justify-between gap-2"><span className="truncate text-[10px] font-bold text-slate-500">{categoryLabels[key] || key}</span><span className="text-[10px] font-black" style={{ color: chartTextColors[index % chartTextColors.length] }}>{score ?? '—'}%</span></div><div className="h-1.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full" style={{ width: `${score || 0}%`, backgroundColor: chartColors[index % chartColors.length] }} /></div></div>)}
+                    {Object.entries(resumeDashboard.summary.categoryAverages).map(([key, score], index) => <div key={key} className="rounded-xl border border-white bg-white/80 p-2.5 shadow-sm"><div className="mb-1.5 flex items-center justify-between gap-2"><span className="truncate text-[10px] font-bold text-slate-500">{categoryLabels[key] || key}</span><span className="text-[10px] font-black" style={{ color: scoreAccentColor(score || 0) }}>{score ?? '—'}%</span></div><div className="h-1.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full" style={{ width: `${score || 0}%`, backgroundColor: chartColors[index % chartColors.length] }} /></div></div>)}
                   </div>
                 </div>
 

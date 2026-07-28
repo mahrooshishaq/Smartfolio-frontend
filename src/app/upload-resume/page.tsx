@@ -490,7 +490,7 @@ function ResumeUploadContent() {
           {showSavedCard && !isUploading && (
             <button
               onClick={analyzeSavedResume}
-              className="font-raleway w-full mt-6 bg-slate-800 text-white py-4 rounded-2xl font-bold hover:bg-slate-900 transition-all shadow-lg shadow-slate-200 active:scale-[0.98]"
+              className="font-raleway mx-auto mt-6 flex w-full max-w-xs items-center justify-center gap-2 bg-[#4F46E5] hover:bg-[#4338CA] text-white px-6 py-3 rounded-2xl text-sm font-semibold transition-all shadow-lg shadow-blue-100 active:scale-[0.98]"
             >
               Start AI Analysis
             </button>
@@ -498,7 +498,7 @@ function ResumeUploadContent() {
           {file && !isUploading && (
             <button
               onClick={handleUpload}
-              className="font-raleway w-full mt-6 bg-slate-800 text-white py-4 rounded-2xl font-bold hover:bg-slate-900 transition-all shadow-lg shadow-slate-200 active:scale-[0.98]"
+              className="font-raleway mx-auto mt-6 flex w-full max-w-xs items-center justify-center gap-2 bg-[#4F46E5] hover:bg-[#4338CA] text-white px-6 py-3 rounded-2xl text-sm font-semibold transition-all shadow-lg shadow-blue-100 active:scale-[0.98]"
             >
               Start AI Analysis
             </button>
