@@ -332,7 +332,7 @@ export default function DashboardPage() {
             >
               <h3 className="font-raleway text-gray-500 text-[9px] font-bold mb-3 uppercase tracking-widest">Resume</h3>
               {latestAnalysis ? (
-                <ScoreRing score={latestAnalysis.overallScore} size={80} strokeWidth={6} color="#F472B6" />
+                <ScoreRing score={latestAnalysis.overallScore} size={80} strokeWidth={6} />
               ) : (
                 <div className="w-20 h-20 rounded-full bg-gray-50 flex items-center justify-center text-gray-500">
                   <FiFileText size={24} />
@@ -410,7 +410,13 @@ export default function DashboardPage() {
                     <div className="flex h-24 items-end gap-2 border-b border-slate-200 px-1 pt-5">
                       {[...resumeDashboard.analyses].slice(0, 8).reverse().map((analysis, index) => (
                         <button key={analysis.analysisId} title={`${analysis.fileName || 'Resume'}: ${analysis.overallScore}%`} onClick={() => router.push(`/analysis-results?resumeId=${analysis.resumeId}&analysisId=${analysis.analysisId}`)} className="group flex h-full min-w-0 flex-1 items-end">
-                          <span className="relative w-full rounded-t-xl shadow-sm transition duration-200 group-hover:-translate-y-1 group-hover:brightness-95" style={{ height: `${Math.max(8, analysis.overallScore)}%`, backgroundColor: chartColors[index % chartColors.length] }}>
+                          <span
+                            className="relative w-full rounded-t-xl shadow-sm transition duration-200 group-hover:-translate-y-1 group-hover:brightness-105"
+                            style={{
+                              height: `${Math.max(8, analysis.overallScore)}%`,
+                              backgroundImage: `linear-gradient(180deg, ${chartColors[index % chartColors.length]} 0%, #06B6D4 115%)`,
+                            }}
+                          >
                             <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-black text-slate-600">{analysis.overallScore}</span>
                           </span>
                         </button>

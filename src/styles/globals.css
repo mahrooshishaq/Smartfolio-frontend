@@ -1,28 +1,28 @@
 @import "tailwindcss";
 
 :root {
-  --sf-bg: #fbfaff;
-  --sf-surface: rgba(255, 255, 255, 0.78);
+  --sf-bg: #f8fbff;
+  --sf-surface: rgba(255, 255, 255, 0.84);
   --sf-surface-strong: #ffffff;
-  --sf-border: #ece7f2;
-  --sf-ink: #2b2440;
-  --sf-ink-soft: #514c60;
-  --sf-muted: #6b6580;
-  --sf-muted-soft: #9189a3;
-  --sf-primary: #776a96;
-  --sf-primary-dark: #5f557c;
-  --sf-primary-soft: #f5f1f7;
-  --sf-primary-ring: #e8e1f1;
-  --sf-blue: #5f7fb8;
-  --sf-blue-soft: #eef4ff;
-  --sf-green: #4f8f7a;
-  --sf-green-soft: #edf8f3;
-  --sf-red: #b86b78;
-  --sf-red-soft: #fbedf0;
-  --sf-yellow: #a9894d;
-  --sf-yellow-soft: #fff7e8;
-  --sf-violet: #9a82ac;
-  --sf-violet-soft: #f4efff;
+  --sf-border: #dbe7ff;
+  --sf-ink: #20243a;
+  --sf-ink-soft: #424867;
+  --sf-muted: #65708d;
+  --sf-muted-soft: #8d99b8;
+  --sf-primary: #6d5df6;
+  --sf-primary-dark: #4f46e5;
+  --sf-primary-soft: #eef2ff;
+  --sf-primary-ring: #dbe4ff;
+  --sf-blue: #0ea5e9;
+  --sf-blue-soft: #e0f2fe;
+  --sf-green: #10b981;
+  --sf-green-soft: #dcfce7;
+  --sf-red: #f43f5e;
+  --sf-red-soft: #ffe4e9;
+  --sf-yellow: #f59e0b;
+  --sf-yellow-soft: #fef3c7;
+  --sf-violet: #8b5cf6;
+  --sf-violet-soft: #f3e8ff;
 }
 
 html,
@@ -507,8 +507,9 @@ html[data-pwa-standalone] .sf-splash {
 
 .sf-app-bg {
   background:
-    radial-gradient(circle at 15% 12%, rgba(214, 228, 255, 0.62), transparent 28rem),
-    radial-gradient(circle at 86% 2%, rgba(245, 241, 247, 0.82), transparent 30rem),
+    radial-gradient(circle at 12% 10%, rgba(14, 165, 233, 0.18), transparent 28rem),
+    radial-gradient(circle at 88% 4%, rgba(16, 185, 129, 0.16), transparent 30rem),
+    radial-gradient(circle at 52% 0%, rgba(139, 92, 246, 0.13), transparent 24rem),
     var(--sf-bg);
 }
 
@@ -527,8 +528,8 @@ html[data-pwa-standalone] .sf-splash {
 
 .sf-primary {
   color: white;
-  background: linear-gradient(135deg, var(--sf-primary) 0%, var(--sf-blue) 100%);
-  box-shadow: 0 12px 30px rgba(95, 85, 124, 0.18);
+  background: linear-gradient(135deg, #7c3aed 0%, #2563eb 48%, #06b6d4 100%);
+  box-shadow: 0 14px 32px rgba(37, 99, 235, 0.24);
 }
 
 .sf-primary:hover {
@@ -552,8 +553,8 @@ html[data-pwa-standalone] .sf-splash {
 .sf-accent-yellow { background: var(--sf-yellow-soft); color: var(--sf-yellow); }
 .sf-accent-violet { background: var(--sf-violet-soft); color: var(--sf-violet); }
 
-.bg-\[\#4F46E5\] { background-color: var(--sf-primary) !important; }
-.hover\:bg-\[\#4338CA\]:hover { background-color: var(--sf-primary-dark) !important; }
+.bg-\[\#4F46E5\] { background: linear-gradient(135deg, #7c3aed 0%, #2563eb 48%, #06b6d4 100%) !important; }
+.hover\:bg-\[\#4338CA\]:hover { background: linear-gradient(135deg, #6d28d9 0%, #1d4ed8 52%, #0891b2 100%) !important; }
 .text-\[\#4F46E5\] { color: var(--sf-primary) !important; }
 .hover\:text-\[\#4338CA\]:hover { color: var(--sf-primary-dark) !important; }
 .border-\[\#4F46E5\] { border-color: var(--sf-primary) !important; }
@@ -566,9 +567,9 @@ html[data-pwa-standalone] .sf-splash {
 .bg-indigo-50\/70 { background-color: color-mix(in srgb, var(--sf-primary-soft) 82%, white) !important; }
 .bg-indigo-100 { background-color: #e8e1f1 !important; }
 .bg-indigo-500,
-.bg-indigo-600 { background-color: var(--sf-primary) !important; }
+.bg-indigo-600 { background: linear-gradient(135deg, #7c3aed 0%, #2563eb 48%, #06b6d4 100%) !important; }
 .hover\:bg-indigo-700:hover,
-.hover\:bg-indigo-600:hover { background-color: var(--sf-primary-dark) !important; }
+.hover\:bg-indigo-600:hover { background: linear-gradient(135deg, #6d28d9 0%, #1d4ed8 52%, #0891b2 100%) !important; }
 .text-indigo-300,
 .text-indigo-500,
 .text-indigo-600,
@@ -663,11 +664,11 @@ html[data-pwa-standalone] .sf-splash {
 }
 
 .landing-spectrum {
-  background: linear-gradient(135deg, #d6e4ff 0%, #cf9fff 42%, #d18ad7 100%);
+  background: linear-gradient(135deg, #bfdbfe 0%, #c4b5fd 45%, #99f6e4 100%);
 }
 
 .auth-spectrum {
-  background: linear-gradient(135deg, #d6e4ff 0%, #cf9fff 42%, #d18ad7 100%);
+  background: linear-gradient(135deg, #bfdbfe 0%, #c4b5fd 45%, #99f6e4 100%);
 }
 
 .nav-spectrum {
@@ -675,8 +676,8 @@ html[data-pwa-standalone] .sf-splash {
   border: 1px solid rgba(174, 124, 190, 0.30);
   background: linear-gradient(
     135deg,
-    rgba(207, 159, 255, 0.58) 0%,
-    rgba(209, 138, 215, 0.48) 100%
+    rgba(191, 219, 254, 0.76) 0%,
+    rgba(153, 246, 228, 0.58) 100%
   );
   box-shadow:
     0 9px 25px rgba(166, 113, 183, 0.16),

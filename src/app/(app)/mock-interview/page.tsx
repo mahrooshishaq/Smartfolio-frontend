@@ -1,5 +1,6 @@
 'use client';
 import FoliLoader from '@/components/foli/FoliLoader';
+import { MockInterviewSkeleton } from '@/components/SkeletonScreens';
 import { useEffect, useState, useCallback, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useWebcam } from './useWebcam';
@@ -41,7 +42,7 @@ const REST_HOLD_MAX_MS = 10_000;
 
 export default function MockInterviewPage() {
   return (
-    <Suspense fallback={<FoliLoader messages={['Loading…','Almost ready…']} />}>
+    <Suspense fallback={<MockInterviewSkeleton />}>
       <MockInterviewContent />
     </Suspense>
   );
@@ -851,7 +852,7 @@ function MockInterviewContent() {
 
           {/* LOADING STAGE */}
           {stage === 'loading' && (
-            <FoliLoader fullScreen={false} title="Preparing your interview" moods={['typing','idle','look-l']} messages={['Crafting questions across 3 rounds…','Take a breath — you’ve got this…']} />
+            <MockInterviewSkeleton />
           )}
 
           {/* CONNECTING (call ceremony) */}

@@ -1,5 +1,5 @@
 'use client';
-import FoliLoader from '@/components/foli/FoliLoader';
+import { TrackerSkeleton } from '@/components/SkeletonScreens';
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
@@ -284,9 +284,7 @@ export default function ApplicationsPage() {
 
       {/* Applications list */}
       {loading ? (
-        <div className="flex items-center justify-center py-32">
-          <FoliLoader fullScreen={false} moods={['look-l','look-r','idle']} messages={['Loading your applications…','Sorting your pipeline…']} />
-        </div>
+        <TrackerSkeleton />
       ) : loadFailed ? (
         <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-50 p-16 text-center">
           <FiWifiOff className="mx-auto text-gray-200 mb-4" size={48} />

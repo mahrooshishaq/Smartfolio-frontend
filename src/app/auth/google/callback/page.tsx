@@ -46,7 +46,7 @@ function GoogleCallbackContent() {
     return (
       <FoliSuccessTakeover
         show
-        title="Signed in with Google"
+        title="You're in"
         subtitle="Taking you to your dashboard…"
         onDone={() => router.replace(target)}
       />
