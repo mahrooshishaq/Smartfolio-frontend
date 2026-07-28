@@ -664,11 +664,11 @@ html[data-pwa-standalone] .sf-splash {
 }
 
 .landing-spectrum {
-  background: linear-gradient(135deg, #bfdbfe 0%, #c4b5fd 45%, #99f6e4 100%);
+  background: linear-gradient(135deg, #d6e4ff 0%, #cf9fff 42%, #d18ad7 100%);
 }
 
 .auth-spectrum {
-  background: linear-gradient(135deg, #bfdbfe 0%, #c4b5fd 45%, #99f6e4 100%);
+  background: linear-gradient(135deg, #d6e4ff 0%, #cf9fff 42%, #d18ad7 100%);
 }
 
 .nav-spectrum {
@@ -676,8 +676,8 @@ html[data-pwa-standalone] .sf-splash {
   border: 1px solid rgba(174, 124, 190, 0.30);
   background: linear-gradient(
     135deg,
-    rgba(191, 219, 254, 0.76) 0%,
-    rgba(153, 246, 228, 0.58) 100%
+    rgba(207, 159, 255, 0.58) 0%,
+    rgba(209, 138, 215, 0.48) 100%
   );
   box-shadow:
     0 9px 25px rgba(166, 113, 183, 0.16),
