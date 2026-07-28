@@ -1,5 +1,37 @@
 @import "tailwindcss";
 
+:root {
+  --sf-bg: #fbfaff;
+  --sf-surface: rgba(255, 255, 255, 0.78);
+  --sf-surface-strong: #ffffff;
+  --sf-border: #ece7f2;
+  --sf-ink: #2b2440;
+  --sf-ink-soft: #514c60;
+  --sf-muted: #6b6580;
+  --sf-muted-soft: #9189a3;
+  --sf-primary: #776a96;
+  --sf-primary-dark: #5f557c;
+  --sf-primary-soft: #f5f1f7;
+  --sf-primary-ring: #e8e1f1;
+  --sf-blue: #5f7fb8;
+  --sf-blue-soft: #eef4ff;
+  --sf-green: #4f8f7a;
+  --sf-green-soft: #edf8f3;
+  --sf-red: #b86b78;
+  --sf-red-soft: #fbedf0;
+  --sf-yellow: #a9894d;
+  --sf-yellow-soft: #fff7e8;
+  --sf-violet: #9a82ac;
+  --sf-violet-soft: #f4efff;
+}
+
+html,
+body {
+  background: var(--sf-bg);
+  color: var(--sf-ink);
+  font-family: var(--font-raleway), sans-serif;
+}
+
 /* Mobile guards */
 html,
 body {
@@ -466,12 +498,89 @@ html[data-pwa-standalone] .sf-splash {
 }
 
 .font-baloo {
-  font-family: var(--font-baloo), cursive;
+  font-family: var(--font-century), var(--font-raleway), sans-serif;
 }
 
 .font-century {
   font-family: var(--font-century), sans-serif;
 }
+
+.sf-app-bg {
+  background:
+    radial-gradient(circle at 15% 12%, rgba(214, 228, 255, 0.62), transparent 28rem),
+    radial-gradient(circle at 86% 2%, rgba(245, 241, 247, 0.82), transparent 30rem),
+    var(--sf-bg);
+}
+
+.sf-card {
+  border: 1px solid rgba(236, 231, 242, 0.86);
+  background: var(--sf-surface);
+  box-shadow: 0 18px 54px rgba(75, 67, 98, 0.055);
+  backdrop-filter: blur(14px);
+}
+
+.sf-panel {
+  border: 1px solid var(--sf-border);
+  background: var(--sf-surface-strong);
+  box-shadow: 0 12px 36px rgba(75, 67, 98, 0.045);
+}
+
+.sf-primary {
+  color: white;
+  background: linear-gradient(135deg, var(--sf-primary) 0%, var(--sf-blue) 100%);
+  box-shadow: 0 12px 30px rgba(95, 85, 124, 0.18);
+}
+
+.sf-primary:hover {
+  filter: brightness(0.97) saturate(1.04);
+}
+
+.sf-subtle-control {
+  border: 1px solid var(--sf-border);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--sf-ink-soft);
+}
+
+.sf-subtle-control:hover {
+  background: var(--sf-primary-soft);
+  color: var(--sf-primary-dark);
+}
+
+.sf-accent-blue { background: var(--sf-blue-soft); color: var(--sf-blue); }
+.sf-accent-green { background: var(--sf-green-soft); color: var(--sf-green); }
+.sf-accent-red { background: var(--sf-red-soft); color: var(--sf-red); }
+.sf-accent-yellow { background: var(--sf-yellow-soft); color: var(--sf-yellow); }
+.sf-accent-violet { background: var(--sf-violet-soft); color: var(--sf-violet); }
+
+.bg-\[\#4F46E5\] { background-color: var(--sf-primary) !important; }
+.hover\:bg-\[\#4338CA\]:hover { background-color: var(--sf-primary-dark) !important; }
+.text-\[\#4F46E5\] { color: var(--sf-primary) !important; }
+.hover\:text-\[\#4338CA\]:hover { color: var(--sf-primary-dark) !important; }
+.border-\[\#4F46E5\] { border-color: var(--sf-primary) !important; }
+.focus\:border-\[\#4F46E5\]:focus { border-color: var(--sf-primary) !important; }
+.focus\:ring-\[\#4F46E5\]:focus { --tw-ring-color: var(--sf-primary) !important; }
+.bg-indigo-50,
+.bg-indigo-50\/40,
+.bg-indigo-50\/50,
+.bg-indigo-50\/60,
+.bg-indigo-50\/70 { background-color: color-mix(in srgb, var(--sf-primary-soft) 82%, white) !important; }
+.bg-indigo-100 { background-color: #e8e1f1 !important; }
+.bg-indigo-500,
+.bg-indigo-600 { background-color: var(--sf-primary) !important; }
+.hover\:bg-indigo-700:hover,
+.hover\:bg-indigo-600:hover { background-color: var(--sf-primary-dark) !important; }
+.text-indigo-300,
+.text-indigo-500,
+.text-indigo-600,
+.text-indigo-700,
+.text-indigo-800 { color: var(--sf-primary) !important; }
+.border-indigo-100,
+.border-indigo-200,
+.border-indigo-300,
+.border-indigo-400,
+.border-indigo-500 { border-color: var(--sf-primary-ring) !important; }
+.hover\:border-indigo-200:hover,
+.hover\:border-indigo-300:hover { border-color: #d9d1e2 !important; }
 
 /* Landing hero atmosphere: fine texture and restrained motion only. */
 .hero-grain {

@@ -1,5 +1,5 @@
 'use client';
-import FoliLoader from '@/components/foli/FoliLoader';
+import { CoursesSkeleton } from '@/components/SkeletonScreens';
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
@@ -258,10 +258,10 @@ export default function CoursesPage() {
 
   const getLevelBadgeColor = (lvl: string) => {
     const colors: Record<string, string> = {
-      'Beginner': 'bg-emerald-50 text-emerald-600',
-      'Intermediate': 'bg-blue-50 text-blue-600',
-      'Advanced': 'bg-purple-50 text-purple-600',
-      'All Levels': 'bg-gray-100 text-gray-600',
+      'Beginner': 'sf-accent-green',
+      'Intermediate': 'sf-accent-blue',
+      'Advanced': 'sf-accent-violet',
+      'All Levels': 'bg-[#f5f1f7] text-[var(--sf-muted)]',
     };
     return colors[lvl] || 'bg-gray-100 text-gray-600';
   };
@@ -287,7 +287,7 @@ export default function CoursesPage() {
             <button
               onClick={runScraper}
               disabled={scraping}
-              className="font-raleway flex items-center justify-center gap-2 self-start bg-[#4F46E5] hover:bg-[#4338CA] text-white px-6 py-3 rounded-2xl font-semibold text-sm transition-all disabled:opacity-60"
+              className="sf-primary font-raleway flex items-center justify-center gap-2 self-start px-6 py-3 rounded-2xl font-semibold text-sm transition-all disabled:opacity-60"
             >
               {scraping ? <><FiLoader className="animate-spin" size={16} /> Finding Courses...</> : <><FiSearch size={16} /> Find New Courses</>}
             </button>
@@ -308,9 +308,9 @@ export default function CoursesPage() {
               </div>
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className={`font-raleway flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold transition-all ${showFilters ? 'bg-blue-50 text-blue-600' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`}
+                className={`font-raleway flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold transition-all ${showFilters ? 'sf-accent-blue' : 'sf-subtle-control'}`}
               >
-                <FiFilter size={16} /> Filters {hasActiveFilters && <span className="w-2 h-2 rounded-full bg-blue-500" />}
+                <FiFilter size={16} /> Filters {hasActiveFilters && <span className="w-2 h-2 rounded-full bg-[var(--sf-blue)]" />}
               </button>
               {hasActiveFilters && (
                 <button onClick={clearFilters} className="font-raleway flex items-center gap-1 text-xs text-gray-500 hover:text-gray-600">
@@ -352,15 +352,13 @@ export default function CoursesPage() {
 
           {/* Course Cards */}
           {loading ? (
-            <div className="flex items-center justify-center py-32">
-              <FoliLoader fullScreen={false} moods={['typing','happy','look-r']} messages={['Loading courses…','Finding skills to level up…']} />
-            </div>
+            <CoursesSkeleton />
           ) : courses.length === 0 ? (
             <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-50 p-16 text-center">
               <FiBookOpen className="mx-auto text-gray-200 mb-4" size={48} />
               <h3 className="font-century text-xl font-bold text-slate-700 mb-2">No Courses Found</h3>
               <p className="font-raleway text-sm text-gray-500 mb-6">Click &quot;Find New Courses&quot; to discover personalized courses based on your profile.</p>
-              <button onClick={runScraper} disabled={scraping} className="font-raleway bg-[#4F46E5] hover:bg-[#4338CA] text-white px-8 py-3 rounded-2xl font-semibold text-sm transition-all disabled:opacity-60">
+              <button onClick={runScraper} disabled={scraping} className="sf-primary font-raleway px-8 py-3 rounded-2xl font-semibold text-sm transition-all disabled:opacity-60">
                 {scraping ? 'Finding Courses...' : 'Find Courses Now'}
               </button>
             </div>

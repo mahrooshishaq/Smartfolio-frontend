@@ -11,7 +11,7 @@ import { burstConfetti } from './confetti';
  */
 export default function FoliSuccessTakeover({
   show,
-  title = "You're in! 🎉",
+  title = "You're in!",
   subtitle = 'Taking you to your dashboard…',
   durationMs = 2600,
   onDone,

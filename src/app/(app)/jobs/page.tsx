@@ -1,5 +1,5 @@
 'use client';
-import FoliLoader from '@/components/foli/FoliLoader';
+import { JobsSkeleton } from '@/components/SkeletonScreens';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
@@ -518,13 +518,13 @@ export default function JobsPage() {
 
   const getTypeBadgeColor = (type: string) => {
     const colors: Record<string, string> = {
-      'Full Time': 'bg-emerald-50 text-emerald-600',
-      'Part Time': 'bg-blue-50 text-blue-600',
-      'Remote': 'bg-purple-50 text-purple-600',
-      'Hybrid': 'bg-orange-50 text-orange-600',
-      'Contract': 'bg-yellow-50 text-yellow-700',
-      'Internship': 'bg-pink-50 text-pink-600',
-      'Onsite': 'bg-gray-100 text-gray-600',
+      'Full Time': 'sf-accent-green',
+      'Part Time': 'sf-accent-blue',
+      'Remote': 'sf-accent-violet',
+      'Hybrid': 'sf-accent-yellow',
+      'Contract': 'sf-accent-yellow',
+      'Internship': 'sf-accent-red',
+      'Onsite': 'bg-[#f5f1f7] text-[var(--sf-muted)]',
     };
     return colors[type] || 'bg-gray-100 text-gray-600';
   };
@@ -540,7 +540,7 @@ export default function JobsPage() {
             <button
               onClick={runScraper}
               disabled={scraping}
-              className="font-raleway flex items-center justify-center gap-2 self-start bg-[#4F46E5] hover:bg-[#4338CA] text-white px-6 py-3 rounded-2xl font-semibold text-sm transition-all disabled:opacity-60"
+              className="sf-primary font-raleway flex items-center justify-center gap-2 self-start px-6 py-3 rounded-2xl font-semibold text-sm transition-all disabled:opacity-60"
             >
               {scraping ? <><FiLoader className="animate-spin" size={16} /> Finding Jobs...</> : <><FiSearch size={16} /> Find Jobs For Me</>}
             </button>
@@ -563,15 +563,15 @@ export default function JobsPage() {
                 onClick={runWebSearch}
                 disabled={scraping}
                 title="Scrape the job boards using your search text and active filters"
-                className="font-raleway flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold bg-[#4F46E5] hover:bg-[#4338CA] text-white transition-all disabled:opacity-60"
+                className="sf-primary font-raleway flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold transition-all disabled:opacity-60"
               >
                 <FiGlobe size={16} /> Search the web
               </button>
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className={`font-raleway flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold transition-all ${showFilters ? 'bg-blue-50 text-blue-600' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`}
+                className={`font-raleway flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold transition-all ${showFilters ? 'sf-accent-blue' : 'sf-subtle-control'}`}
               >
-                <FiFilter size={16} /> Filters {hasActiveFilters && <span className="w-2 h-2 rounded-full bg-blue-500" />}
+                <FiFilter size={16} /> Filters {hasActiveFilters && <span className="w-2 h-2 rounded-full bg-[var(--sf-blue)]" />}
               </button>
               {hasActiveFilters && (
                 <button onClick={clearFilters} className="font-raleway flex items-center gap-1 text-xs text-gray-500 hover:text-gray-600">
@@ -630,7 +630,7 @@ export default function JobsPage() {
           {/* The scrape succeeded but the active filters hide every result. Say
               so plainly and offer the way out, rather than reporting "no jobs". */}
           {hiddenByFilters > 0 && (
-            <div className="font-raleway bg-amber-50 text-amber-800 px-6 py-4 rounded-2xl mb-6 text-sm flex items-start gap-3">
+            <div className="font-raleway sf-accent-yellow px-6 py-4 rounded-2xl mb-6 text-sm flex items-start gap-3">
               <FiFilter className="flex-shrink-0 mt-0.5" size={16} />
               <div className="flex-1">
                 <p className="font-semibold">
@@ -652,7 +652,7 @@ export default function JobsPage() {
           {/* Scrapes take 1–5 min; without this the page looks idle and users
               assume the search silently failed. */}
           {(scraping || scrapeStatus) && (
-            <div className="font-raleway bg-blue-50 text-blue-700 px-6 py-4 rounded-2xl mb-6 text-sm flex items-center gap-3">
+            <div className="font-raleway sf-accent-blue px-6 py-4 rounded-2xl mb-6 text-sm flex items-center gap-3">
               {scraping && <FiLoader className="animate-spin flex-shrink-0" size={16} />}
               <span>
                 {scrapeStatus}
@@ -687,9 +687,7 @@ export default function JobsPage() {
 
           {/* Job Cards */}
           {loading ? (
-            <div className="flex items-center justify-center py-32">
-              <FoliLoader fullScreen={false} moods={['look-l','look-r','idle']} messages={['Loading jobs…','Matching to your resume…']} />
-            </div>
+            <JobsSkeleton />
           ) : jobs.length === 0 ? (
             <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-50 p-16 text-center">
               <FiBriefcase className="mx-auto text-gray-200 mb-4" size={48} />

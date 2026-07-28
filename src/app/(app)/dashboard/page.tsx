@@ -1,12 +1,12 @@
 'use client';
-import FoliLoader from '@/components/foli/FoliLoader';
+import { DashboardSkeleton } from '@/components/SkeletonScreens';
 import { useEffect, useState, useCallback, type ComponentType } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   FiFileText, FiMic,
   FiBookOpen, FiFile, FiBriefcase,
   FiArrowRight, FiUpload, FiSearch,
-  FiExternalLink, FiLoader,
+  FiExternalLink,
 } from 'react-icons/fi';
 import ScoreRing from '@/components/ScoreRing';
 import { apiFetch, getAccessToken } from '@/lib/api';
@@ -29,17 +29,17 @@ const StatCard = ({ title, value, subtitle, icon: Icon, color, onClick }: { titl
 );
 
 const metricTones: Record<string, string> = {
-  Uploaded: 'bg-pink-50 text-pink-700 ring-pink-100',
-  Reviews: 'bg-violet-50 text-violet-700 ring-violet-100',
-  Latest: 'bg-sky-50 text-sky-700 ring-sky-100',
-  Average: 'bg-amber-50 text-amber-700 ring-amber-100',
-  Best: 'bg-gradient-to-br from-indigo-500 to-violet-500 text-white ring-violet-200 shadow-sm shadow-violet-100',
+  Uploaded: 'sf-accent-blue ring-[#d9e4f5]',
+  Reviews: 'sf-accent-violet ring-[#eadff3]',
+  Latest: 'sf-accent-green ring-[#dcefe8]',
+  Average: 'sf-accent-yellow ring-[#f2e6c9]',
+  Best: 'sf-primary text-white ring-[#d9d9e8] shadow-sm',
 };
-const chartColors = ['#F472B6', '#A78BFA', '#60A5FA', '#FBBF24', '#34D399', '#FB7185', '#818CF8', '#2DD4BF'];
+const chartColors = ['#776A96', '#5F7FB8', '#4F8F7A', '#A9894D', '#B86B78', '#9A82AC', '#6E7FB8', '#70A7A0'];
 const categoryLabels: Record<string, string> = { ats_compatibility: 'ATS', content_quality: 'Content', experience_strength: 'Experience', skills_alignment: 'Skills', achievement_impact: 'Impact', formatting_clarity: 'Formatting' };
 
 const ResumeMetric = ({ label, value, accent = false }: { label: string; value: string | number; accent?: boolean }) => (
-  <div className={`rounded-2xl p-4 ring-1 ${metricTones[label] || (accent ? 'bg-indigo-600 text-white ring-indigo-200' : 'bg-slate-50 text-slate-800 ring-slate-100')}`}>
+  <div className={`rounded-2xl p-4 ring-1 ${metricTones[label] || (accent ? 'sf-primary text-white ring-[#d9d9e8]' : 'bg-[#fbfaff] text-[var(--sf-ink)] ring-[var(--sf-border)]')}`}>
     <p className={`font-raleway text-[10px] font-black uppercase tracking-widest ${accent ? 'text-slate-100' : 'opacity-60'}`}>{label}</p>
     <p className="mt-1 font-century text-2xl font-black">{value}</p>
   </div>
@@ -50,7 +50,7 @@ const EmptyState = ({ icon: Icon, title, description, buttonLabel, onClick }: { 
     <Icon className="text-gray-200 mb-3" size={36} />
     <p className="font-century text-sm font-bold text-slate-700 mb-1">{title}</p>
     <p className="font-raleway text-xs text-gray-500 mb-4">{description}</p>
-    <button onClick={onClick} className="font-raleway bg-[#4F46E5] hover:bg-[#4338CA] text-white px-5 py-2 rounded-xl text-xs font-bold transition-all">
+    <button onClick={onClick} className="sf-primary font-raleway px-5 py-2 rounded-xl text-xs font-bold transition-all">
       {buttonLabel}
     </button>
   </div>
@@ -249,29 +249,25 @@ export default function DashboardPage() {
 
   const getTypeBadgeColor = (type: string) => {
     const colors: Record<string, string> = {
-      'Full Time': 'bg-emerald-50 text-emerald-600',
-      'Part Time': 'bg-blue-50 text-blue-600',
-      'Remote': 'bg-purple-50 text-purple-600',
-      'Hybrid': 'bg-orange-50 text-orange-600',
-      'Contract': 'bg-yellow-50 text-yellow-700',
-      'Internship': 'bg-pink-50 text-pink-600',
+      'Full Time': 'sf-accent-green',
+      'Part Time': 'sf-accent-blue',
+      'Remote': 'sf-accent-violet',
+      'Hybrid': 'sf-accent-yellow',
+      'Contract': 'sf-accent-yellow',
+      'Internship': 'sf-accent-red',
     };
     return colors[type] || 'bg-gray-100 text-gray-600';
   };
 
   if (loading) {
-    return (
-      <div className="py-32 flex items-center justify-center">
-        <FoliLoader fullScreen={false} moods={['happy','look-r','idle']} messages={['Loading your dashboard…','Pulling your progress…']} />
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   return (
     <div>
 
           {/* Row 1: Welcome + Quick Actions */}
-          <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-50 p-5 md:p-8 mb-8">
+          <div className="sf-card rounded-[2rem] p-5 md:p-8 mb-8">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <h2 className="font-century text-2xl md:text-3xl font-black text-slate-800">
@@ -287,13 +283,13 @@ export default function DashboardPage() {
                 )}
               </div>
               <div className="flex flex-wrap items-center gap-3">
-                <button onClick={() => router.push('/upload-resume')} className="font-raleway flex flex-1 sm:flex-none items-center justify-center gap-2 bg-[#4F46E5] hover:bg-[#4338CA] text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-all">
+                <button onClick={() => router.push('/upload-resume')} className="sf-primary font-raleway flex flex-1 sm:flex-none items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all">
                   <FiUpload size={14} /> {resumeDashboard?.summary.totalResumes ? 'Analyze Resume' : 'Build a resume with Folio'}
                 </button>
-                <button onClick={() => router.push('/jobs')} className="font-raleway flex flex-1 sm:flex-none items-center justify-center gap-2 bg-white hover:bg-gray-50 text-slate-700 px-5 py-2.5 rounded-xl text-xs font-bold border border-gray-200 transition-all">
+                <button onClick={() => router.push('/jobs')} className="sf-subtle-control font-raleway flex flex-1 sm:flex-none items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all">
                   <FiSearch size={14} /> Find Jobs
                 </button>
-                <button onClick={() => router.push('/courses')} className="font-raleway flex flex-1 sm:flex-none items-center justify-center gap-2 bg-white hover:bg-gray-50 text-slate-700 px-5 py-2.5 rounded-xl text-xs font-bold border border-gray-200 transition-all">
+                <button onClick={() => router.push('/courses')} className="sf-subtle-control font-raleway flex flex-1 sm:flex-none items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all">
                   <FiBookOpen size={14} /> Find Courses
                 </button>
               </div>
@@ -317,7 +313,7 @@ export default function DashboardPage() {
               <div className="mt-5 pt-5 border-t border-gray-50">
                 <div className="flex flex-wrap gap-2">
                   {userContext.skills.slice(0, 8).map((skill) => (
-                    <span key={skill} className="font-raleway text-[11px] font-bold px-3 py-1 rounded-lg bg-indigo-50 text-indigo-600">{skill}</span>
+                    <span key={skill} className="font-raleway text-[11px] font-bold px-3 py-1 rounded-lg sf-accent-blue">{skill}</span>
                   ))}
                   {userContext.skills.length > 8 && (
                     <span className="font-raleway text-[11px] font-bold px-3 py-1 rounded-lg bg-gray-50 text-gray-500">+{userContext.skills.length - 8} more</span>
@@ -349,7 +345,7 @@ export default function DashboardPage() {
               value={interviewSessions.length}
               subtitle={interviewSessions.length > 0 ? `${Math.round(interviewSessions.reduce((acc, s) => acc + (s.overallScore || 0), 0) / (interviewSessions.filter(s => s.isSubmitted).length || 1))}% Avg` : 'Practice now'}
               icon={FiMic}
-              color="bg-rose-500"
+              color="bg-[var(--sf-red)]"
               onClick={() => router.push('/mock-interview')}
             />
 
@@ -358,7 +354,7 @@ export default function DashboardPage() {
               value={documentHistory.length}
               subtitle={documentHistory.length > 0 ? 'Assets ready' : 'Start creating'}
               icon={FiFile}
-              color="bg-amber-500"
+              color="bg-[var(--sf-yellow)]"
               onClick={() => router.push('/document-generation')}
             />
 
@@ -367,7 +363,7 @@ export default function DashboardPage() {
               value={jobStats?.total_jobs || 0}
               subtitle="Matched for you"
               icon={FiBriefcase}
-              color="bg-emerald-500"
+              color="bg-[var(--sf-green)]"
               onClick={() => router.push('/jobs')}
             />
 
@@ -376,7 +372,7 @@ export default function DashboardPage() {
               value={courseStats?.total_courses || 0}
               subtitle="To level up"
               icon={FiBookOpen}
-              color="bg-purple-500"
+              color="bg-[var(--sf-blue)]"
               onClick={() => router.push('/courses')}
             />
           </div>

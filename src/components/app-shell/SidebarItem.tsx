@@ -18,8 +18,8 @@ export default function SidebarItem({
       onClick={onClick}
       className={`font-raleway flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all ${
         active
-          ? 'bg-blue-50 text-blue-600 font-semibold'
-          : 'text-gray-500 hover:bg-gray-50 hover:text-gray-600'
+          ? 'bg-[var(--sf-primary-soft)] text-[var(--sf-primary-dark)] font-semibold'
+          : 'text-[var(--sf-muted)] hover:bg-[var(--sf-primary-soft)] hover:text-[var(--sf-primary-dark)]'
       }`}
     >
       <Icon size={20} />

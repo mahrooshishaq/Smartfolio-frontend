@@ -1,11 +1,5 @@
-import FoliLoader from '@/components/foli/FoliLoader';
+import { CoursesSkeleton } from '@/components/SkeletonScreens';
 
-// Courses — Foli is keen to learn.
 export default function Loading() {
-  return (
-    <FoliLoader
-      moods={['happy', 'typing', 'look-r', 'happy']}
-      messages={['Lining up courses…', 'Finding skills to level up…', 'Almost ready…']}
-    />
-  );
+  return <CoursesSkeleton />;
 }
