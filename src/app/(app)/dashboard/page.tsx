@@ -29,18 +29,19 @@ const StatCard = ({ title, value, subtitle, icon: Icon, color, onClick }: { titl
 );
 
 const metricTones: Record<string, string> = {
-  Uploaded: 'sf-accent-blue ring-[#d9e4f5]',
+  Uploaded: 'bg-[#f8fbff] text-[var(--sf-ink)] ring-[#edf3ff]',
   Reviews: 'sf-accent-violet ring-[#eadff3]',
   Latest: 'sf-accent-green ring-[#dcefe8]',
   Average: 'sf-accent-yellow ring-[#f2e6c9]',
-  Best: 'sf-primary text-white ring-[#d9d9e8] shadow-sm',
+  Best: 'sf-primary ring-[#eadff3] shadow-sm',
 };
-const chartColors = ['#776A96', '#5F7FB8', '#4F8F7A', '#A9894D', '#B86B78', '#9A82AC', '#6E7FB8', '#70A7A0'];
+const chartColors = ['#D6E4FF', '#F3E8FF', '#FFE4E9', '#DCFCE7', '#FEF3C7', '#EDE9FE', '#E8F7F2', '#FFF1D6'];
+const chartTextColors = ['#5B6FA6', '#7C5FA8', '#B85D70', '#3F8C6E', '#A87325', '#7459B6', '#43836F', '#A86F28'];
 const categoryLabels: Record<string, string> = { ats_compatibility: 'ATS', content_quality: 'Content', experience_strength: 'Experience', skills_alignment: 'Skills', achievement_impact: 'Impact', formatting_clarity: 'Formatting' };
 
 const ResumeMetric = ({ label, value, accent = false }: { label: string; value: string | number; accent?: boolean }) => (
-  <div className={`rounded-2xl p-4 ring-1 ${metricTones[label] || (accent ? 'sf-primary text-white ring-[#d9d9e8]' : 'bg-[#fbfaff] text-[var(--sf-ink)] ring-[var(--sf-border)]')}`}>
-    <p className={`font-raleway text-[10px] font-black uppercase tracking-widest ${accent ? 'text-slate-100' : 'opacity-60'}`}>{label}</p>
+  <div className={`rounded-2xl p-4 ring-1 ${metricTones[label] || (accent ? 'sf-primary ring-[#eadff3]' : 'bg-[#fbfaff] text-[var(--sf-ink)] ring-[var(--sf-border)]')}`}>
+    <p className="font-raleway text-[10px] font-black uppercase tracking-widest opacity-60">{label}</p>
     <p className="mt-1 font-century text-2xl font-black">{value}</p>
   </div>
 );
@@ -313,7 +314,7 @@ export default function DashboardPage() {
               <div className="mt-5 pt-5 border-t border-gray-50">
                 <div className="flex flex-wrap gap-2">
                   {userContext.skills.slice(0, 8).map((skill) => (
-                    <span key={skill} className="font-raleway text-[11px] font-bold px-3 py-1 rounded-lg sf-accent-blue">{skill}</span>
+                    <span key={skill} className="font-raleway text-[11px] font-bold px-3 py-1 rounded-lg sf-skill-chip">{skill}</span>
                   ))}
                   {userContext.skills.length > 8 && (
                     <span className="font-raleway text-[11px] font-bold px-3 py-1 rounded-lg bg-gray-50 text-gray-500">+{userContext.skills.length - 8} more</span>
@@ -414,7 +415,7 @@ export default function DashboardPage() {
                             className="relative w-full rounded-t-xl shadow-sm transition duration-200 group-hover:-translate-y-1 group-hover:brightness-105"
                             style={{
                               height: `${Math.max(8, analysis.overallScore)}%`,
-                              backgroundImage: `linear-gradient(180deg, ${chartColors[index % chartColors.length]} 0%, #06B6D4 115%)`,
+                              backgroundColor: chartColors[index % chartColors.length],
                             }}
                           >
                             <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-black text-slate-600">{analysis.overallScore}</span>
@@ -425,7 +426,7 @@ export default function DashboardPage() {
                     <div className="mt-2 flex gap-2 px-1">{[...resumeDashboard.analyses].slice(0, 8).reverse().map((analysis) => <span key={analysis.analysisId} className="min-w-0 flex-1 truncate text-center text-[10px] font-bold text-slate-500">{new Date(analysis.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>)}</div>
                   </div>
                   <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    {Object.entries(resumeDashboard.summary.categoryAverages).map(([key, score], index) => <div key={key} className="rounded-xl border border-white bg-white/80 p-2.5 shadow-sm"><div className="mb-1.5 flex items-center justify-between gap-2"><span className="truncate text-[10px] font-bold text-slate-500">{categoryLabels[key] || key}</span><span className="text-[10px] font-black" style={{ color: chartColors[index % chartColors.length] }}>{score ?? '—'}%</span></div><div className="h-1.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full" style={{ width: `${score || 0}%`, backgroundColor: chartColors[index % chartColors.length] }} /></div></div>)}
+                    {Object.entries(resumeDashboard.summary.categoryAverages).map(([key, score], index) => <div key={key} className="rounded-xl border border-white bg-white/80 p-2.5 shadow-sm"><div className="mb-1.5 flex items-center justify-between gap-2"><span className="truncate text-[10px] font-bold text-slate-500">{categoryLabels[key] || key}</span><span className="text-[10px] font-black" style={{ color: chartTextColors[index % chartTextColors.length] }}>{score ?? '—'}%</span></div><div className="h-1.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full" style={{ width: `${score || 0}%`, backgroundColor: chartColors[index % chartColors.length] }} /></div></div>)}
                   </div>
                 </div>
 
