@@ -370,8 +370,7 @@ function ResultsContent() {
                     <p className="text-xs text-slate-500">Original uploaded {resumeContent?.fileType?.toUpperCase() || 'document'}</p>
                   </div>
                 </div>
-                {pdfUrl && (
-                  <div className="mt-4 grid grid-cols-2 gap-2 border-t border-slate-100 pt-4 sm:grid-cols-4">
+                <div className="mt-4 grid grid-cols-2 gap-2 border-t border-slate-100 pt-4 sm:grid-cols-4">
                     <button onClick={() => setShowReanalysisWarning(true)} disabled={reanalyzing} className="inline-flex min-w-0 items-center justify-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2.5 text-center text-xs font-bold text-violet-700 hover:bg-violet-100 disabled:opacity-60">
                       {/* "with current profile" would be a lie once a job
                           description can be carried over — the dialog is where
@@ -381,14 +380,21 @@ function ResultsContent() {
                     <button onClick={() => router.push(`/resume-editor?resumeId=${data.resumeId}&analysisId=${data.analysisId}`)} className="inline-flex min-w-0 items-center justify-center gap-2 rounded-xl bg-slate-800 px-3 py-2.5 text-center text-xs font-bold text-white hover:bg-slate-900">
                       <WandSparkles size={14} /> Edit with SmartFolio
                     </button>
-                    <a href={pdfUrl} target="_blank" rel="noreferrer" className="inline-flex min-w-0 items-center justify-center gap-2 rounded-xl bg-slate-100 px-3 py-2.5 text-center text-xs font-bold text-slate-600 hover:bg-slate-200">
-                      <ExternalLink size={14} /> {resumeContent?.fileType === 'docx' ? 'Original' : 'Open'}
-                    </a>
-                    <a href={pdfUrl} download={fileName} className="inline-flex min-w-0 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-3 py-2.5 text-center text-xs font-bold text-white hover:bg-indigo-700">
-                      <Download size={14} /> Download
-                    </a>
+                    {pdfUrl ? (
+                      <>
+                        <a href={pdfUrl} target="_blank" rel="noreferrer" className="inline-flex min-w-0 items-center justify-center gap-2 rounded-xl bg-slate-100 px-3 py-2.5 text-center text-xs font-bold text-slate-600 hover:bg-slate-200">
+                          <ExternalLink size={14} /> {resumeContent?.fileType === 'docx' ? 'Original' : 'Open'}
+                        </a>
+                        <a href={pdfUrl} download={fileName} className="inline-flex min-w-0 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-3 py-2.5 text-center text-xs font-bold text-white hover:bg-indigo-700">
+                          <Download size={14} /> Download
+                        </a>
+                      </>
+                    ) : (
+                      <p className="col-span-2 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2.5 text-xs font-semibold leading-5 text-amber-800">
+                        Original file unavailable. Editing and re-analysis still work from saved resume content.
+                      </p>
+                    )}
                   </div>
-                )}
               </header>
               {/* Preview, best available first: the original file, then the
                   structured document, then raw extracted text. The middle tier

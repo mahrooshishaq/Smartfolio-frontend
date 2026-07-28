@@ -17,6 +17,8 @@ interface SavedResume {
   fileType: string;
   uploadedAt: string;
   analyzable: boolean;
+  originalAvailable?: boolean;
+  extractedTextAvailable?: boolean;
 }
 
 export default function ResumeUploadPage() {
@@ -243,9 +245,6 @@ function ResumeUploadContent() {
         router.push('/login');
         return;
       }
-      // The carried job has done its job — drop it so navigating back here
-      // later starts clean rather than re-prefilling a finished analysis.
-      clearJobHandoff('resume');
       const trimmedJobDescription = jobDescription.trim();
       const analyzeRes = await apiFetch(`/resume/analyze`, {
         method: 'POST',
@@ -263,6 +262,8 @@ function ResumeUploadContent() {
         const errorData = await analyzeRes.json();
         throw new Error(errorData.message || 'Analysis failed');
       }
+      // The carried job has done its job only after analysis succeeds.
+      clearJobHandoff('resume');
       router.push(`/analysis-results?resumeId=${resumeId}`);
     } catch (error: unknown) {
       console.error("Analysis Error:", error);
@@ -348,7 +349,7 @@ function ResumeUploadContent() {
                   <p className="font-century text-lg font-black text-slate-800">Using your saved CV</p>
                   <p className="mt-1 truncate text-sm text-slate-600">{savedResume!.fileName}</p>
                   <p className="mt-0.5 text-[11px] font-bold uppercase tracking-wider text-emerald-600">
-                    Ready to analyse — no re-upload needed
+                    {savedResume!.originalAvailable ? 'Ready to analyse - no re-upload needed' : 'Ready to analyse from saved text'}
                   </p>
                 </div>
               </div>
@@ -360,6 +361,11 @@ function ResumeUploadContent() {
               >
                 <RefreshCw size={14} /> Use a different CV
               </button>
+              {!savedResume!.originalAvailable && (
+                <p className="mt-4 rounded-2xl border border-amber-100 bg-white px-4 py-3 text-xs leading-relaxed text-amber-800">
+                  The original file itself is not available, so preview/download may use the formatted SmartFolio version. Re-upload this CV to restore the original file.
+                </p>
+              )}
             </div>
           ) : (
             <>
@@ -373,6 +379,12 @@ function ResumeUploadContent() {
                   We have <span className="font-bold">{savedResume.fileName}</span> on record, but the file
                   itself is no longer stored on the server, so it can&apos;t be previewed, downloaded or
                   edited. Please upload it again to run this analysis.
+                </div>
+              )}
+              {savedResume?.analyzable && !savedResume.originalAvailable && (
+                <div className="mb-6 rounded-2xl border border-amber-100 bg-amber-50 px-5 py-4 text-xs leading-relaxed text-amber-800">
+                  We can analyze <span className="font-bold">{savedResume.fileName}</span> from saved extracted text,
+                  but the original file preview and download need a re-upload.
                 </div>
               )}
 

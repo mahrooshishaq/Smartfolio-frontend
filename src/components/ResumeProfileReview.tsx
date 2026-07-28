@@ -46,6 +46,7 @@ export default function ResumeProfileReview({
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
   const [applyError, setApplyError] = useState<string | null>(null);
+  const [noSuggestions, setNoSuggestions] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
@@ -57,10 +58,10 @@ export default function ResumeProfileReview({
         return r.json();
       })
       .then((d: Suggestions) => {
-        // Nothing to change (e.g. re-upload of an already-applied CV) → don't
-        // make the user dismiss an empty modal; go straight to analysis.
+        // Nothing to change still gets an explicit continue state so the flow
+        // never looks like a dead button or vanished modal.
         if (!d.rows || d.rows.length === 0) {
-          onDone();
+          setNoSuggestions(true);
           return;
         }
         setData(d);
@@ -109,7 +110,7 @@ export default function ResumeProfileReview({
 
   // Keep upload progress on the upload page. The review dialog should appear
   // only when there is something concrete for the user to review.
-  if (!data && !error) return null;
+  if (!data && !error && !noSuggestions) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 font-raleway">
@@ -120,9 +121,13 @@ export default function ResumeProfileReview({
             <Sparkles size={18} />
             <span className="text-[11px] font-bold uppercase tracking-widest">From your resume</span>
           </div>
-          <h2 className="font-century text-xl text-slate-800">Add these details to your profile?</h2>
+          <h2 className="font-century text-xl text-slate-800">
+            {noSuggestions ? 'No new profile details found' : 'Add these details to your profile?'}
+          </h2>
           <p className="text-sm text-gray-500 mt-1">
-            We use these to match you with better jobs and courses. Uncheck anything you’d rather skip.
+            {noSuggestions
+              ? 'Your profile already covers the details SmartFolio could read from this resume.'
+              : 'We use these to match you with better jobs and courses. Uncheck anything you would rather skip.'}
           </p>
         </div>
 
@@ -135,10 +140,16 @@ export default function ResumeProfileReview({
             </div>
           )}
 
-          {!data && !error && (
+          {!data && !error && !noSuggestions && (
             <div className="flex items-center gap-2 text-slate-500 py-8 justify-center">
               <Loader2 size={18} className="animate-spin" />
               <span className="text-sm">Reading your resume…</span>
+            </div>
+          )}
+
+          {noSuggestions && !error && (
+            <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5 text-sm leading-6 text-emerald-800">
+              Nothing needs to be added before analysis. Continue when you are ready.
             </div>
           )}
 
@@ -196,22 +207,22 @@ export default function ResumeProfileReview({
 
         {/* Footer */}
         <div className="p-7 pt-4 border-t border-gray-50 flex gap-3">
-          <button
+          {!noSuggestions && <button
             type="button"
             onClick={onDone}
             disabled={saving}
             className="flex-1 py-3 rounded-2xl text-sm font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 transition-colors disabled:opacity-50"
           >
             Skip
-          </button>
+          </button>}
           <button
             type="button"
-            onClick={apply}
-            disabled={saving || !data}
-            className="flex-[2] py-3 rounded-2xl text-sm font-bold text-white bg-slate-800 hover:bg-slate-900 transition-colors shadow-lg shadow-slate-200 disabled:opacity-50 flex items-center justify-center gap-2"
+            onClick={noSuggestions ? onDone : apply}
+            disabled={saving || (!data && !noSuggestions)}
+            className={`${noSuggestions ? 'flex-1' : 'flex-[2]'} py-3 rounded-2xl text-sm font-bold text-white bg-slate-800 hover:bg-slate-900 transition-colors shadow-lg shadow-slate-200 disabled:opacity-50 flex items-center justify-center gap-2`}
           >
             {saving ? <Loader2 size={16} className="animate-spin" /> : null}
-            {saving ? 'Saving…' : applyError ? 'Retry' : 'Add & continue'}
+            {noSuggestions ? 'Continue to analysis' : saving ? 'Saving...' : applyError ? 'Retry' : 'Add & continue'}
           </button>
         </div>
       </div>
