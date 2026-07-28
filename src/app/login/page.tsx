@@ -6,7 +6,6 @@ import Link from "next/link";
 import { FaEye, FaEyeSlash, FaGoogle } from "react-icons/fa";
 import AuthShell from "@/components/auth/AuthShell";
 import type { FoliState } from "@/components/foli/Foli";
-import FoliSuccessTakeover from "@/components/foli/FoliSuccessTakeover";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
@@ -19,7 +18,6 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [foli, setFoli] = useState<FoliState>("idle");
-  const [redirectTo, setRedirectTo] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -56,8 +54,7 @@ export default function LoginPage() {
         target = "/dashboard";
       }
 
-      setFoli("success");
-      setRedirectTo(target);
+      window.location.href = target;
     } catch (requestError: unknown) {
       const backendMessage = axios.isAxiosError(requestError)
         ? requestError.response?.data?.message
@@ -76,15 +73,6 @@ export default function LoginPage() {
 
   return (
     <AuthShell foli={foli}>
-      <FoliSuccessTakeover
-        show={!!redirectTo}
-        title="Welcome back."
-        subtitle="Taking you to your dashboard..."
-        onDone={() => {
-          if (redirectTo) window.location.href = redirectTo;
-        }}
-      />
-
       <header className="mb-7">
         <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#8a7392]">
           Welcome back
