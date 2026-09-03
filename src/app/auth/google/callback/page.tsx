@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import axios from 'axios';
 import FoliLoader from '@/components/foli/FoliLoader';
 import AuthTransition from '@/components/foli/AuthTransition';
+import { resolvePostAuthDestination } from '@/lib/post-auth';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
@@ -34,7 +35,11 @@ function GoogleCallbackContent() {
         const statusRes = await axios.get(`${API}/onboarding/status`, {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
-        setTarget(statusRes.data?.completed ? '/dashboard' : '/onboarding');
+        // sessionStorage survives the OAuth round trip because it is the same
+        // tab throughout - which a query parameter would not be.
+        setTarget(
+          resolvePostAuthDestination(statusRes.data?.completed ? '/dashboard' : '/onboarding'),
+        );
       } catch {
         setTarget('/dashboard');
       }

@@ -77,3 +77,43 @@ npm run dev
 npm run build
 npm start
 ```
+
+## Environment
+
+`.env.example` is gitignored, so the one variable production genuinely cannot
+run without is documented here instead.
+
+### `NEXT_PUBLIC_API_URL` — required in production
+
+Set it in the Vercel project settings to the backend's own origin:
+
+```
+NEXT_PUBLIC_API_URL=https://mahrooshishaq-smartfoliobackend.hf.space
+```
+
+`NEXT_PUBLIC_*` values are inlined at build time, so changing it needs a
+redeploy to take effect. Leave it **unset** locally.
+
+**Why it matters.** Most of the app reaches the backend through the rewrites in
+`next.config.ts`, and for ordinary requests nobody cares which machine made the
+outbound call. The verification check is the exception. That check judges the
+*candidate's* IP address — it is how a VPN is told apart from a home connection.
+A rewrite is a server-side proxy, so without this variable the backend sees the
+address of the Vercel server that forwarded the request, which lives in a
+datacenter, which is exactly what the hosting-provider rule blocks.
+
+Unset in production, therefore: **every candidate is judged to be on a hosting
+IP and comes back `blocked`.** Nothing errors — the verdicts are well-formed and
+the admin dashboard fills with findings, all of them measuring our own
+deployment rather than any applicant. The collector logs a console error if it
+ever finds itself proxying from a non-localhost host, because that failure
+produces no error of its own.
+
+Locally the frontend and backend share `localhost`, so the proxied address is
+`127.0.0.1` either way and the distinction does not exist.
+
+### `NEXT_PUBLIC_LIVE_CAPTIONS`
+
+Optional. On-device MoonshineJS streaming captions are on by default in the mock
+interview, with the browser recognizer as the automatic fallback. Set to
+`browser` to use only the latter.

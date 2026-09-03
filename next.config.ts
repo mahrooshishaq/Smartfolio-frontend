@@ -31,8 +31,16 @@ const csp = [
   // back. Without it the preview failed with "Refused to connect" even though
   // the bytes were already in the page — a blob URL carries no network reach, so
   // allowing it grants nothing beyond reading what this origin already holds.
+  // The verification latency probes hit AWS regional endpoints DIRECTLY from
+  // the browser, and read the public IP from ipify. Proxying either through the
+  // backend would measure the server's distance from those regions, not the
+  // candidate's — which is the whole signal. ipify is listed for both its v4
+  // and v6 hostnames because the check compares the two.
   [
     "connect-src 'self' blob:",
+    'https://*.amazonaws.com',
+    'https://api.ipify.org',
+    'https://api64.ipify.org',
     process.env.NEXT_PUBLIC_API_URL,
     isDev ? 'http://localhost:3000' : null,
   ].filter(Boolean).join(' '),
@@ -52,7 +60,11 @@ const securityHeaders = [
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   { key: 'X-Frame-Options', value: 'DENY' },
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-  { key: 'Permissions-Policy', value: 'camera=(), geolocation=(), microphone=(self)' },
+  // camera=(self) is required by the verification check, which reads camera
+  // *device names* to spot virtual cameras (OBS, ManyCam). camera=() blocks
+  // getUserMedia outright, and enumerateDevices then returns empty labels —
+  // the check silently sees no devices rather than failing loudly.
+  { key: 'Permissions-Policy', value: 'camera=(self), geolocation=(), microphone=(self)' },
 ];
 
 const nextConfig: NextConfig = {

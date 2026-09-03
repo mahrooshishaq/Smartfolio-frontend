@@ -43,7 +43,33 @@ export const ROUTES: RouteSpec[] = [
   { path: '/upload-resume', auth: true },
   { path: '/onboarding', auth: true },
   { path: '/analysis-results', auth: true },
+
+  // Campaign + verification surface.
+  //
+  // The apply page and the invite gate are audited with a slug and a token that
+  // deliberately do not exist: their not-found states are what a mistyped or
+  // expired link actually shows, they are reachable without a fixture, and a
+  // dead end that overflows on a phone is still a dead end that overflows on a
+  // phone. The populated versions are covered by apply-journey.spec.ts.
+  { path: '/verify', auth: false },
+  { path: '/apply/no-such-campaign', auth: false },
+  { path: '/interview/not-a-real-token', auth: false },
+  { path: '/admin/campaigns', auth: true },
+  { path: '/admin/campaigns/new', auth: true },
+  { path: '/admin/verification', auth: true },
 ];
+
+/**
+ * Routes whose audited state is an empty or refused one.
+ *
+ * Worth auditing (they are what a real mistyped link renders) but pointless to
+ * judge for content, so a reviewer knows not to look for a populated table.
+ */
+export const EMPTY_STATE_ROUTES = new Set([
+  '/apply/no-such-campaign',
+  '/interview/not-a-real-token',
+  '/this-page-does-not-exist',
+]);
 
 export type OverflowReport = {
   vw: number;

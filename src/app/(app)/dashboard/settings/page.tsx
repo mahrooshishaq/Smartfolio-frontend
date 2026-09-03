@@ -8,6 +8,7 @@ import {
 
 import { apiFetch } from '@/lib/api';
 import { Select } from '@/components/ui/Select';
+import AvailabilityCard from '@/components/AvailabilityCard';
 
 // --- Enums (matching backend) ---
 const CAREER_STAGES = [
@@ -273,6 +274,10 @@ export default function SettingsPage() {
                 : <><FiSave size={16} /> Save Changes</>}
             </button>
           </div>
+
+          {/* Whether we may put them forward to companies - and the only place a
+              paused status can be lifted, because only they can answer it. */}
+          <AvailabilityCard className="mb-8" />
 
           {error && (
             <div className="font-raleway bg-red-50 text-red-600 px-6 py-4 rounded-2xl mb-6 text-sm">{error}</div>

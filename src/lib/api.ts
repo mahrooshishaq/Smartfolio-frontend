@@ -156,3 +156,30 @@ export async function resolveJobLink(
     clearTimeout(timer);
   }
 }
+
+/**
+ * Unauthenticated fetch, for the public campaign surface.
+ *
+ * `apiFetch` cannot serve these pages: with no access token it clears the
+ * session and redirects to /login, which would bounce a logged-out visitor away
+ * from a job advert before they ever saw it. The apply page is public by
+ * definition - that IS the acquisition flow - so it needs a client that treats
+ * "not signed in" as the normal case.
+ *
+ * `credentials: 'include'` is always set because the pre-signup application
+ * draft is identified by an httpOnly cookie. Without it the browser would drop
+ * the cookie on every call and the draft would be unfindable on return from
+ * signup.
+ *
+ * A token is attached when one happens to exist, so a signed-in user applying
+ * to a campaign is recognised - but its absence is never an error.
+ */
+export async function publicFetch(path: string, init?: RequestInit): Promise<Response> {
+  const url = path.startsWith('http') ? path : `${API}${path}`;
+  const headers = new Headers(init?.headers);
+
+  const token = getAccessToken();
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+
+  return fetch(url, { ...init, headers, credentials: 'include' });
+}

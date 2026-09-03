@@ -7,6 +7,7 @@ import { FaEye, FaEyeSlash, FaGoogle } from "react-icons/fa";
 import AuthShell from "@/components/auth/AuthShell";
 import type { FoliState } from "@/components/foli/Foli";
 import AuthTransition from "@/components/foli/AuthTransition";
+import { resolvePostAuthDestination } from "@/lib/post-auth";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
@@ -56,8 +57,11 @@ export default function LoginPage() {
         target = "/dashboard";
       }
 
+      // Someone who started an application before signing in goes back to it,
+      // not to the dashboard - they are three minutes into a job application
+      // and have not finished it yet.
       setFoli("success");
-      setRedirectTo(target);
+      setRedirectTo(resolvePostAuthDestination(target));
     } catch (requestError: unknown) {
       const backendMessage = axios.isAxiosError(requestError)
         ? requestError.response?.data?.message

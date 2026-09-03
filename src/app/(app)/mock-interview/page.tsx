@@ -25,6 +25,13 @@ import { useAppChrome } from '@/components/app-shell/AppShell';
 
 import { apiFetch } from '@/lib/api';
 import { peekJobHandoff, clearJobHandoff, HANDOFF_PARAM, type JobHandoff } from '@/lib/job-handoff';
+import {
+  peekCampaignInterview,
+  clearCampaignInterview,
+  recordCampaignInterview,
+  CAMPAIGN_PARAM,
+  type CampaignInterviewHandoff,
+} from '@/lib/campaign-interview';
 
 // Breather between questions: long enough to reset (and for the next question's
 // audio to finish synthesizing in the background), short enough to keep pace.
@@ -58,6 +65,9 @@ function MockInterviewContent() {
   // Set when the user arrived from a job card — names the posting in the form so
   // they can see which job the pre-filled description belongs to.
   const [prefilledFrom, setPrefilledFrom] = useState<JobHandoff | null>(null);
+  // Set when this interview was opened from a campaign invitation, so the
+  // finished session can be attached back to it.
+  const [campaignInterview, setCampaignInterview] = useState<CampaignInterviewHandoff | null>(null);
   // Reading the handoff destroys it, and StrictMode runs effects twice in dev —
   // without this the second pass would find an empty stash and the job would
   // silently fail to load.
@@ -207,6 +217,18 @@ function MockInterviewContent() {
         prefillConsumed.current = true;
         setJobDescription(prefill.description);
         setPrefilledFrom(prefill);
+      }
+    }
+
+    // A campaign invitation carries the same description, plus the token saying
+    // which invitation this interview is for. Read without consuming, for the
+    // same remount reason as above.
+    if (searchParams.get(CAMPAIGN_PARAM) === '1' && !prefillConsumed.current) {
+      const campaign = peekCampaignInterview();
+      if (campaign) {
+        prefillConsumed.current = true;
+        setJobDescription(campaign.jobDescription);
+        setCampaignInterview(campaign);
       }
     }
   }, [router, searchParams]);
@@ -663,6 +685,20 @@ function MockInterviewContent() {
       setEvaluation(data.evaluation);
       setStage('results');
       if (token) loadProgress(token); // refresh the trend with this attempt
+
+      // Attach it to the invitation, if this interview came from one. Their
+      // answers are already submitted and scored by this point, so a failure
+      // here is logged rather than surfaced — it must not read to a candidate
+      // as though the interview did not count.
+      if (campaignInterview && sessionId) {
+        const linked = await recordCampaignInterview(campaignInterview, sessionId, apiFetch);
+        if (linked) {
+          clearCampaignInterview();
+          setCampaignInterview(null);
+        } else {
+          console.warn('Could not attach this interview to its campaign invitation.');
+        }
+      }
     } catch (err: any) {
       console.warn('Submit failed:', err);
       setError('We couldn’t submit your interview — please press Next or the end button to try again.');
