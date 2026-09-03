@@ -42,6 +42,11 @@ const csp = [
     'https://api.ipify.org',
     'https://api64.ipify.org',
     process.env.NEXT_PUBLIC_API_URL,
+    // The verification check posts straight to the backend, bypassing the
+    // rewrites on purpose, so the backend observes the candidate's address
+    // rather than this deployment's. Without it in connect-src the browser
+    // blocks that one request and the check cannot submit at all.
+    process.env.NEXT_PUBLIC_VERIFICATION_API_URL,
     isDev ? 'http://localhost:3000' : null,
   ].filter(Boolean).join(' '),
   "media-src 'self' blob: data:",

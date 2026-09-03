@@ -83,34 +83,54 @@ npm start
 `.env.example` is gitignored, so the one variable production genuinely cannot
 run without is documented here instead.
 
-### `NEXT_PUBLIC_API_URL` — required in production
-
-Set it in the Vercel project settings to the backend's own origin:
+### `NEXT_PUBLIC_VERIFICATION_API_URL` — required in production
 
 ```
-NEXT_PUBLIC_API_URL=https://mahrooshishaq-smartfoliobackend.hf.space
+NEXT_PUBLIC_VERIFICATION_API_URL=https://mahrooshishaq-smartfoliobackend.hf.space
 ```
 
-`NEXT_PUBLIC_*` values are inlined at build time, so changing it needs a
-redeploy to take effect. Leave it **unset** locally.
+The backend's own origin. Inlined at build time, so it needs a **rebuild** to
+take effect — setting it on an existing deployment does nothing.
 
-**Why it matters.** Most of the app reaches the backend through the rewrites in
+**Why it exists.** Almost everything reaches the backend through the rewrites in
 `next.config.ts`, and for ordinary requests nobody cares which machine made the
-outbound call. The verification check is the exception. That check judges the
-*candidate's* IP address — it is how a VPN is told apart from a home connection.
-A rewrite is a server-side proxy, so without this variable the backend sees the
-address of the Vercel server that forwarded the request, which lives in a
-datacenter, which is exactly what the hosting-provider rule blocks.
+outbound call. The verification check is the exception: it judges the
+*candidate's* IP address, which is how a VPN is told apart from a home
+connection. A rewrite is a server-side proxy, so through it the backend sees the
+address of the Vercel edge that forwarded the request — a datacenter address,
+which is exactly what the hosting-provider rule blocks.
 
-Unset in production, therefore: **every candidate is judged to be on a hosting
-IP and comes back `blocked`.** Nothing errors — the verdicts are well-formed and
-the admin dashboard fills with findings, all of them measuring our own
-deployment rather than any applicant. The collector logs a console error if it
-ever finds itself proxying from a non-localhost host, because that failure
-produces no error of its own.
+Measured on production before this variable existed:
 
-Locally the frontend and backend share `localhost`, so the proxied address is
-`127.0.0.1` either way and the distinction does not exist.
+```
+verdict: blocked | country: SG
+  block  hosting_asn — IP belongs to a hosting provider (AWS EC2 ap-southeast-1)
+```
+
+Every candidate, blocked, and told they were in Singapore. Nothing errored — the
+verdict was well-formed, and the admin dashboard would have filled with findings
+that measured only our own deployment.
+
+It is a **separate variable from `NEXT_PUBLIC_API_URL` on purpose.** That one is
+set to the frontend's own origin, which is what makes every other call route
+through the rewrites and work. Repointing it at the backend would move every
+request in the product to a cross-origin call in order to fix one of them. This
+variable changes exactly the call that needs changing.
+
+The value must also be reachable under the CSP — `next.config.ts` adds it to
+`connect-src` from the same variable, so the two cannot drift apart.
+
+Locally, leave it unset: the frontend and backend share `localhost`, so the
+proxied address is `127.0.0.1` either way and the distinction does not exist.
+The collector logs a console error if it finds itself proxying anywhere else,
+because that failure produces no error of its own.
+
+### `NEXT_PUBLIC_API_URL`
+
+The origin the rest of the app calls. Currently the frontend's own Vercel URL,
+which is what routes those calls through the rewrites in `next.config.ts`.
+Leave it alone unless you are deliberately moving the whole app to direct
+cross-origin calls.
 
 ### `NEXT_PUBLIC_LIVE_CAPTIONS`
 

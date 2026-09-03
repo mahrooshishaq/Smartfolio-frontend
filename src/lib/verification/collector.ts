@@ -526,37 +526,44 @@ export async function runVerification(options: RunOptions): Promise<Verification
  * Where the check is submitted.
  *
  * This MUST reach the backend directly, not through the Next.js rewrite proxy.
- * A rewrite is a server-side fetch: the backend would then observe the
- * FRONTEND's address, not the candidate's - and since that address belongs to a
- * hosting provider, every single candidate would come back `blocked` with
- * `hosting_asn`. The check would appear to work perfectly while measuring
- * nothing but our own deployment.
+ * A rewrite is a server-side fetch: the backend would observe the FRONTEND's
+ * address, not the candidate's - and since that address belongs to a hosting
+ * provider, every candidate comes back `blocked`. Measured on production
+ * before this variable existed: verdict `blocked`, country SG, "IP belongs to a
+ * hosting provider (AWS EC2 ap-southeast-1)". The check appeared to work
+ * perfectly while measuring nothing but Vercel's edge.
  *
- * So: when NEXT_PUBLIC_API_URL is configured (production), talk to the backend
- * origin directly - CORS already allows the frontend origin, and the CSP
- * already lists it in connect-src. Without it, fall back to same-origin, which
- * is correct in local development where the proxy and the browser share a host.
+ * Deliberately its OWN variable rather than reusing NEXT_PUBLIC_API_URL.
+ * That one is set to the frontend's own origin, which is what makes every other
+ * call in the app route through the rewrites and work; repointing it at the
+ * backend would move every request in the product to a cross-origin call to buy
+ * a fix for one of them. This variable changes exactly the call that needs
+ * changing.
  *
- * NEXT_PUBLIC_API_URL is inlined at build time, so this is decided when the
- * frontend is built, not at runtime.
+ * Set it to the backend origin in production. It is inlined at build time, so
+ * it needs a rebuild to take effect, and it must also appear in the CSP's
+ * connect-src (see next.config.ts) or the browser blocks the request.
  */
 function verificationEndpoint(): string {
-  const base = process.env.NEXT_PUBLIC_API_URL;
+  const base = process.env.NEXT_PUBLIC_VERIFICATION_API_URL;
   if (base) return `${base.replace(/\/$/, '')}/verification/session`;
 
-  // Falling back to the proxy is correct on localhost, where the frontend and
+  // The same-origin fallback is correct on localhost, where the frontend and
   // backend share a host and the distinction does not exist. Anywhere else it
-  // means NEXT_PUBLIC_API_URL was not set at build time, and every check from
-  // here will be judged on the proxy's datacenter address rather than the
-  // candidate's — blocking everyone, silently, with well-formed verdicts.
+  // means the variable was not set at build time, and every check from here
+  // will be judged on the proxy's datacenter address rather than the
+  // candidate's - blocking everyone, silently, with well-formed verdicts.
   //
   // Say so loudly. This is the one failure in the whole check that produces no
   // error of its own.
-  if (typeof window !== 'undefined' && !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname)) {
+  if (
+    typeof window !== 'undefined' &&
+    !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname)
+  ) {
     console.error(
-      '[verification] NEXT_PUBLIC_API_URL is not set. The check is being proxied, ' +
-        "so the backend will see this deployment's IP instead of the candidate's " +
-        'and block everyone. Set it to the backend origin and redeploy.',
+      '[verification] NEXT_PUBLIC_VERIFICATION_API_URL is not set. The check is ' +
+        "being proxied, so the backend will see this deployment's IP instead of " +
+        'the candidate\'s and block everyone. Set it to the backend origin and rebuild.',
     );
   }
   return '/api/verification/session';
