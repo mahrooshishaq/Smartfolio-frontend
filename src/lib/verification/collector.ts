@@ -545,7 +545,14 @@ export async function runVerification(options: RunOptions): Promise<Verification
  * connect-src (see next.config.ts) or the browser blocks the request.
  */
 function verificationEndpoint(): string {
-  const base = process.env.NEXT_PUBLIC_VERIFICATION_API_URL;
+  // NEXT_PUBLIC_VERIFICATION_API_URL first, because its name states the
+  // requirement: this call must not be proxied. NEXT_PUBLIC_BACKEND_URL is the
+  // fallback rather than the primary for the same reason - it exists for the
+  // OAuth redirect, and somebody repointing it for OAuth reasons should not
+  // silently change where the check is judged. But when only that one is set,
+  // using it beats falling through to the proxy and blocking everybody.
+  const base =
+    process.env.NEXT_PUBLIC_VERIFICATION_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
   if (base) return `${base.replace(/\/$/, '')}/verification/session`;
 
   // The same-origin fallback is correct on localhost, where the frontend and
@@ -561,7 +568,8 @@ function verificationEndpoint(): string {
     !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname)
   ) {
     console.error(
-      '[verification] NEXT_PUBLIC_VERIFICATION_API_URL is not set. The check is ' +
+      '[verification] Neither NEXT_PUBLIC_VERIFICATION_API_URL nor ' +
+        'NEXT_PUBLIC_BACKEND_URL is set. The check is ' +
         "being proxied, so the backend will see this deployment's IP instead of " +
         'the candidate\'s and block everyone. Set it to the backend origin and rebuild.',
     );

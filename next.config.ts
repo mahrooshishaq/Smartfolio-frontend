@@ -47,6 +47,7 @@ const csp = [
     // rather than this deployment's. Without it in connect-src the browser
     // blocks that one request and the check cannot submit at all.
     process.env.NEXT_PUBLIC_VERIFICATION_API_URL,
+    process.env.NEXT_PUBLIC_BACKEND_URL,
     isDev ? 'http://localhost:3000' : null,
   ].filter(Boolean).join(' '),
   "media-src 'self' blob: data:",
