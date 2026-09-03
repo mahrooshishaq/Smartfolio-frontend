@@ -29,6 +29,7 @@ import {
   type VerificationContext,
   type VerificationResult,
 } from '@/lib/verification/collector';
+import { APPLY_COUNTRIES } from '@/lib/countries';
 
 type Props = {
   context: VerificationContext;
@@ -165,8 +166,14 @@ export default function VerificationGate({
   if (phase === 'error') {
     return (
       <div className={`sf-card p-5 ${className}`} data-testid="verification-error">
-        <h3 className="text-base font-semibold text-[var(--sf-ink)]">The check could not be submitted</h3>
-        <p className="mt-1 text-sm text-[var(--sf-muted)]">{error}</p>
+        <h3 className="text-base font-semibold text-[var(--sf-ink)]">
+          We could not finish the check
+        </h3>
+        <p className="mt-1 text-sm leading-relaxed text-[var(--sf-muted)]">{error}</p>
+        <p className="mt-2 text-xs leading-relaxed text-[var(--sf-muted-soft)]">
+          This is a problem at our end or with the connection between us — not with your
+          application. Nothing you have entered has been lost.
+        </p>
         <button
           type="button"
           onClick={start}
@@ -181,7 +188,9 @@ export default function VerificationGate({
   if (!result) return null;
 
   const blocks = result.findings.filter((f) => f.level === 'block');
+  const contradictions = result.findings.filter((f) => f.level === 'contradiction');
   const isBlocked = result.verdict === 'blocked';
+  const needsReview = result.verdict === 'review';
 
   return (
     <div
@@ -190,14 +199,23 @@ export default function VerificationGate({
       data-verdict={result.verdict}
     >
       <div className="flex items-start gap-3">
-        {isBlocked ? (
-          <FiAlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-[var(--sf-yellow)]" />
+        {isBlocked || needsReview ? (
+          <FiAlertTriangle
+            className={
+              'mt-0.5 h-5 w-5 shrink-0 ' +
+              (isBlocked ? 'text-[var(--sf-yellow)]' : 'text-[var(--sf-muted)]')
+            }
+          />
         ) : (
           <FiCheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-[var(--sf-green)]" />
         )}
         <div className="flex-1">
           <h3 className="text-base font-semibold text-[var(--sf-ink)]">
-            {isBlocked ? 'One thing to change first' : 'Connection check complete'}
+            {isBlocked
+              ? 'One thing to change first'
+              : needsReview
+                ? 'Check complete — one thing to flag'
+                : 'Connection check complete'}
           </h3>
 
           {isBlocked ? (
@@ -226,10 +244,44 @@ export default function VerificationGate({
                 <FiRefreshCw className="h-4 w-4" /> Check again
               </button>
             </>
+          ) : needsReview ? (
+            <>
+              {/* A review is NOT a rejection and must not read like one. The
+                  candidate continues either way — but they are told what we
+                  saw, because finding out later that something was "flagged"
+                  and never explained is worse than being told now. */}
+              <p className="mt-1 text-sm leading-relaxed text-[var(--sf-muted)]">
+                Your application continues as normal. One detail did not line up, so a person will
+                take a look — nothing is decided automatically.
+              </p>
+              <ul className="mt-3 space-y-2">
+                {contradictions.map((f) => (
+                  <li
+                    key={f.code}
+                    className="rounded-xl bg-[var(--sf-yellow-soft)] px-3.5 py-2.5 text-[13.5px] leading-relaxed text-[var(--sf-ink-soft)]"
+                    data-finding={f.code}
+                  >
+                    {humanise(f.code, f.detail)}
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-3 text-xs leading-relaxed text-[var(--sf-muted-soft)]">
+                If that looks wrong — you are not on a VPN and the country is right — you can run
+                the check again and it will use whatever it sees this time.
+              </p>
+              <button
+                type="button"
+                onClick={start}
+                className="sf-subtle-control mt-3 inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold"
+                data-testid="verification-recheck"
+              >
+                <FiRefreshCw className="h-4 w-4" /> Run it again
+              </button>
+            </>
           ) : (
             <p className="mt-1 text-sm text-[var(--sf-muted)]">
               {result.country
-                ? `Connecting from ${result.country}. You are all set.`
+                ? `Connecting from ${countryName(result.country)}. You are all set.`
                 : 'You are all set.'}
             </p>
           )}
@@ -240,26 +292,63 @@ export default function VerificationGate({
 }
 
 /**
- * Turns a finding into an instruction.
+ * Turns a finding into something a candidate can act on.
  *
- * The server's `detail` explains the finding to an operator. A candidate needs
- * to know what to DO, and being told their network "belongs to a hosting
- * provider" tells them nothing actionable.
+ * The server's `detail` is written for an operator: it names ASNs, regions and
+ * round-trip times. A candidate needs to know what to DO, and being told their
+ * network "belongs to a hosting provider" tells them nothing. Where the
+ * specifics matter — which country we saw — they are pulled out of the detail
+ * rather than dropped, because "we think you are somewhere else" without saying
+ * where is worse than saying nothing.
  */
 function humanise(code: string, detail: string): string {
   switch (code) {
+    /* ---- blocks: fixable, and the candidate is the one who fixes them ---- */
     case 'hosting_asn':
     case 'hosting_asn_name':
-    case 'known_proxy':
     case 'datacenter_range':
-      return 'Please turn off your VPN or proxy and run the check again. We need to see your normal internet connection.';
+      return 'Your connection looks like a VPN, proxy or company network rather than an ordinary home or mobile one. Please turn off any VPN and run the check again.';
+    case 'known_proxy':
+      return 'Your connection is flagged as a proxy or VPN. If you are using one, please turn it off and try again.';
     case 'tor_exit':
       return 'You appear to be connecting through Tor. Please use your normal internet connection instead.';
     case 'virtual_camera':
-      return 'A virtual camera (such as OBS) is running. Please close it and run the check again.';
+      return 'A virtual camera (OBS, ManyCam or similar) is running. Please close it and run the check again.';
     case 'virtual_microphone':
       return 'A virtual audio device is active. Please close it and run the check again.';
+
+    /* ---- contradictions: explained, never accusations ---- */
+    case 'declared_vs_ip': {
+      const seen = countriesIn(detail);
+      return seen
+        ? `You told us you are in ${seen.declared}, but your connection looks like it is in ${seen.actual}. If you are travelling, or using a VPN or company network, that is usually why.`
+        : 'The country you gave does not match where your connection appears to be.';
+    }
+    case 'latency_excludes_declared':
+      return 'The speed of your connection to different parts of the world does not line up with the country you gave. A VPN is the most common reason.';
+    case 'ipv4_vs_ipv6':
+      return 'Your device has two internet connections and they appear to be in different countries. This often happens with a VPN, or with some mobile networks.';
+    case 'automation':
+      return 'Your browser reports that it is being controlled automatically. If you are using an automation tool or an unusual browser extension, please turn it off.';
+
     default:
       return detail;
   }
+}
+
+/**
+ * The two country codes out of a declared_vs_ip detail.
+ *
+ * Read from the message rather than added as separate fields: the server owns
+ * the wording, and duplicating the values into the payload would give two
+ * places for them to disagree.
+ */
+function countriesIn(detail: string): { declared: string; actual: string } | null {
+  const match = detail.match(/Declared ([A-Z]{2}), connection resolves to ([A-Z]{2})/);
+  return match ? { declared: countryName(match[1]), actual: countryName(match[2]) } : null;
+}
+
+function countryName(code: string): string {
+  const named = APPLY_COUNTRIES.find(([value]) => value === code);
+  return named ? named[1] : code;
 }

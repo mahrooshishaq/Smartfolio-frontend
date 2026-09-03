@@ -587,17 +587,41 @@ async function submitCheck(payload: Record<string, unknown>): Promise<Verificati
     if (token) headers.set('Authorization', `Bearer ${token}`);
   }
 
-  const res = await timedFetch(
-    verificationEndpoint(),
-    { method: 'POST', headers, body: JSON.stringify(payload), credentials: 'include' },
-    BUDGET.submit,
-  );
+  let res: Response;
+  try {
+    // No `credentials: include`. This call goes cross-origin to the backend on
+    // purpose, and it carries no cookies — a signed-in candidate is identified
+    // by the Authorization header above. Asking for credentials would make the
+    // browser require Access-Control-Allow-Credentials on the response and
+    // discard the whole thing when it is absent: a "Failed to fetch" with a
+    // perfectly healthy server on the other end.
+    res = await timedFetch(
+      verificationEndpoint(),
+      { method: 'POST', headers, body: JSON.stringify(payload) },
+      BUDGET.submit,
+    );
+  } catch (e) {
+    // fetch() rejects with a bare TypeError ("Failed to fetch") for every
+    // network-level failure: offline, DNS, a blocked request, an aborted
+    // timeout. That string means nothing to a candidate, and it is the last
+    // thing they see before abandoning an application.
+    const aborted = (e as Error)?.name === 'AbortError';
+    throw new Error(
+      aborted
+        ? 'The check took too long to finish. Your connection may be slow — please try again.'
+        : 'We could not reach the check. Please check your internet connection and try again.',
+    );
+  }
 
   if (res.status === 429) {
     throw new Error('Too many checks from this connection. Please wait a minute and try again.');
   }
   if (!res.ok) {
-    throw new Error(`Verification failed (${res.status})`);
+    throw new Error(
+      res.status >= 500
+        ? 'Our end had a problem running the check. Please try again in a moment.'
+        : 'The check could not be completed. Please try again.',
+    );
   }
   return (await res.json()) as VerificationResult;
 }
