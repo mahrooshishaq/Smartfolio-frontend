@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { FiChevronLeft, FiZap, FiSend, FiCheck } from 'react-icons/fi';
+import { FiChevronLeft, FiZap, FiSend, FiCheck, FiCopy, FiExternalLink } from 'react-icons/fi';
 import { adminApi, type Campaign, type CampaignCandidate } from '@/lib/admin';
 import { useFeedback } from '@/components/ui/feedback';
 import StatusBadge from '@/components/admin/StatusBadge';
@@ -33,6 +33,7 @@ export default function AdminCampaignDetailPage() {
   const [view, setView] = useState('top');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -74,6 +75,22 @@ export default function AdminCampaignDetailPage() {
   }, [campaign, candidates]);
 
   const ids = () => [...selected];
+
+  /** The full public URL, not the path — nobody can paste `/apply/x` into a DM. */
+  async function copyApplyLink() {
+    if (!campaign) return;
+    const url = `${window.location.origin}/apply/${campaign.slug}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard access can be refused (an insecure origin, a locked-down
+      // browser). Show the URL so it can still be copied by hand rather than
+      // failing with nothing to fall back on.
+      error(`Copy failed — the link is ${url}`);
+    }
+  }
 
   async function act(action: 'shortlist' | 'submit' | 'reject') {
     if (!selected.size) return;
@@ -173,10 +190,31 @@ export default function AdminCampaignDetailPage() {
                 href={`/apply/${campaign.slug}`}
                 target="_blank"
                 rel="noreferrer"
-                className="text-[var(--sf-primary-dark)]"
+                className="inline-flex items-center gap-1.5 text-[var(--sf-primary-dark)]"
               >
                 /apply/{campaign.slug}
+                <FiExternalLink className="h-3.5 w-3.5" />
               </a>
+              {/* The apply link is the thing that gets pasted into LinkedIn, a
+                  DM or an email a dozen times a day. Copying it by selecting a
+                  fragment of a breadcrumb is the kind of small friction that
+                  makes an internal tool annoying to use. */}
+              <button
+                type="button"
+                onClick={copyApplyLink}
+                className="sf-subtle-control inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-bold"
+                data-testid="copy-apply-link"
+              >
+                {copied ? (
+                  <>
+                    <FiCheck className="h-3.5 w-3.5" /> Copied
+                  </>
+                ) : (
+                  <>
+                    <FiCopy className="h-3.5 w-3.5" /> Copy link
+                  </>
+                )}
+              </button>
               <StatusBadge status={campaign.status} />
             </div>
           )}

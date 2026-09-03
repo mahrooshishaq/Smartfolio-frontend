@@ -175,11 +175,22 @@ export async function resolveJobLink(
  * to a campaign is recognised - but its absence is never an error.
  */
 export async function publicFetch(path: string, init?: RequestInit): Promise<Response> {
-  const url = path.startsWith('http') ? path : `${API}${path}`;
+  // SAME-ORIGIN, deliberately - a relative path is left relative rather than
+  // being prefixed with API like apiFetch does.
+  //
+  // Two things break otherwise. The draft cookie is SameSite=Lax, so it is not
+  // sent on a cross-site request at all: the claim after signup would find no
+  // draft and silently drop the application. And a credentialed cross-origin
+  // request needs Access-Control-Allow-Credentials on the response, which is
+  // absent, so the browser rejects it as "Failed to fetch".
+  //
+  // Neither problem exists same-origin, and these endpoints have no reason to
+  // leave the origin: unlike the verification check, none of them care which
+  // machine made the outbound call.
   const headers = new Headers(init?.headers);
 
   const token = getAccessToken();
   if (token) headers.set('Authorization', `Bearer ${token}`);
 
-  return fetch(url, { ...init, headers, credentials: 'include' });
+  return fetch(path, { ...init, headers, credentials: 'include' });
 }
