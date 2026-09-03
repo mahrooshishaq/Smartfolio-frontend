@@ -39,6 +39,12 @@ type Props = {
   campaignId?: string;
   /** Fires once the check has been submitted, whatever the verdict. */
   onComplete?: (result: VerificationResult) => void;
+  /**
+   * Shown as a Continue button on a `review` verdict. A review does not stop
+   * anyone, but they should read what was found before moving on rather than
+   * being swept past it.
+   */
+  onContinue?: () => void;
   /** Start as soon as the component mounts rather than on a button press. */
   autoStart?: boolean;
   className?: string;
@@ -52,6 +58,7 @@ export default function VerificationGate({
   campaignCandidateId,
   campaignId,
   onComplete,
+  onContinue,
   autoStart = false,
   className = '',
 }: Props) {
@@ -269,14 +276,26 @@ export default function VerificationGate({
                 If that looks wrong — you are not on a VPN and the country is right — you can run
                 the check again and it will use whatever it sees this time.
               </p>
-              <button
-                type="button"
-                onClick={start}
-                className="sf-subtle-control mt-3 inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold"
-                data-testid="verification-recheck"
-              >
-                <FiRefreshCw className="h-4 w-4" /> Run it again
-              </button>
+              <div className="mt-4 flex flex-wrap items-center gap-2.5">
+                {onContinue && (
+                  <button
+                    type="button"
+                    onClick={onContinue}
+                    className="sf-primary rounded-xl px-4 py-2 text-sm font-bold"
+                    data-testid="verification-continue"
+                  >
+                    Continue anyway
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={start}
+                  className="sf-subtle-control inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold"
+                  data-testid="verification-recheck"
+                >
+                  <FiRefreshCw className="h-4 w-4" /> Run it again
+                </button>
+              </div>
             </>
           ) : (
             <p className="mt-1 text-sm text-[var(--sf-muted)]">

@@ -197,7 +197,16 @@ test('apply logged out, sign up mid-flow, land with everything intact', async ({
   // immediately and unmounts it, so waiting for it races the product it is
   // meant to be testing. Reaching the account step IS the pass condition; the
   // verdict itself comes from the row the check wrote.
-  await expect(page.getByTestId('apply-account')).toBeVisible({ timeout: 120_000 });
+  // A `review` verdict deliberately stops here so the candidate reads what was
+  // found rather than being swept past it. Clean advances on its own; review
+  // waits for Continue. Both are correct outcomes of this journey.
+  const account = page.getByTestId('apply-account');
+  const reviewContinue = page.getByTestId('verification-continue');
+  await expect(account.or(reviewContinue).first()).toBeVisible({ timeout: 120_000 });
+  if (await reviewContinue.isVisible().catch(() => false)) {
+    await reviewContinue.click();
+  }
+  await expect(account).toBeVisible({ timeout: 30_000 });
 
   const verdict = sql(
     `select verdict from verification_sessions where context = 'apply' order by "createdAt" desc limit 1`,
@@ -210,7 +219,16 @@ test('apply logged out, sign up mid-flow, land with everything intact', async ({
 
   /* ------------------------------------------------------------ sign up ---- */
   await expect(page.getByText('CV uploaded')).toBeVisible();
-  await expect(page.getByText('Connection check passed')).toBeVisible();
+  // The summary must report what the check actually said. It used to claim
+  // "passed" regardless of verdict, which told a flagged candidate the opposite
+  // of the truth.
+  await expect(
+    page.getByText(
+      verdict === 'review'
+        ? 'Connection check complete — one detail flagged'
+        : 'Connection check passed',
+    ),
+  ).toBeVisible();
 
   await page.getByTestId('apply-create-account').click();
   await page.waitForURL('**/signup', { timeout: 20_000 });

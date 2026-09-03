@@ -1,10 +1,11 @@
 ﻿'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AnimatedBackground from '@/components/AnimatedBackground';
 import { FiArrowRight, FiArrowLeft, FiCheck, FiMapPin, FiLoader } from 'react-icons/fi';
 
 import { apiFetch } from '@/lib/api';
+import { peekPendingApplication } from '@/lib/post-auth';
 
 // --- Enums matching backend ---
 const GOALS = [
@@ -65,6 +66,25 @@ const STEP_TITLES = [
 export default function OnboardingPage() {
   const router = useRouter();
   const [step, setStep] = useState(0);
+
+  /**
+   * Somebody who arrived here mid-application goes back to finish it.
+   *
+   * The catch-all for the campaign flow. An applicant is meant to be returned
+   * to /apply/<slug>, where claiming their draft seeds a profile from what they
+   * already submitted — a CV, a country, their answers — so onboarding is not
+   * asked of them at all. If the return path is lost anywhere along the way
+   * (the Google round trip leaves the origin twice), they land here instead,
+   * five questions deep, having already given us most of the answers.
+   *
+   * That is the moment an application is abandoned, so it is worth catching
+   * even though it should not happen.
+   */
+  useEffect(() => {
+    const pending = peekPendingApplication();
+    if (pending) router.replace(`/apply/${pending}`);
+  }, [router]);
+
   const [submitting, setSubmitting] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   const [error, setError] = useState('');

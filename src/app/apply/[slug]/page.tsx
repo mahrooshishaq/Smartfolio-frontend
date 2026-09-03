@@ -196,7 +196,11 @@ export default function ApplyPage() {
       // The check is already stored server-side; linking it to the draft is a
       // convenience, and losing that link must not block an application.
     }
-    if (outcome.verdict === 'blocked') return; // the gate shows how to fix it
+    // `blocked` stops here and the gate explains how to fix it. `review` also
+    // stops here — not to refuse anyone, but because being advanced past a
+    // finding they never saw is how a candidate later discovers they were
+    // "flagged" and was never told. The gate shows a Continue button.
+    if (outcome.verdict !== 'clean') return;
     setStage(signedIn ? 'submitting' : 'account');
   }
 
@@ -502,6 +506,7 @@ export default function ApplyPage() {
                   campaignId={campaign.id}
                   autoStart
                   onComplete={onVerified}
+                  onContinue={() => setStage(signedIn ? 'submitting' : 'account')}
                 />
                 <p className="mt-3 text-xs text-[var(--sf-muted-soft)]">
                   Your CV and answers are already saved.
@@ -524,10 +529,19 @@ export default function ApplyPage() {
 
                 <div className="mt-4 flex flex-col gap-2.5 rounded-2xl bg-[#f8fbff] p-4">
                   <Saved label="CV uploaded" detail={file?.name} />
+                  {campaign.questions.length > 0 && (
+                    <Saved
+                      label={`${campaign.questions.length} question${campaign.questions.length === 1 ? '' : 's'} answered`}
+                    />
+                  )}
                   <Saved
-                    label={`${campaign.questions.length} question${campaign.questions.length === 1 ? '' : 's'} answered`}
+                    label={
+                      verification?.verdict === 'review'
+                        ? 'Connection check complete — one detail flagged'
+                        : 'Connection check passed'
+                    }
+                    tone={verification?.verdict === 'review' ? 'warn' : undefined}
                   />
-                  <Saved label="Connection check passed" />
                 </div>
 
                 <button
@@ -601,10 +615,23 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Saved({ label, detail }: { label: string; detail?: string }) {
+function Saved({
+  label,
+  detail,
+  tone,
+}: {
+  label: string;
+  detail?: string;
+  tone?: 'warn';
+}) {
   return (
     <div className="flex items-center gap-2.5">
-      <FiCheck className="h-4 w-4 shrink-0 text-[var(--sf-green)]" />
+      <FiCheck
+        className={
+          'h-4 w-4 shrink-0 ' +
+          (tone === 'warn' ? 'text-[var(--sf-yellow)]' : 'text-[var(--sf-green)]')
+        }
+      />
       <span className="flex-1 text-sm text-[var(--sf-ink-soft)]">{label}</span>
       {detail && <span className="truncate text-xs text-[var(--sf-muted-soft)]">{detail}</span>}
     </div>

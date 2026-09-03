@@ -16,6 +16,42 @@
 
 const KEY = 'sf.postAuthNext';
 
+/**
+ * How long a remembered destination stays valid.
+ *
+ * Long enough for a signup with an email round trip and a Google consent
+ * screen; short enough that an abandoned application cannot hijack an
+ * unrelated visit tomorrow. Storage is localStorage rather than
+ * sessionStorage because the OAuth hop leaves the origin twice, and a
+ * per-tab store does not reliably survive that.
+ */
+const TTL_MS = 60 * 60 * 1000;
+
+function write(key: string, value: string): void {
+  try {
+    localStorage.setItem(key, JSON.stringify({ value, at: Date.now() }));
+  } catch {
+    /* private mode and storage-blocked contexts: the flow still works, it just
+       lands on the default page */
+  }
+}
+
+function read(key: string, consume: boolean): string | null {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { value?: string; at?: number };
+    if (!parsed?.value || !parsed.at || Date.now() - parsed.at > TTL_MS) {
+      localStorage.removeItem(key);
+      return null;
+    }
+    if (consume) localStorage.removeItem(key);
+    return parsed.value;
+  } catch {
+    return null;
+  }
+}
+
 /** Same-origin paths only - never send anyone to an attacker-supplied URL. */
 function isSafePath(path: string): boolean {
   return path.startsWith('/') && !path.startsWith('//');
@@ -23,33 +59,19 @@ function isSafePath(path: string): boolean {
 
 export function rememberPostAuthPath(path: string): void {
   if (typeof window === 'undefined' || !isSafePath(path)) return;
-  try {
-    sessionStorage.setItem(KEY, path);
-  } catch {
-    // Private-mode Safari and storage-blocked contexts throw. Losing the return
-    // path is a worse landing page, not a broken flow.
-  }
+  write(KEY, path);
 }
 
 export function takePostAuthPath(): string | null {
   if (typeof window === 'undefined') return null;
-  try {
-    const path = sessionStorage.getItem(KEY);
-    if (path) sessionStorage.removeItem(KEY);
-    return path && isSafePath(path) ? path : null;
-  } catch {
-    return null;
-  }
+  const path = read(KEY, true);
+  return path && isSafePath(path) ? path : null;
 }
 
 export function peekPostAuthPath(): string | null {
   if (typeof window === 'undefined') return null;
-  try {
-    const path = sessionStorage.getItem(KEY);
-    return path && isSafePath(path) ? path : null;
-  } catch {
-    return null;
-  }
+  const path = read(KEY, false);
+  return path && isSafePath(path) ? path : null;
 }
 
 /**
@@ -76,20 +98,16 @@ const PENDING_KEY = 'sf.pendingApplySlug';
 
 export function rememberPendingApplication(slug: string): void {
   if (typeof window === 'undefined') return;
-  try {
-    sessionStorage.setItem(PENDING_KEY, slug);
-  } catch {
-    /* storage-blocked contexts: they finish by pressing submit again */
-  }
+  write(PENDING_KEY, slug);
 }
 
 export function takePendingApplication(): string | null {
   if (typeof window === 'undefined') return null;
-  try {
-    const slug = sessionStorage.getItem(PENDING_KEY);
-    if (slug) sessionStorage.removeItem(PENDING_KEY);
-    return slug;
-  } catch {
-    return null;
-  }
+  return read(PENDING_KEY, true);
+}
+
+/** Read without consuming — for pages that only need to know one exists. */
+export function peekPendingApplication(): string | null {
+  if (typeof window === 'undefined') return null;
+  return read(PENDING_KEY, false);
 }
