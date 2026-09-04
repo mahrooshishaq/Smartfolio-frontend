@@ -43,6 +43,22 @@ async function signIn(page: Page, user: TestUser) {
   }, sessionArg(user));
 }
 
+/** psql -tA still returns a trailing newline; ids must be clean to interpolate. */
+const firstLine = (out: string) => out.trim().split('\n')[0].trim();
+
+/** Attach a CV with real text, so the candidate has a score to go stale. */
+function attachCv(candidateId: string, userId: string, text: string) {
+  const resumeId = firstLine(
+    sql(
+      'insert into resumes ("userId", "originalFileName", "filePath", "fileType", "fileSizeBytes", "isExtracted", "extractedText", "fileData") values (' +
+        `'${userId}', 'cv.pdf', 'db://resume', 'pdf', 1024, true, $q$${text}$q$, ` +
+        "decode('255044462d312e340a25','hex')) returning id",
+    ),
+  );
+  sql(`update campaign_candidates set "resumeId" = '${resumeId}' where id = '${candidateId}'`);
+  return resumeId;
+}
+
 async function makeCampaignWithApplicant() {
   const created = await apiAs(admin, '/admin/campaigns', {
     method: 'POST',
@@ -175,6 +191,9 @@ test('an expired invitation explains itself instead of vanishing', async ({ page
 
 test('stale scores can be cleared from the screen that flags them', async ({ page }) => {
   const { campaign, candidateId } = await makeCampaignWithApplicant();
+  // A score only exists once there is a CV to read, and only a score can go stale.
+  attachCv(candidateId, candidate.userId, 'SQL Node Go ledger reconciliation payments APIs');
+  await apiAs(admin, `/admin/campaigns/${campaign.id}/rescore`, { method: 'POST' });
 
   // A material edit: every existing score is now answering the wrong question.
   await apiAs(admin, `/admin/campaigns/${campaign.id}`, {
@@ -228,4 +247,43 @@ test('an operator is warned when invitation links point at another site', async 
     'some-other-deployment.vercel.app',
   );
   await expect(banner).toContainText('localhost:3000');
+});
+
+test('a reviewer can open the CV and read the interview', async ({ page }) => {
+  const { campaign, candidateId } = await makeCampaignWithApplicant();
+
+  // A CV with real bytes, and a finished interview attached the way the flow does.
+  attachCv(candidateId, candidate.userId, 'React TypeScript design system performance testing');
+
+  const sessionId = firstLine(sql(
+    'insert into interview_sessions ("userId", "jobDescription", "lengthTier", questions, answers, "overallScore") values (' +
+      `'${candidate.userId}', $q$${JD}$q$, 'full', ` +
+      '$q$[{"id":1,"round":"hr","type":"behavioral","question":"Tell me about a ledger you owned.","answerKey":"HIDDEN"}]$q$, ' +
+      '$q$[{"questionId":1,"answer":"I ran reconciliation for three years.","score":7}]$q$, 74) returning id',
+  ));
+  sql(
+    `update campaign_candidates set "interviewSessionId"='${sessionId}', status='completed', "completedAt"=now() where id='${candidateId}'`,
+  );
+
+  await signIn(page, admin);
+  await page.goto(`/admin/campaigns/${campaign.id}`, { waitUntil: 'networkidle' });
+  await page.getByTestId('view-completed').click();
+
+  // The interview opens, and reads as the conversation it was.
+  await page.getByTestId('open-interview').first().click();
+  const panel = page.getByTestId('interview-panel');
+  await expect(panel).toBeVisible();
+  await expect(panel).toContainText('Tell me about a ledger you owned');
+  await expect(panel).toContainText('I ran reconciliation for three years');
+  await expect(panel).toContainText('7/10');
+  await expect(panel, 'the answer key is never shown to a reviewer').not.toContainText('HIDDEN');
+  await panel.getByRole('button', { name: 'Close' }).click();
+
+  // And the CV opens as a document instead of answering 401.
+  const cv = await page.request.get(
+    `${process.env.API_BASE || 'http://localhost:3001'}/admin/campaigns/${campaign.id}/candidates/${candidateId}/cv`,
+    { headers: { Authorization: `Bearer ${admin.accessToken}` } },
+  );
+  expect(cv.status()).toBe(200);
+  expect(cv.headers()['content-type']).toContain('pdf');
 });

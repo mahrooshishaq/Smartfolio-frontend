@@ -16,6 +16,7 @@ import {
   adminApi,
   type Campaign,
   type CampaignCandidate,
+  type CandidateInterview,
   type CandidateStatus,
 } from '@/lib/admin';
 import { useFeedback } from '@/components/ui/feedback';
@@ -85,6 +86,9 @@ export default function AdminCampaignDetailPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [interview, setInterview] = useState<
+    { loading: boolean; name: string; data: CandidateInterview | null } | null
+  >(null);
 
   const load = useCallback(async () => {
     try {
@@ -199,6 +203,25 @@ export default function AdminCampaignDetailPage() {
    * deliberately refuses to overwrite an applicant's score, so after a material
    * edit every applicant was flagged stale with no tool that could clear it.
    */
+  /** Open a CV. See adminApi.openCandidateCv for why this is a fetch. */
+  async function openCv(candidateId: string) {
+    try {
+      await adminApi.openCandidateCv(id, candidateId);
+    } catch (e) {
+      error(e instanceof Error ? e.message : 'Could not open this CV.');
+    }
+  }
+
+  async function openInterview(candidateId: string, name: string) {
+    setInterview({ loading: true, name, data: null });
+    try {
+      setInterview({ loading: false, name, data: await adminApi.candidateInterview(id, candidateId) });
+    } catch (e) {
+      setInterview(null);
+      error(e instanceof Error ? e.message : 'Could not open this interview.');
+    }
+  }
+
   async function rescore() {
     setBusy('rescore');
     try {
@@ -687,17 +710,26 @@ export default function AdminCampaignDetailPage() {
               </div>
 
               <div className="min-w-0 text-sm">
+                {c.hasInterview && (
+                  <button
+                    type="button"
+                    onClick={() => openInterview(c.id, c.name || c.email || 'this candidate')}
+                    className="mb-1 block text-left text-[12.5px] font-bold text-[var(--sf-green)] hover:underline"
+                    data-testid="open-interview"
+                  >
+                    Read interview
+                  </button>
+                )}
                 {c.cv ? (
                   c.cv.analyzable ? (
-                    <a
-                      href={`/api/resume/${c.cv.id}/file`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="truncate font-semibold text-[var(--sf-primary-dark)]"
+                    <button
+                      type="button"
+                      onClick={() => openCv(c.id)}
+                      className="truncate text-left font-semibold text-[var(--sf-primary-dark)] hover:underline"
                       data-testid="candidate-cv"
                     >
                       {c.cv.fileName}
-                    </a>
+                    </button>
                   ) : (
                     <span
                       className="text-xs text-[var(--sf-muted-soft)]"
@@ -776,6 +808,82 @@ export default function AdminCampaignDetailPage() {
         explanations, and internet cafés and family computers are normal in these markets.
       </p>
 
+      {interview && (
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 sm:p-8"
+          onClick={() => setInterview(null)}
+          data-testid="interview-panel"
+        >
+          <div
+            className="w-full max-w-[820px] rounded-2xl bg-[var(--sf-surface-strong)] p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-bold text-[var(--sf-ink)]">
+                  {interview.name}&rsquo;s interview
+                </h2>
+                {interview.data && (
+                  <p className="mt-0.5 text-sm text-[var(--sf-muted)]">
+                    Taken {new Date(interview.data.takenAt).toLocaleDateString()} ·{' '}
+                    {interview.data.questions.length} questions ·{' '}
+                    {interview.data.overallScore === null
+                      ? 'not scored'
+                      : `${Math.round(Number(interview.data.overallScore))}% overall`}
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setInterview(null)}
+                className="sf-subtle-control rounded-xl px-3 py-1.5 text-sm font-semibold"
+              >
+                Close
+              </button>
+            </div>
+
+            {interview.loading && (
+              <p className="text-sm text-[var(--sf-muted)]">Loading the transcript…</p>
+            )}
+
+            {interview.data?.evaluation?.summary && (
+              <div className="mb-5 rounded-xl bg-[var(--sf-primary-soft)] p-4">
+                <p className="text-sm leading-relaxed text-[var(--sf-ink-soft)]">
+                  {interview.data.evaluation.summary}
+                </p>
+              </div>
+            )}
+
+            <ol className="space-y-4">
+              {interview.data?.questions.map((q, i) => (
+                <li key={q.id} className="rounded-xl border border-[var(--sf-line)] p-4">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--sf-muted-soft)]">
+                      {q.round.replace(/_/g, ' ')} · question {i + 1}
+                    </p>
+                    {q.score !== null && (
+                      <span className="text-sm font-bold tabular-nums text-[var(--sf-ink)]">
+                        {q.score}/10
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-1.5 text-sm font-semibold text-[var(--sf-ink)]">{q.question}</p>
+                  <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-[var(--sf-ink-soft)]">
+                    {q.answer?.trim()
+                      ? q.answer
+                      : 'No answer recorded. The candidate skipped this question.'}
+                  </p>
+                  {q.feedback && (
+                    <p className="mt-2 border-t border-[var(--sf-line)] pt-2 text-[13px] leading-relaxed text-[var(--sf-muted)]">
+                      {q.feedback}
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ol>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

@@ -74,6 +74,26 @@ export interface CandidateCv {
   analyzable: boolean;
 }
 
+/** A completed interview, as a reviewer needs to read it. */
+export interface CandidateInterview {
+  sessionId: string;
+  takenAt: string;
+  lengthTier: string;
+  overallScore: number | string | null;
+  evaluation: { summary?: string; strengths?: string[]; improvements?: string[] } | null;
+  questions: Array<{
+    id: number;
+    round: string;
+    type: string;
+    question: string;
+    options: string[] | null;
+    answer: string | null;
+    score: number | null;
+    feedback: string | null;
+  }>;
+  followUps: unknown[];
+}
+
 /** What this person has done on OTHER campaigns. */
 export interface CandidateElsewhere {
   applications: number;
@@ -103,6 +123,8 @@ export interface CampaignCandidate {
   cv: CandidateCv | null;
   /** Scored against a description the campaign has since materially changed. */
   scoreStale: boolean;
+  /** True when there is an interview to read. */
+  hasInterview: boolean;
   elsewhere: CandidateElsewhere;
 }
 
@@ -209,6 +231,36 @@ export const adminApi = {
 
   duplicateCampaign: (id: string) =>
     json<Campaign>(`/api/admin/campaigns/${id}/duplicate`, { method: 'POST' }),
+
+  /**
+   * Open a candidate's CV.
+   *
+   * Fetched rather than linked. /resume/:id/file is owner-only and needs a
+   * bearer token, which a plain anchor cannot send — the link in this list
+   * answered 401 and then, with a token, would have 404'd anyway. This route is
+   * authorised by campaign membership instead, and the bytes are turned into a
+   * blob URL so the browser opens them in a tab.
+   */
+  openCandidateCv: async (campaignId: string, candidateId: string) => {
+    const res = await apiFetch(
+      `/api/admin/campaigns/${campaignId}/candidates/${candidateId}/cv`,
+    );
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      throw new Error(body?.message || 'Could not open this CV.');
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank', 'noopener');
+    // Revoked on a delay: revoking immediately races the new tab's own load.
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  },
+
+  /** The interview a candidate sat: questions, their answers, and the scoring. */
+  candidateInterview: (campaignId: string, candidateId: string) =>
+    json<CandidateInterview>(
+      `/api/admin/campaigns/${campaignId}/candidates/${candidateId}/interview`,
+    ),
 
   /** Rescore the people already on this campaign — see rescore() on the service. */
   rescore: (id: string) =>
