@@ -408,3 +408,37 @@ test('a stale access token cannot break a public draft save', async ({ page }) =
   await expect(page.getByTestId('cv-attached')).toBeVisible({ timeout: 20_000 });
   expect(failures, 'a dead token must not 401 a public endpoint').toEqual([]);
 });
+
+test('the header says whether you are actually signed in', async ({ page }) => {
+  // A token in localStorage is not a session. The page used to treat an expired
+  // one as proof of being signed in — skipping the account step for someone
+  // whose session was dead — while the header offered them "Sign in" at the
+  // same time. Two components, two different guesses, both from the same string.
+
+  // Dead token: the header must offer sign-in, not a name.
+  await page.addInitScript(() => {
+    localStorage.setItem('accessToken', 'expired.rubbish.token');
+    localStorage.setItem('refreshToken', 'also-expired');
+    localStorage.setItem('userName', 'Ghost');
+  });
+  await page.goto(`/apply/${slug}`, { waitUntil: 'networkidle' });
+  await expect(page.getByRole('link', { name: 'Sign in' })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText('Applying as')).toHaveCount(0);
+
+  // And the dead token is cleared rather than left to mislead the next page.
+  expect(await page.evaluate(() => localStorage.getItem('accessToken'))).toBeNull();
+});
+
+test('a real session is named in the header', async ({ page }) => {
+  const user = await createVerifiedUser('Session Holder', uniqueEmail('session'));
+  await page.addInitScript((u) => {
+    localStorage.setItem('accessToken', u.accessToken);
+    localStorage.setItem('refreshToken', u.refreshToken);
+    localStorage.setItem('userName', u.name);
+  }, { accessToken: user.accessToken, refreshToken: user.refreshToken, name: user.name });
+
+  await page.goto(`/apply/${slug}`, { waitUntil: 'networkidle' });
+  await expect(page.getByText('Applying as')).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText('Session Holder')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Sign in' })).toHaveCount(0);
+});

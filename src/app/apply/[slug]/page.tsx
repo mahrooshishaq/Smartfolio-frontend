@@ -29,7 +29,7 @@ import BrandMark from '@/components/BrandMark';
 import { Select } from '@/components/ui/Select';
 import { useFeedback } from '@/components/ui/feedback';
 import VerificationGate from '@/components/verification/VerificationGate';
-import { publicFetch, sessionFetch, getAccessToken } from '@/lib/api';
+import { publicFetch, sessionFetch, getAccessToken, clearSession } from '@/lib/api';
 import {
   rememberPostAuthPath,
   rememberPendingApplication,
@@ -62,6 +62,9 @@ type PublicCampaign = {
 
 type Stage = 'form' | 'checking' | 'account' | 'submitting' | 'done';
 
+/** undefined = still checking, null = signed out, object = a verified session. */
+type Session = { name: string; email: string } | null | undefined;
+
 export default function ApplyPage() {
   const { slug } = useParams<{ slug: string }>();
   const router = useRouter();
@@ -85,7 +88,20 @@ export default function ApplyPage() {
 
   const fileInput = useRef<HTMLInputElement>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const signedIn = typeof window !== 'undefined' && Boolean(getAccessToken());
+
+  /**
+   * Who is actually signed in — verified, not guessed.
+   *
+   * The presence of a token in localStorage is not a session: an expired one is
+   * still a string. Trusting it made this page skip the account step for
+   * someone whose session was dead, while the header simultaneously offered
+   * them "Sign in". Both were guessing, and they guessed differently.
+   *
+   * `undefined` means "not established yet", so nothing renders a wrong answer
+   * while the check is in flight.
+   */
+  const [session, setSession] = useState<Session>(undefined);
+  const signedIn = Boolean(session);
 
   /* --------------------------------------------------------------- load -- */
   useEffect(() => {
@@ -107,6 +123,34 @@ export default function ApplyPage() {
       cancelled = true;
     };
   }, [slug]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!getAccessToken()) {
+        if (!cancelled) setSession(null);
+        return;
+      }
+      try {
+        // sessionFetch refreshes once on a 401, so a merely-expired access
+        // token still resolves to a real session rather than a false negative.
+        const res = await sessionFetch('/api/auth/me');
+        if (!res.ok) throw new Error('no session');
+        const me = await res.json();
+        if (!cancelled) setSession({ name: me.name, email: me.email });
+      } catch {
+        // Genuinely gone. Clear it rather than leaving a dead token to mislead
+        // the next page as well.
+        if (!cancelled) {
+          clearSession();
+          setSession(null);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   /* -------------------------------------------------------------- draft -- */
 
@@ -262,7 +306,7 @@ export default function ApplyPage() {
 
   if (loadError) {
     return (
-      <Shell>
+      <Shell session={session}>
         <div className="sf-card mx-auto max-w-[520px] rounded-2xl p-8 text-center">
           <h1 className="text-lg font-bold text-[var(--sf-ink)]">This role is not available</h1>
           <p className="mt-2 text-sm text-[var(--sf-muted)]">{loadError}</p>
@@ -279,18 +323,25 @@ export default function ApplyPage() {
 
   if (!campaign) {
     return (
-      <Shell>
+      <Shell session={session}>
         <p className="py-20 text-center text-sm text-[var(--sf-muted)]">Loading this role…</p>
       </Shell>
     );
   }
 
   if (stage === 'done' && result) {
-    return <Confirmation campaign={campaign} result={result} verification={verification} />;
+    return (
+      <Confirmation
+        campaign={campaign}
+        result={result}
+        verification={verification}
+        session={session}
+      />
+    );
   }
 
   return (
-    <Shell>
+    <Shell session={session}>
       {/* hero */}
       <div className="mb-7">
         <div className="mb-3.5 flex flex-wrap items-center gap-2">
@@ -590,7 +641,7 @@ export default function ApplyPage() {
 
 /* ------------------------------------------------------------- pieces -- */
 
-function Shell({ children }: { children: React.ReactNode }) {
+function Shell({ children, session }: { children: React.ReactNode; session?: Session }) {
   return (
     <main className="sf-app-bg min-h-[100svh] pb-16">
       <div className="flex items-center justify-between px-5 py-5 sm:px-10">
@@ -600,12 +651,19 @@ function Shell({ children }: { children: React.ReactNode }) {
             Smartfolio-AI
           </span>
         </Link>
-        <Link
-          href="/login"
-          className="sf-subtle-control rounded-xl px-4 py-2 text-[13.5px] font-semibold"
-        >
-          Sign in
-        </Link>
+        {session ? (
+          <span className="text-[13.5px] text-[var(--sf-muted)]">
+            Applying as{' '}
+            <strong className="font-semibold text-[var(--sf-ink-soft)]">{session.name}</strong>
+          </span>
+        ) : session === null ? (
+          <Link
+            href="/login"
+            className="sf-subtle-control rounded-xl px-4 py-2 text-[13.5px] font-semibold"
+          >
+            Sign in
+          </Link>
+        ) : null}
       </div>
       <div className="mx-auto w-full max-w-[1180px] px-5 pt-6 sm:px-10">{children}</div>
     </main>
@@ -673,15 +731,17 @@ function Confirmation({
   campaign,
   result,
   verification,
+  session,
 }: {
   campaign: PublicCampaign;
   result: { matchScore: string | null; resumeId: string | null; alreadyApplied: boolean };
   verification: VerificationResult | null;
+  session?: Session;
 }) {
   const score = result.matchScore ? Math.round(Number(result.matchScore)) : null;
 
   return (
-    <Shell>
+    <Shell session={session}>
       <div className="mx-auto max-w-[900px]">
         <div className="mb-2.5 flex items-center gap-3">
           <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--sf-green-soft)]">
