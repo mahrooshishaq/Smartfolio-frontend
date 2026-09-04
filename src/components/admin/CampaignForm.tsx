@@ -102,16 +102,22 @@ export default function CampaignForm({
   initial,
   backHref,
   onSubmit,
+  counts,
 }: {
   mode: 'create' | 'edit';
   initial: CampaignFormValues;
   backHref: string;
   onSubmit: (payload: Record<string, unknown>) => Promise<void>;
+  /** Candidates already on this campaign, by status. Drives the live-edit warning. */
+  counts?: Partial<Record<string, number>>;
 }) {
   const router = useRouter();
   const { error } = useFeedback();
   const [v, setV] = useState<CampaignFormValues>(initial);
   const [saving, setSaving] = useState(false);
+
+  /** Anyone at all on this campaign — the warning is about live edits, not status. */
+  const applicants = Object.values(counts ?? {}).reduce<number>((a, b) => a + (b ?? 0), 0);
 
   // The button says whether it will work. Letting someone click a live-looking
   // button and answering with a toast is the same information delivered worse.
@@ -222,8 +228,42 @@ export default function CampaignForm({
       <p className="mt-1.5 max-w-[640px] text-sm leading-relaxed text-[var(--sf-muted)]">
         {mode === 'create'
           ? 'A campaign is one role: a public apply page, the applications it collects, and the interviews you invite people to. It is created as a draft — nothing is public until you open it.'
-          : 'The description is a copy. Editing it changes what new applicants see; it does not change what people who already applied were shown.'}
+          : 'The apply link never changes. Edits appear on it straight away.'}
       </p>
+
+      {/* Editing a campaign people have already applied to is not the same as
+          editing a draft, and the difference is not obvious. Spell it out, but
+          only when it actually applies. */}
+      {mode === 'edit' && applicants > 0 && (
+        <div className="sf-panel mt-4 max-w-[820px] rounded-2xl border-l-4 border-l-[var(--sf-yellow)] p-4">
+          <p className="text-sm font-bold text-[var(--sf-ink)]">
+            {applicants} {applicants === 1 ? 'person has' : 'people have'} already applied to this
+            role
+          </p>
+          <ul className="mt-2 space-y-1.5 text-[13px] leading-relaxed text-[var(--sf-ink-soft)]">
+            <li>
+              <strong>The apply link stays the same</strong> — anything you have already shared keeps
+              working.
+            </li>
+            <li>
+              Their <strong>answers and match scores are untouched</strong>. Scores were calculated
+              against the description as it was, so after a big edit the ranking mixes old and new.
+            </li>
+            <li>
+              <strong>Interviews are generated from this description when the candidate sits them
+              </strong>
+              , not when they applied. Rewriting it means anyone not yet interviewed is asked about
+              the new version.
+            </li>
+            {v.questions.length < (initial.questions?.length ?? 0) && (
+              <li className="text-[var(--sf-red)]">
+                You have removed a question. Answers already given to it are kept in the record but
+                will no longer be shown anywhere.
+              </li>
+            )}
+          </ul>
+        </div>
+      )}
 
       <div className="mt-6 max-w-[820px] space-y-5">
         <section className="sf-panel rounded-2xl p-5 sm:p-6">
@@ -572,7 +612,7 @@ export default function CampaignForm({
               ? 'Needs a title, a company, a location and a description of at least 40 characters.'
               : mode === 'create'
                 ? 'Nothing is public until you open it for applications.'
-                : 'Changes apply to new applicants; people who already applied keep what they saw.'}
+                : 'The apply link does not change.'}
           </span>
         </div>
       </div>

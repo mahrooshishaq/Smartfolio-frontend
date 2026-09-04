@@ -15,13 +15,17 @@ export default function EditCampaignPage() {
   const router = useRouter();
   const { success, error } = useFeedback();
   const [initial, setInitial] = useState<CampaignFormValues | null>(null);
+  const [counts, setCounts] = useState<Partial<Record<string, number>>>({});
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         const campaign = await adminApi.getCampaign(id);
-        if (!cancelled) setInitial(valuesFrom(campaign));
+        if (!cancelled) {
+          setInitial(valuesFrom(campaign));
+          setCounts(campaign.counts ?? {});
+        }
       } catch (e) {
         if (!cancelled) {
           error(e instanceof Error ? e.message : 'Could not load this campaign.');
@@ -46,6 +50,7 @@ export default function EditCampaignPage() {
     <CampaignForm
       mode="edit"
       initial={initial}
+      counts={counts}
       backHref={`/admin/campaigns/${id}`}
       onSubmit={async (payload) => {
         await adminApi.updateCampaign(id, payload);

@@ -325,3 +325,42 @@ test('the country list is alphabetical, searchable, and offers Anywhere', async 
   await expect(page.getByRole('option')).toHaveCount(1);
   await expect(page.getByRole('option')).toHaveText('Pakistan');
 });
+
+test('editing a campaign with applicants says what actually changes', async ({ page }) => {
+  // A draft edit and a live edit are not the same thing, and the difference is
+  // not visible: the slug never changes, but interviews are generated from the
+  // description AT THE TIME THE CANDIDATE SITS THEM — so rewriting it changes
+  // the interview for people who applied to the old one.
+  const created = await apiAs(admin, '/admin/campaigns', {
+    method: 'POST',
+    body: JSON.stringify({
+      title: `Live Edit ${Date.now().toString(36)}`,
+      company: 'Northwind Labs',
+      jobDescription: JD,
+      location: 'Remote',
+    }),
+  });
+  const campaignId = created.body.id;
+  await apiAs(admin, `/admin/campaigns/${campaignId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status: 'collecting' }),
+  });
+
+  await signIn(page, admin);
+
+  // No applicants yet: nothing to warn about.
+  await page.goto(`/admin/campaigns/${campaignId}/edit`, { waitUntil: 'networkidle' });
+  await expect(page.getByText(/already applied to this role/)).toHaveCount(0);
+
+  // One applicant, and the warning appears.
+  const applicant = await createVerifiedUser('Live Edit Applicant', uniqueEmail('live-edit'));
+  await apiAs(applicant, `/campaigns/public/${created.body.slug}/claim`, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+
+  await page.reload({ waitUntil: 'networkidle' });
+  await expect(page.getByText(/1 person has already applied/)).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText(/The apply link stays the same/)).toBeVisible();
+  await expect(page.getByText(/when the candidate sits them/)).toBeVisible();
+});

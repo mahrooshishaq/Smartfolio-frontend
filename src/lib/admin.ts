@@ -46,6 +46,7 @@ export interface Campaign {
   applicationDeadline: string | null;
   interviewDeadline: string | null;
   createdAt: string;
+  /** Candidates by status. Present on the list, and on the detail for the live-edit warning. */
   counts?: Partial<Record<CandidateStatus, number>>;
   /** What the connection check did to this campaign's traffic. */
   verification?: {
