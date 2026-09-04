@@ -26,6 +26,7 @@ import {
   FiUploadCloud, FiCheck, FiFileText, FiArrowRight, FiShield, FiChevronLeft,
 } from 'react-icons/fi';
 import BrandMark from '@/components/BrandMark';
+import AppShell from '@/components/app-shell/AppShell';
 import { Select } from '@/components/ui/Select';
 import { useFeedback } from '@/components/ui/feedback';
 import VerificationGate from '@/components/verification/VerificationGate';
@@ -330,13 +331,15 @@ export default function ApplyPage() {
   }
 
   if (stage === 'done' && result) {
+    // Inside the app shell, not the public one. By this point they have an
+    // account and an application on it — leaving them on a bare page with a
+    // logo and no navigation is a dead end at exactly the moment they are most
+    // likely to look around. The sidebar is the difference between "thanks,
+    // goodbye" and "here is the rest of it".
     return (
-      <Confirmation
-        campaign={campaign}
-        result={result}
-        verification={verification}
-        session={session}
-      />
+      <AppShell>
+        <Confirmation campaign={campaign} result={result} verification={verification} />
+      </AppShell>
     );
   }
 
@@ -731,17 +734,15 @@ function Confirmation({
   campaign,
   result,
   verification,
-  session,
 }: {
   campaign: PublicCampaign;
   result: { matchScore: string | null; resumeId: string | null; alreadyApplied: boolean };
   verification: VerificationResult | null;
-  session?: Session;
 }) {
   const score = result.matchScore ? Math.round(Number(result.matchScore)) : null;
 
   return (
-    <Shell session={session}>
+    <div className="px-1 py-2">
       <div className="mx-auto max-w-[900px]">
         <div className="mb-2.5 flex items-center gap-3">
           <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--sf-green-soft)]">
@@ -845,7 +846,7 @@ function Confirmation({
           {campaign.company} will email you either way. Nothing else is needed from you today.
         </p>
       </div>
-    </Shell>
+    </div>
   );
 }
 

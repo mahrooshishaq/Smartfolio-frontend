@@ -288,6 +288,11 @@ test('apply logged out, sign up mid-flow, land with everything intact', async ({
   ).toBeGreaterThan(0);
 
   /* ------------------------------------------- the confirmation sells, not receipts */
+  // Rendered inside the app shell, so the new user can go anywhere from here
+  // rather than being left on a page with a logo and no way forward. The nav
+  // items are buttons driven by the router, not anchors, so match on their text.
+  await expect(page.getByText('Job Tracker').first()).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole('button', { name: /logout/i })).toBeVisible();
   await expect(page.getByTestId('practice-interview')).toBeVisible();
   await expect(page.getByText(/Match score/i)).toBeVisible();
   await expect(page.getByText(/Roles that fit your CV/i)).toBeVisible();
