@@ -101,6 +101,8 @@ export interface CampaignCandidate {
   availability: 'looking' | 'suspended';
   suspensionReason: string | null;
   cv: CandidateCv | null;
+  /** Scored against a description the campaign has since materially changed. */
+  scoreStale: boolean;
   elsewhere: CandidateElsewhere;
 }
 
@@ -204,6 +206,9 @@ export const adminApi = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ availability }),
     }),
+
+  duplicateCampaign: (id: string) =>
+    json<Campaign>(`/api/admin/campaigns/${id}/duplicate`, { method: 'POST' }),
 
   clusters: () =>
     json<{ count: number; clusters: DeviceCluster[] }>('/api/admin/verification/clusters'),

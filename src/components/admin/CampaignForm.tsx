@@ -119,6 +119,10 @@ export default function CampaignForm({
   /** Anyone at all on this campaign — the warning is about live edits, not status. */
   const applicants = Object.values(counts ?? {}).reduce<number>((a, b) => a + (b ?? 0), 0);
 
+  // Not a UI preference — the API refuses it. Disabling the field means finding
+  // that out before retyping a company name rather than after.
+  const companyLocked = mode === 'edit' && applicants > 0;
+
   // The button says whether it will work. Letting someone click a live-looking
   // button and answering with a toast is the same information delivered worse.
   const incomplete =
@@ -231,37 +235,36 @@ export default function CampaignForm({
           : 'The apply link never changes. Edits appear on it straight away.'}
       </p>
 
-      {/* Editing a campaign people have already applied to is not the same as
-          editing a draft, and the difference is not obvious. Spell it out, but
-          only when it actually applies. */}
+      {/* Editing a campaign people have applied to is a different act from
+          editing a draft. State the rule rather than hinting at it. */}
       {mode === 'edit' && applicants > 0 && (
         <div className="sf-panel mt-4 max-w-[820px] rounded-2xl border-l-4 border-l-[var(--sf-yellow)] p-4">
           <p className="text-sm font-bold text-[var(--sf-ink)]">
-            {applicants} {applicants === 1 ? 'person has' : 'people have'} already applied to this
-            role
+            {applicants} {applicants === 1 ? 'person has' : 'people have'} applied to this role
           </p>
           <ul className="mt-2 space-y-1.5 text-[13px] leading-relaxed text-[var(--sf-ink-soft)]">
             <li>
-              <strong>The apply link stays the same</strong> — anything you have already shared keeps
-              working.
+              <strong>Free to change:</strong> location, shortlist target, deadlines. The apply link
+              never changes either.
             </li>
             <li>
-              Their <strong>answers and match scores are untouched</strong>. Scores were calculated
-              against the description as it was, so after a big edit the ranking mixes old and new.
+              <strong>Marks scores as stale:</strong> the description, target countries and
+              arrangement. Existing scores are kept and labelled, not recalculated — a score earned
+              against the role someone applied to should not be quietly replaced with one against a
+              role they have never seen.
             </li>
             <li>
-              <strong>Interviews are generated from this description when the candidate sits them
-              </strong>
-              , not when they applied. Rewriting it means anyone not yet interviewed is asked about
-              the new version.
+              <strong>Locked:</strong> the company. They applied to {v.company} by name.
             </li>
-            {v.questions.length < (initial.questions?.length ?? 0) && (
-              <li className="text-[var(--sf-red)]">
-                You have removed a question. Answers already given to it are kept in the record but
-                will no longer be shown anywhere.
-              </li>
-            )}
+            <li>
+              Interviews already sent are unaffected — each one keeps the description it was issued
+              with.
+            </li>
           </ul>
+          <p className="mt-2.5 text-[13px] leading-relaxed text-[var(--sf-muted)]">
+            Rewriting this into a different job? <strong>Duplicate it</strong> from the campaign page
+            instead. The original keeps its applicants; the copy starts clean.
+          </p>
         </div>
       )}
 
@@ -279,12 +282,20 @@ export default function CampaignForm({
                 data-testid="field-title"
               />
             </Field>
-            <Field label="Company">
+            <Field
+              label="Company"
+              hint={
+                companyLocked
+                  ? 'Locked — people have applied to this employer by name'
+                  : undefined
+              }
+            >
               <input
                 value={v.company}
                 onChange={(e) => set('company', e.target.value)}
                 placeholder="Northwind Labs"
-                className={inputClass}
+                disabled={companyLocked}
+                className={`${inputClass} disabled:cursor-not-allowed disabled:bg-[#f8fbff] disabled:text-[var(--sf-muted)]`}
                 data-testid="field-company"
               />
             </Field>

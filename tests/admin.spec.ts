@@ -360,7 +360,52 @@ test('editing a campaign with applicants says what actually changes', async ({ p
   });
 
   await page.reload({ waitUntil: 'networkidle' });
-  await expect(page.getByText(/1 person has already applied/)).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByText(/The apply link stays the same/)).toBeVisible();
-  await expect(page.getByText(/when the candidate sits them/)).toBeVisible();
+  await expect(page.getByText(/1 person has applied to this role/)).toBeVisible({ timeout: 15_000 });
+
+  // The three tiers, stated rather than hinted at.
+  await expect(page.getByText(/Free to change/)).toBeVisible();
+  await expect(page.getByText(/Marks scores as stale/)).toBeVisible();
+  await expect(page.getByText(/Locked:/)).toBeVisible();
+
+  // And the company field is actually disabled, so the rule is discovered
+  // before retyping a name rather than after — the API refuses it either way.
+  await expect(page.getByTestId('field-company')).toBeDisabled();
+
+  const refused = await apiAs(admin, `/admin/campaigns/${campaignId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ company: 'Someone Else' }),
+  });
+  expect(refused.status, 'the API is the real gate, not the disabled input').toBe(400);
+});
+
+test('duplicating leaves the original intact', async ({ page }) => {
+  const created = await apiAs(admin, '/admin/campaigns', {
+    method: 'POST',
+    body: JSON.stringify({
+      title: `Duplicate Me ${Date.now().toString(36)}`,
+      company: 'Northwind Labs',
+      jobDescription: JD,
+      location: 'Remote',
+    }),
+  });
+  const campaignId = created.body.id;
+
+  await signIn(page, admin);
+  await page.goto(`/admin/campaigns/${campaignId}`, { waitUntil: 'networkidle' });
+
+  await page.getByTestId('duplicate-campaign').click();
+  // Scoped to the dialog: the page button behind it has the same label.
+  const dialog = page.getByRole('dialog', { name: /Duplicate this campaign/ });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', { name: 'Duplicate' }).click();
+
+  // Lands on the copy's edit page, and the copy is a fresh draft.
+  await page.waitForURL(/\/admin\/campaigns\/[0-9a-f-]+\/edit/, { timeout: 20_000 });
+  const copyId = page.url().split('/campaigns/')[1].split('/')[0];
+  expect(copyId).not.toBe(campaignId);
+  expect(sql(`select status from campaigns where id = '${copyId}'`)).toBe('draft');
+  expect(
+    sql(`select slug from campaigns where id = '${copyId}'`),
+    'the copy gets its own apply link',
+  ).not.toBe(sql(`select slug from campaigns where id = '${campaignId}'`));
 });

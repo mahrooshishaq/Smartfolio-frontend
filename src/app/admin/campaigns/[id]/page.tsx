@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { FiChevronLeft, FiZap, FiSend, FiCheck, FiCopy, FiExternalLink } from 'react-icons/fi';
 import { adminApi, type Campaign, type CampaignCandidate } from '@/lib/admin';
 import { useFeedback } from '@/components/ui/feedback';
@@ -26,6 +26,7 @@ const VIEWS: Array<{ id: string; label: string; status?: string; sort?: 'score' 
 export default function AdminCampaignDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params.id;
+  const router = useRouter();
   const { error, success, confirm } = useFeedback();
 
   const [campaign, setCampaign] = useState<Campaign | null>(null);
@@ -138,6 +139,32 @@ export default function AdminCampaignDetailPage() {
       await load();
     } catch (e) {
       error(e instanceof Error ? e.message : 'Could not send invitations.');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  /**
+   * The clean path for a real rewrite: copy the campaign rather than editing a
+   * live one into a different job and leaving everyone attached to a role that
+   * no longer exists.
+   */
+  async function duplicate() {
+    const ok = await confirm({
+      title: 'Duplicate this campaign?',
+      message:
+        'A fresh draft with its own apply link, copied from this one. This campaign keeps its applicants, their scores and any interviews already sent.',
+      confirmLabel: 'Duplicate',
+    });
+    if (!ok) return;
+
+    setBusy('duplicate');
+    try {
+      const copy = await adminApi.duplicateCampaign(id);
+      success('Copied. Opening the draft.');
+      router.push(`/admin/campaigns/${copy.id}/edit`);
+    } catch (e) {
+      error(e instanceof Error ? e.message : 'Could not duplicate this campaign.');
     } finally {
       setBusy(null);
     }
@@ -262,6 +289,15 @@ export default function AdminCampaignDetailPage() {
           >
             Edit
           </Link>
+          <button
+            type="button"
+            onClick={duplicate}
+            disabled={busy === 'duplicate'}
+            className="sf-subtle-control inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold disabled:opacity-50"
+            data-testid="duplicate-campaign"
+          >
+            <FiCopy className="h-4 w-4" /> {busy === 'duplicate' ? 'Copying…' : 'Duplicate'}
+          </button>
           <button
             type="button"
             onClick={runMatch}
@@ -483,7 +519,21 @@ export default function AdminCampaignDetailPage() {
               </div>
 
               <div className="text-sm font-bold text-[var(--sf-ink-soft)]">
-                {c.matchScore ? Math.round(Number(c.matchScore)) : '—'}
+                {c.matchScore ? (
+                  <span
+                    className={c.scoreStale ? 'text-[var(--sf-muted-soft)] line-through' : ''}
+                    title={
+                      c.scoreStale
+                        ? 'Scored against an earlier version of this role. Run match to rescore.'
+                        : undefined
+                    }
+                    data-stale={c.scoreStale ? 'true' : 'false'}
+                  >
+                    {Math.round(Number(c.matchScore))}
+                  </span>
+                ) : (
+                  '—'
+                )}
               </div>
 
               <div className="min-w-0 text-sm">
