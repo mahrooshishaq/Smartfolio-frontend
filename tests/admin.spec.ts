@@ -199,3 +199,108 @@ test('the verification screen loads its clusters and list health', async ({ page
     timeout: 20_000,
   });
 });
+
+test('the campaign form does not mangle what you type', async ({ page }) => {
+  await signIn(page, admin);
+  await page.goto('/admin/campaigns/new', { waitUntil: 'networkidle' });
+
+  const target = page.getByTestId('field-shortlist-target');
+
+  // Reported: clearing the box showed 0, and typing into that 0 gave "013".
+  // Coercing on every keystroke did it — a half-typed number is a string.
+  await target.fill('');
+  expect(await target.inputValue(), 'an empty box must stay empty while retyping').toBe('');
+  await target.fill('13');
+  expect(await target.inputValue(), 'no leading zero').toBe('13');
+
+  // It settles only on blur, and only within the range the API accepts.
+  await target.fill('');
+  await target.blur();
+  expect(await target.inputValue()).toBe('25');
+  await target.fill('900');
+  await target.blur();
+  expect(await target.inputValue(), 'clamped to the API maximum').toBe('500');
+
+  // The button states whether it will work, rather than accepting a click and
+  // answering with a toast.
+  await expect(page.getByTestId('create-submit')).toBeDisabled();
+  await expect(page.getByText(/Needs a title, a company, a location/)).toBeVisible();
+
+  await page.getByTestId('field-title').fill('Data Engineer');
+  await page.getByTestId('field-company').fill('Loam');
+  await page.getByTestId('field-location').fill('Remote — Pakistan and India');
+  await page.getByTestId('field-jd').fill(JD);
+  await expect(page.getByTestId('create-submit')).toBeEnabled();
+
+  // Deadlines cannot be set in the past: a campaign whose window has already
+  // closed is closed the moment it opens.
+  const todayValue = new Date().toISOString().slice(0, 10);
+  expect(await page.getByTestId('field-app-deadline').getAttribute('min')).toBe(todayValue);
+});
+
+test('country targeting is stored and drives matching', async ({ page }) => {
+  await signIn(page, admin);
+  await page.goto('/admin/campaigns/new', { waitUntil: 'networkidle' });
+
+  const title = `Country Targeted ${Date.now().toString(36)}`;
+  await page.getByTestId('field-title').fill(title);
+  await page.getByTestId('field-company').fill('Ardent Systems');
+  await page.getByTestId('field-location').fill('Remote — South Asia');
+  await page.getByTestId('field-jd').fill(JD);
+
+  // Free text cannot be matched on; this is the field that can.
+  // The aria-label is stable; only the visible placeholder changes once a
+  // country is chosen, so address it by the label both times.
+  const addCountry = page.getByRole('button', { name: /Add a country this role can hire from/i });
+  await addCountry.click();
+  await page.getByRole('option', { name: 'Pakistan' }).click();
+  await addCountry.click();
+  await page.getByRole('option', { name: 'India' }).click();
+  await expect(page.getByTestId('country-chip')).toHaveCount(2);
+
+  await page.getByTestId('create-submit').click();
+  await expect(page.getByText(/Its apply page will be/)).toBeVisible({ timeout: 15_000 });
+
+  const stored = sql(
+    `select "candidateCountries"::text from campaigns where title = '${title}' limit 1`,
+  );
+  expect(stored, 'the countries must persist').toContain('PK');
+  expect(stored).toContain('IN');
+});
+
+test('a pick-from-a-list question takes real options', async ({ page }) => {
+  await signIn(page, admin);
+  await page.goto('/admin/campaigns/new', { waitUntil: 'networkidle' });
+
+  const title = `Options Test ${Date.now().toString(36)}`;
+  await page.getByTestId('field-title').fill(title);
+  await page.getByTestId('field-company').fill('Loam');
+  await page.getByTestId('field-location').fill('Remote');
+  await page.getByTestId('field-jd').fill(JD);
+
+  await page.getByTestId('add-question').click();
+  await page.getByTestId('question-label').fill('Notice period');
+
+  // "Choose one" read as an instruction to the admin rather than the answer
+  // type. And the options were one comma-separated box, so there was no way to
+  // tell you were meant to enter several.
+  await page.getByRole('button', { name: /Answer type for question 1/i }).click();
+  await page.getByRole('option', { name: 'Pick from a list' }).click();
+
+  const options = page.getByTestId('question-option');
+  await expect(options, 'switching to a list gives rows to fill').toHaveCount(2);
+  await options.nth(0).fill('Immediate');
+  await options.nth(1).fill('1 month');
+  await page.getByTestId('add-option').click();
+  await page.getByTestId('question-option').nth(2).fill('3 months');
+
+  await page.getByTestId('create-submit').click();
+  await expect(page.getByText(/Its apply page will be/)).toBeVisible({ timeout: 15_000 });
+
+  const stored = sql(
+    `select questions->0->>'options' from campaigns where title = '${title}' limit 1`,
+  );
+  expect(stored).toContain('Immediate');
+  expect(stored).toContain('3 months');
+  expect(stored, 'blank rows must not reach the applicant').not.toContain('""');
+});

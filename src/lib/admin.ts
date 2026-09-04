@@ -37,6 +37,8 @@ export interface Campaign {
   jobDescription: string;
   location: string | null;
   jobType: string | null;
+  /** ISO alpha-2 countries the role can hire from. Empty/null means anywhere. */
+  candidateCountries: string[] | null;
   slug: string;
   status: CampaignStatus;
   questions: CampaignQuestion[];

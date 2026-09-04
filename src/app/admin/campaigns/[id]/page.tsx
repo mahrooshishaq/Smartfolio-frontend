@@ -157,6 +157,21 @@ export default function AdminCampaignDetailPage() {
   }
 
   async function advance(status: string) {
+    // Status only ever advances — a closed campaign cannot reopen, because that
+    // would resurrect invite links that have already expired. So the one that
+    // takes a live campaign off the market gets a confirmation; a misclick here
+    // is not recoverable.
+    if (status === 'shortlisting') {
+      const ok = await confirm({
+        title: 'Close applications for this role?',
+        message:
+          'The public apply page stops accepting new applications, and this cannot be undone — campaign status only moves forward.',
+        confirmLabel: 'Close applications',
+        variant: 'danger',
+      });
+      if (!ok) return;
+    }
+
     try {
       const updated = await adminApi.updateCampaign(id, { status });
       setCampaign(updated);
