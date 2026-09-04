@@ -304,3 +304,24 @@ test('a pick-from-a-list question takes real options', async ({ page }) => {
   expect(stored).toContain('3 months');
   expect(stored, 'blank rows must not reach the applicant').not.toContain('""');
 });
+
+test('the country list is alphabetical, searchable, and offers Anywhere', async ({ page }) => {
+  await signIn(page, admin);
+  await page.goto('/admin/campaigns/new', { waitUntil: 'networkidle' });
+
+  await page.getByRole('button', { name: /Add a country this role can hire from/i }).click();
+
+  // "Anywhere" is an explicit choice, not the absence of one, and it leads.
+  const rows = page.getByRole('option');
+  await expect(rows.first()).toHaveText('Anywhere in the world');
+
+  // Alphabetical. The old order was market priority, which tells the person
+  // scanning for their own country nothing about where to look.
+  const names = (await rows.allInnerTexts()).slice(1, 6);
+  expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b)));
+
+  // Searchable, because fifty countries is too many to scroll.
+  await page.getByRole('textbox', { name: /Filter the list/i }).fill('paki');
+  await expect(page.getByRole('option')).toHaveCount(1);
+  await expect(page.getByRole('option')).toHaveText('Pakistan');
+});

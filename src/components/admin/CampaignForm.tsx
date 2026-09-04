@@ -298,16 +298,29 @@ export default function CampaignForm({
                 )}
                 <Select
                   value=""
+                  searchable
                   onChange={(code) => {
+                    // "Anywhere" is a real choice, not the absence of one.
+                    // Picking it clears any restriction rather than leaving the
+                    // operator to guess that an empty list means global.
+                    if (code === ANYWHERE) {
+                      set('candidateCountries', []);
+                      return;
+                    }
                     if (code && !v.candidateCountries.includes(code)) {
                       set('candidateCountries', [...v.candidateCountries, code]);
                     }
                   }}
-                  options={APPLY_COUNTRIES.filter(([code]) => !v.candidateCountries.includes(code)).map(
-                    ([value, label]) => ({ value, label }),
-                  )}
+                  options={[
+                    { value: ANYWHERE, label: 'Anywhere in the world' },
+                    ...APPLY_COUNTRIES.filter(([code]) => !v.candidateCountries.includes(code)).map(
+                      ([value, label]) => ({ value, label }),
+                    ),
+                  ]}
                   placeholder={
-                    v.candidateCountries.length ? 'Add another country' : 'Anywhere — add a country to restrict'
+                    v.candidateCountries.length
+                      ? 'Add another country'
+                      : 'Anywhere in the world'
                   }
                   ariaLabel="Add a country this role can hire from"
                   className="w-full rounded-lg border border-[var(--sf-border)] bg-white px-3 py-2 text-sm text-[var(--sf-ink)]"
@@ -569,6 +582,9 @@ export default function CampaignForm({
 
 /** Today, as the value a date input expects. Used as the floor on both dates:
  *  a campaign created with a deadline in the past is closed the moment it opens. */
+/** Sentinel for the "no restriction" row. Not a country, so it cannot collide. */
+const ANYWHERE = '__anywhere__';
+
 const countryLabel = (code: string) =>
   APPLY_COUNTRIES.find(([value]) => value === code)?.[1] ?? code;
 

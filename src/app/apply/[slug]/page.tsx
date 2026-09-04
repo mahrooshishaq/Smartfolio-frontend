@@ -488,6 +488,7 @@ export default function ApplyPage() {
                       setCountry(value);
                       void saveDraft({ declaredCountry: value, answers }).catch(() => {});
                     }}
+                    searchable
                     options={APPLY_COUNTRIES.map(([value, label]) => ({ value, label }))}
                     placeholder="Select a country"
                     ariaLabel="Country you are in"

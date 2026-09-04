@@ -58,6 +58,7 @@ export default function VerifyPage() {
                 onChange={setCountry}
                 placeholder="Select a country"
                 ariaLabel="Country you are in"
+                searchable
                 options={COUNTRIES.map(([value, label]) => ({ value, label }))}
               />
             </div>

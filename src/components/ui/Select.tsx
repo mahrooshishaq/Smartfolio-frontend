@@ -36,6 +36,12 @@ type SelectProps = {
   placeholder?: React.ReactNode;
   ariaLabel?: string;
   disabled?: boolean;
+  /**
+   * Show a filter box in the menu. Off by default — for a handful of options it
+   * is clutter, and every existing caller has a handful. Turn it on where the
+   * list is long enough that scrolling is the slow way to answer.
+   */
+  searchable?: boolean;
 };
 
 type MenuPos = { left: number; width: number; maxHeight: number; top?: number; bottom?: number };
@@ -43,14 +49,33 @@ type MenuPos = { left: number; width: number; maxHeight: number; top?: number; b
 // useLayoutEffect warns during SSR; the menu only ever positions client-side.
 const useIsoLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
-export function Select({ value, onChange, options, className = '', placeholder, ariaLabel, disabled }: SelectProps) {
+export function Select({
+  value,
+  onChange,
+  options,
+  className = '',
+  placeholder,
+  ariaLabel,
+  disabled,
+  searchable = false,
+}: SelectProps) {
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const searchRef = useRef<HTMLInputElement>(null);
   const [pos, setPos] = useState<MenuPos | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const selected = options.find((o) => o.value === value);
+
+  const shown = searchable && query.trim()
+    ? options.filter((o) =>
+        String(typeof o.label === 'string' ? o.label : o.value)
+          .toLowerCase()
+          .includes(query.trim().toLowerCase()),
+      )
+    : options;
 
   const reposition = useCallback(() => {
     const el = triggerRef.current;
@@ -115,9 +140,13 @@ export function Select({ value, onChange, options, className = '', placeholder, 
 
   const openMenu = () => {
     if (disabled) return;
+    setQuery('');
     const current = options.findIndex((o) => o.value === value);
     setActiveIndex(current >= 0 ? current : 0);
     setOpen(true);
+    // Focus the filter so typing starts narrowing immediately, rather than
+    // making the user click into it first.
+    if (searchable) requestAnimationFrame(() => searchRef.current?.focus());
   };
 
   const choose = (v: string) => {
@@ -135,11 +164,11 @@ export function Select({ value, onChange, options, className = '', placeholder, 
       return;
     }
     switch (e.key) {
-      case 'ArrowDown': e.preventDefault(); setActiveIndex((i) => Math.min(options.length - 1, i + 1)); break;
+      case 'ArrowDown': e.preventDefault(); setActiveIndex((i) => Math.min(shown.length - 1, i + 1)); break;
       case 'ArrowUp': e.preventDefault(); setActiveIndex((i) => Math.max(0, i - 1)); break;
       case 'Home': e.preventDefault(); setActiveIndex(0); break;
-      case 'End': e.preventDefault(); setActiveIndex(options.length - 1); break;
-      case 'Enter': e.preventDefault(); if (options[activeIndex]) choose(options[activeIndex].value); break;
+      case 'End': e.preventDefault(); setActiveIndex(shown.length - 1); break;
+      case 'Enter': e.preventDefault(); if (shown[activeIndex]) choose(shown[activeIndex].value); break;
       case 'Escape': e.preventDefault(); setOpen(false); triggerRef.current?.focus(); break;
       case 'Tab': setOpen(false); break;
     }
@@ -178,7 +207,30 @@ export function Select({ value, onChange, options, className = '', placeholder, 
           }}
           className="z-[130] overflow-y-auto rounded-2xl bg-white border border-slate-100 shadow-xl p-1.5 animate-[toastIn_.14s_ease-out]"
         >
-          {options.map((o, i) => {
+          {searchable && (
+            <div className="sticky top-0 z-10 -mx-1.5 -mt-1.5 mb-1 border-b border-slate-100 bg-white px-2.5 pb-2 pt-2.5">
+              <input
+                ref={searchRef}
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setActiveIndex(0);
+                }}
+                onKeyDown={onKeyDown}
+                placeholder="Type to search"
+                aria-label="Filter the list"
+                className="font-raleway w-full rounded-lg border border-slate-100 bg-slate-50 px-2.5 py-1.5 text-sm text-slate-700 outline-none focus:border-indigo-300"
+              />
+            </div>
+          )}
+
+          {shown.length === 0 && (
+            <p className="px-3 py-4 text-center text-sm text-slate-400">
+              Nothing matches “{query}”.
+            </p>
+          )}
+
+          {shown.map((o, i) => {
             const isSelected = o.value === value;
             const isActive = i === activeIndex;
             return (
