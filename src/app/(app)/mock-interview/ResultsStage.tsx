@@ -55,9 +55,11 @@ interface ResultsStageProps {
   questions: PublicQuestion[];
   answers: Record<number, string | number>;
   onRestart: () => void;
+  /** An employer's interview cannot be restarted — there is no second sitting. */
+  hideRestart?: boolean;
 }
 
-export function ResultsStage({ evaluation, questions, answers, onRestart }: ResultsStageProps) {
+export function ResultsStage({ evaluation, questions, answers, onRestart, hideRestart }: ResultsStageProps) {
   return (
     <div className="space-y-6 max-w-4xl mx-auto pb-10">
       {/* Overall Score */}
@@ -219,14 +221,16 @@ export function ResultsStage({ evaluation, questions, answers, onRestart }: Resu
         </div>
       </div>
 
-      <div className="flex justify-center">
-        <button
-          onClick={onRestart}
-          className="font-raleway flex items-center gap-2 bg-[#4F46E5] hover:bg-[#4338CA] text-white px-10 py-4 rounded-2xl font-semibold text-sm transition-all"
-        >
-          <FiRefreshCw size={16} /> Try Another Interview
-        </button>
-      </div>
+      {!hideRestart && (
+        <div className="flex justify-center">
+          <button
+            onClick={onRestart}
+            className="font-raleway flex items-center gap-2 bg-[#4F46E5] hover:bg-[#4338CA] text-white px-10 py-4 rounded-2xl font-semibold text-sm transition-all"
+          >
+            <FiRefreshCw size={16} /> Try Another Interview
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -167,7 +167,7 @@ export default function InterviewInvitePage() {
             </h1>
             <p className="mt-2 max-w-[540px] text-[15.5px] leading-relaxed text-[var(--sf-muted)]">
               For the {invite.campaign.title} role you applied to. The interview is generated from
-              that job description and takes around 25 minutes.
+              that job description and takes around 15 minutes.
             </p>
 
             {stage === 'intro' && (
@@ -175,7 +175,7 @@ export default function InterviewInvitePage() {
                 <h2 className="mb-4.5 text-base font-bold text-[var(--sf-ink)]">What to expect</h2>
 
                 <div className="flex flex-col gap-4">
-                  <Expect icon={<FiClock />} title="Three rounds, about 25 minutes">
+                  <Expect icon={<FiClock />} title="Three rounds, about 15 minutes">
                     Background, technical, and one problem to work through. You can speak your
                     answers or type them.
                   </Expect>

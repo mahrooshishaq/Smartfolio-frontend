@@ -16,8 +16,8 @@
  * out working interviews, and proving who you are first defeats nothing.
  */
 
-import { useCallback, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useCallback, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { FiSend, FiClock, FiCheckCircle, FiAlertCircle, FiArrowRight } from 'react-icons/fi';
 import { invitationsApi, daysLeft, type Invitation } from '@/lib/invitations';
 import { useFeedback } from '@/components/ui/feedback';
@@ -68,8 +68,13 @@ function Deadline({ invitation }: { invitation: Invitation }) {
   );
 }
 
-export default function InterviewsPage() {
+function InterviewsInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // Sent here by the interview page when the handoff was gone — a cleared
+  // session, a bookmarked URL, a second tab. Saying so beats a list that
+  // silently appeared for no reason the candidate can see.
+  const resumed = searchParams.get('resume') === '1';
   const { error } = useFeedback();
   const [invitations, setInvitations] = useState<Invitation[] | null>(null);
   const [opening, setOpening] = useState<string | null>(null);
@@ -105,6 +110,20 @@ export default function InterviewsPage() {
   return (
     <main className="px-5 py-7 sm:px-8" data-testid="interviews-page">
       <h1 className="text-2xl font-bold text-[var(--sf-ink)]">My interviews</h1>
+
+      {resumed && (
+        <div
+          className="mt-4 max-w-[620px] rounded-2xl border border-[var(--sf-yellow-soft)] bg-[var(--sf-yellow-soft)] p-4"
+          data-testid="resume-notice"
+        >
+          <p className="text-sm font-semibold text-[var(--sf-ink)]">
+            That interview link had already been used to open a session
+          </p>
+          <p className="mt-1 text-[13px] leading-relaxed text-[var(--sf-ink-soft)]">
+            Nothing is lost. Start it again below — you are signed in, so we know it is you.
+          </p>
+        </div>
+      )}
       <p className="mt-2 max-w-[620px] text-sm text-[var(--sf-muted)]">
         Interviews you have been invited to. You can start one from here even if you no longer have
         the invitation email — you are signed in, which is all we need to know it is you.
@@ -169,5 +188,17 @@ export default function InterviewsPage() {
         </ul>
       )}
     </main>
+  );
+}
+
+/**
+ * useSearchParams opts the whole route into client-side rendering unless it
+ * sits behind a Suspense boundary, which would cost this page its static shell.
+ */
+export default function InterviewsPage() {
+  return (
+    <Suspense fallback={<main className="px-5 py-7 sm:px-8"><p className="text-sm text-[var(--sf-muted)]">Loading…</p></main>}>
+      <InterviewsInner />
+    </Suspense>
   );
 }

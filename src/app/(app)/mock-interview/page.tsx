@@ -23,6 +23,7 @@ import {
 } from './constants';
 import { useAppChrome } from '@/components/app-shell/AppShell';
 
+import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
 import { peekJobHandoff, clearJobHandoff, HANDOFF_PARAM, type JobHandoff } from '@/lib/job-handoff';
 import {
@@ -46,6 +47,16 @@ const TIMER_WARN_SECONDS = 10;
 // this slow the voice will just start late rather than stalling the interview.
 const REST_HOLD_MAX_MS = 10_000;
 
+/**
+ * What an employer's interview is set to.
+ *
+ * The thorough tier, always. A campaign interview is an assessment several
+ * people will be compared on, so it cannot be something each candidate picks
+ * the length of — a five-question Quick Screen and a fifteen-question full
+ * interview do not produce scores that belong in the same ranked list.
+ */
+const CAMPAIGN_LENGTH_TIER: LengthTier = 'full';
+
 export default function MockInterviewPage() {
   return (
     <Suspense fallback={<MockInterviewSkeleton />}>
@@ -68,6 +79,14 @@ function MockInterviewContent() {
   // Set when this interview was opened from a campaign invitation, so the
   // finished session can be attached back to it.
   const [campaignInterview, setCampaignInterview] = useState<CampaignInterviewHandoff | null>(null);
+  // One-shot guard: the auto-start effect must never fire twice, or a candidate
+  // gets two sessions and the second overwrites the first.
+  const campaignAutoStarted = useRef(false);
+  // Whether the finished interview was successfully attached to its invitation.
+  // null while unknown; false means the answers are safely scored but the link
+  // back to the campaign row did not stick, which the candidate must not be
+  // asked to worry about — an operator can still find the session.
+  const [campaignLinked, setCampaignLinked] = useState<boolean | null>(null);
   // Reading the handoff destroys it, and StrictMode runs effects twice in dev —
   // without this the second pass would find an empty stash and the job would
   // silently fail to load.
@@ -229,9 +248,46 @@ function MockInterviewContent() {
         prefillConsumed.current = true;
         setJobDescription(campaign.jobDescription);
         setCampaignInterview(campaign);
+      } else {
+        // The flag says "an employer's interview is waiting" but the handoff is
+        // gone — a cleared session, a bookmarked URL, a different tab. Falling
+        // through would drop them on the practice form with an empty box, which
+        // reads as "your interview vanished". Send them where it actually lives.
+        router.replace('/interviews?resume=1');
       }
     }
   }, [router, searchParams]);
+
+  /**
+   * A campaign interview starts itself.
+   *
+   * The invitation gate already asked "ready?" and the candidate already
+   * pressed start. Landing them on the practice form — job description in a
+   * text box, three interview lengths to choose from, a seniority picker —
+   * asked the question twice and, worse, handed the candidate control over an
+   * assessment an employer is going to read. Someone could sit a five-question
+   * Quick Screen for a role that was advertised to them as a full interview.
+   *
+   * So the configuration is a prescription, not a choice: the thorough tier,
+   * the frozen description from the invitation, and their CV. Nothing to
+   * decide, nothing to get wrong, and the same interview for every candidate on
+   * the campaign — which is the only way the scores mean anything next to each
+   * other.
+   */
+  useEffect(() => {
+    if (!campaignInterview || !token) return;
+    if (campaignAutoStarted.current) return;
+    if (stage !== 'input') return;
+    campaignAutoStarted.current = true;
+    void generateTest({
+      jobDescription: campaignInterview.jobDescription,
+      lengthTier: CAMPAIGN_LENGTH_TIER,
+      useResume: true,
+    });
+    // generateTest is stable enough for this one-shot: the ref guarantees it
+    // runs once, and re-running on every render would start the interview again.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [campaignInterview, token, stage]);
 
   const fetchSessionDetail = async (accessToken: string, sid: string) => {
     setStage('loading');
@@ -422,9 +478,25 @@ function MockInterviewContent() {
     setTyping(!sttSupported);
   }, [currentQuestionIdx, currentRoundIdx, followUpQ, sttSupported]);
 
-  const generateTest = async () => {
+  /**
+   * `overrides` exists for the campaign auto-start.
+   *
+   * A campaign interview is prescribed rather than configured, and it starts
+   * itself the moment the candidate arrives. Setting the state and then calling
+   * this in the same tick would read the PREVIOUS render's values — the default
+   * tier and an empty description — so the prescription is passed explicitly
+   * instead of being routed through state it cannot see yet.
+   */
+  const generateTest = async (overrides?: {
+    jobDescription?: string;
+    lengthTier?: LengthTier;
+    useResume?: boolean;
+  }) => {
     if (!token) return;
-    if (jobDescription.trim().length < 20) {
+    const jd = overrides?.jobDescription ?? jobDescription;
+    const tier = overrides?.lengthTier ?? lengthTier;
+    const withResume = overrides?.useResume ?? useResume;
+    if (jd.trim().length < 20) {
       setError('Job description must be at least 20 characters.');
       return;
     }
@@ -438,9 +510,9 @@ function MockInterviewContent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          jobDescription,
-          lengthTier,
-          useResume,
+          jobDescription: jd,
+          lengthTier: tier,
+          useResume: withResume,
           ...(seniority ? { seniority } : {}),
           ...(focusInput.trim()
             ? { focusAreas: focusInput.split(',').map((s) => s.trim()).filter(Boolean).slice(0, 6) }
@@ -692,10 +764,14 @@ function MockInterviewContent() {
       // as though the interview did not count.
       if (campaignInterview && sessionId) {
         const linked = await recordCampaignInterview(campaignInterview, sessionId, apiFetch);
-        if (linked) {
-          clearCampaignInterview();
-          setCampaignInterview(null);
-        } else {
+        // Only the stashed handoff is cleared, never `campaignInterview` itself.
+        // Nulling the state here wiped the employer's name off the screen at the
+        // exact moment the results appeared, so the page the candidate finished
+        // on called itself a Mock Interview and said nothing about the
+        // application it had just been submitted to.
+        clearCampaignInterview();
+        setCampaignLinked(linked);
+        if (!linked) {
           console.warn('Could not attach this interview to its campaign invitation.');
         }
       }
@@ -762,20 +838,54 @@ function MockInterviewContent() {
           {/* HEADER */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-8">
             <div>
-              <h2 className="font-century text-2xl md:text-3xl font-black text-slate-800">Mock Interview</h2>
-              <p className="font-raleway text-sm text-gray-400 mt-1">
-                {stage === 'input' && 'Paste a job description to start a 3-round mock interview'}
-                {stage === 'connecting' && 'Connecting you to your interviewer…'}
-                {stage === 'round_intro' && `Get ready for Round ${currentRoundIdx + 1} of ${ROUND_ORDER.length}`}
-                {stage === 'round' && `Question ${currentQuestionIdx + 1} of ${currentRoundQuestions.length} — ${ROUND_META[currentRound].title}`}
-                {stage === 'results' && 'Your full interview evaluation'}
-              </p>
+              {/* Calling an employer's interview a "Mock Interview" is not a
+                  cosmetic slip — a candidate who believes it is practice does
+                  not treat it as the thing their application rests on. */}
+              {campaignInterview ? (
+                <>
+                  <span
+                    className="font-raleway inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-indigo-600"
+                    data-testid="campaign-interview-badge"
+                  >
+                    Employer interview
+                  </span>
+                  <h2 className="font-century mt-2 text-2xl font-black text-slate-800 md:text-3xl">
+                    {campaignInterview.role}
+                  </h2>
+                  <p className="font-raleway mt-1 text-sm text-gray-400">
+                    {campaignInterview.company}
+                    {stage === 'round' &&
+                      ` — question ${currentQuestionIdx + 1} of ${currentRoundQuestions.length}, ${ROUND_META[currentRound].title}`}
+                    {stage === 'round_intro' && ` — round ${currentRoundIdx + 1} of ${ROUND_ORDER.length}`}
+                    {stage === 'loading' && ' — preparing your questions…'}
+                    {stage === 'results' && ' — your answers have been sent'}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h2 className="font-century text-2xl md:text-3xl font-black text-slate-800">Mock Interview</h2>
+                  <p className="font-raleway text-sm text-gray-400 mt-1">
+                    {stage === 'input' && 'Paste a job description to start a 3-round mock interview'}
+                    {stage === 'connecting' && 'Connecting you to your interviewer…'}
+                    {stage === 'round_intro' && `Get ready for Round ${currentRoundIdx + 1} of ${ROUND_ORDER.length}`}
+                    {stage === 'round' && `Question ${currentQuestionIdx + 1} of ${currentRoundQuestions.length} — ${ROUND_META[currentRound].title}`}
+                    {stage === 'results' && 'Your full interview evaluation'}
+                  </p>
+                </>
+              )}
             </div>
-            {stage !== 'input' && stage !== 'loading' && stage !== 'evaluating' && (
-              <button onClick={restart} className="font-raleway flex items-center gap-2 self-start py-2 text-sm text-gray-400 hover:text-slate-600 transition-colors">
-                <FiArrowLeft size={16} /> Start Over
-              </button>
-            )}
+            {/* No "Start Over" on an employer's interview. It is one sitting,
+                which the invitation said, and a restart would either hand
+                somebody a second attempt at an assessment or — worse — look
+                like one and lose the answers already recorded. */}
+            {!campaignInterview &&
+              stage !== 'input' &&
+              stage !== 'loading' &&
+              stage !== 'evaluating' && (
+                <button onClick={restart} className="font-raleway flex items-center gap-2 self-start py-2 text-sm text-gray-400 hover:text-slate-600 transition-colors">
+                  <FiArrowLeft size={16} /> Start Over
+                </button>
+              )}
           </div>
 
           {/* PROGRESS BAR (when in interview) */}
@@ -856,7 +966,7 @@ function MockInterviewContent() {
               seniority={seniority} setSeniority={setSeniority}
               focusInput={focusInput} setFocusInput={setFocusInput}
               useResume={useResume} setUseResume={setUseResume}
-              onStart={generateTest}
+              onStart={() => generateTest()}
               sttSupported={sttSupported}
               progress={progress}
               prefilledFrom={prefilledFrom}
@@ -1196,7 +1306,53 @@ function MockInterviewContent() {
 
           {/* RESULTS STAGE */}
           {stage === 'results' && evaluation && (
-            <ResultsStage evaluation={evaluation} questions={questions} answers={answers} onRestart={restart} />
+            <>
+              {/* An employer's interview does not end on a practice screen.
+                  The candidate has just finished the thing their application
+                  rests on and needs to know it was received, that the score
+                  below is their own feedback rather than a verdict, and that
+                  there is nothing further to do. */}
+              {campaignInterview && (
+                <div
+                  className="mx-auto mb-6 max-w-4xl rounded-2xl border border-emerald-100 bg-emerald-50 p-5"
+                  data-testid="campaign-complete"
+                >
+                  <h3 className="font-century text-lg font-black text-emerald-900">
+                    Sent to {campaignInterview.company}
+                  </h3>
+                  <p className="font-raleway mt-1.5 text-sm leading-relaxed text-emerald-800">
+                    Your interview for {campaignInterview.role} is complete and your answers are with
+                    the hiring team. There is nothing else for you to do — they will be in touch
+                    through the email address on your account.
+                  </p>
+                  <p className="font-raleway mt-2.5 text-[13px] leading-relaxed text-emerald-700">
+                    The breakdown below is <strong>yours</strong>, not theirs. It is the same feedback
+                    you would get from a practice run, kept so you can see how you did.
+                  </p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Link
+                      href="/interviews"
+                      className="font-raleway rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-emerald-700"
+                    >
+                      My interviews
+                    </Link>
+                    <Link
+                      href="/jobs"
+                      className="font-raleway rounded-xl border border-emerald-200 bg-white px-4 py-2 text-sm font-bold text-emerald-800 transition hover:bg-emerald-50"
+                    >
+                      Find more roles
+                    </Link>
+                  </div>
+                </div>
+              )}
+              <ResultsStage
+                evaluation={evaluation}
+                questions={questions}
+                answers={answers}
+                onRestart={restart}
+                hideRestart={Boolean(campaignInterview)}
+              />
+            </>
           )}
     </div>
   );
