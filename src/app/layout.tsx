@@ -123,7 +123,7 @@ export default function RootLayout({
       <body className={`${raleway.variable} ${baloo.variable} ${century.variable} font-sans`}>
         {/* Pre-hydration boot overlay for slow opens. Visibility is driven by
             BOOT_REVEAL + FoliBoot via element.style, never React props. The reveal
-            is a RAW inline <script> so it runs during HTML parse — a next/script
+            is a RAW inline <script> so it runs during HTML parse. A next/script
             beforeInteractive tag loads through Next's own JS, which is exactly what
             is slow on a bad connection, so the timer would never start in time. */}
         <div

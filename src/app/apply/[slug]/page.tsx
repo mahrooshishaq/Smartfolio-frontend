@@ -395,7 +395,7 @@ export default function ApplyPage() {
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-[var(--sf-muted)]">
             You can still read the description below. Smartfolio finds roles like this one from your
-            CV — create an account and we will look for you.
+            CV: create an account and we will look for you.
           </p>
           <Link
             href="/signup"
@@ -409,7 +409,7 @@ export default function ApplyPage() {
         </div>
       ) : (
         <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_428px]">
-          {/* JD — second on mobile, because the form is the point */}
+          {/* JD: second on mobile, because the form is the point */}
           <div className="order-2 lg:order-1">
             <div className="sf-card rounded-2xl p-6 sm:p-8">
               <h2 className="mb-3.5 text-[17px] font-bold text-[var(--sf-ink)]">About the role</h2>
@@ -423,7 +423,7 @@ export default function ApplyPage() {
               <div className="sf-panel rounded-2xl p-6" data-testid="apply-form">
                 <h2 className="text-[18px] font-bold text-[var(--sf-ink)]">Apply</h2>
                 <p className="mt-1 text-[13.5px] leading-relaxed text-[var(--sf-muted)]">
-                  Takes about three minutes. You can create your account at the end — nothing you
+                  Takes about three minutes. You can create your account at the end. Nothing you
                   enter here is lost.
                 </p>
 
@@ -552,7 +552,7 @@ export default function ApplyPage() {
                 <div className="mt-4 flex items-start gap-2.5">
                   <FiShield className="mt-0.5 h-4 w-4 shrink-0 text-[var(--sf-muted-soft)]" />
                   <p className="text-xs leading-relaxed text-[var(--sf-muted-soft)]">
-                    A short connection check runs next. It confirms where you are applying from — it
+                    A short connection check runs next. It confirms where you are applying from. It
                     does not read your files, your screen, or your browsing.
                   </p>
                 </div>
@@ -584,7 +584,7 @@ export default function ApplyPage() {
                   Step 3 of 3
                 </p>
                 <h2 className="text-[18px] font-bold text-[var(--sf-ink)]">
-                  Last thing — who is this from?
+                  Last thing: who is this from?
                 </h2>
                 <p className="mt-1.5 text-[13.5px] leading-relaxed text-[var(--sf-muted)]">
                   Your application is already saved. An account is what lets you track it, and gives
@@ -601,7 +601,7 @@ export default function ApplyPage() {
                   <Saved
                     label={
                       verification?.verdict === 'review'
-                        ? 'Connection check complete — one detail flagged'
+                        ? 'Connection check complete. One detail flagged'
                         : 'Connection check passed'
                     }
                     tone={verification?.verdict === 'review' ? 'warn' : undefined}
@@ -759,7 +759,7 @@ function Confirmation({
         </div>
 
         <h1 className="font-century text-[28px] font-bold tracking-tight text-[var(--sf-ink)] sm:text-[34px]">
-          While you wait —
+          While you wait
         </h1>
         <p className="mt-2 max-w-[560px] text-[15.5px] leading-relaxed text-[var(--sf-muted)]">
           We read your CV as part of the application. Here is how it scored against this role, and
@@ -793,7 +793,7 @@ function Confirmation({
             {verification?.verdict === 'review' && (
               <p className="mt-4 rounded-xl bg-[var(--sf-yellow-soft)] px-3.5 py-2.5 text-[13px] leading-relaxed text-[var(--sf-yellow)]">
                 One detail of your connection did not line up with the country you gave. A person
-                will look at it — it does not stop your application.
+                will look at it. It does not stop your application.
               </p>
             )}
           </div>
@@ -883,7 +883,7 @@ function ScoreRing({ value }: { value: number | null }) {
       />
       <text x="66" y="62" textAnchor="middle" className="font-century"
             fontSize="34" fontWeight="700" fill="var(--sf-ink)">
-        {value === null ? '—' : pct}
+        {value === null ? 'Not scored' : pct}
       </text>
       <text x="66" y="82" textAnchor="middle" fontSize="12" fill="var(--sf-muted)">
         out of 100

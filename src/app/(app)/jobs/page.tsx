@@ -159,7 +159,7 @@ export default function JobsPage() {
         const runs = await res.json();
         const latest = Array.isArray(runs) ? runs[0] : null;
         if (latest && new Date(latest.createdAt).getTime() >= startedAt) return true;
-      } catch { /* transient — keep polling */ }
+      } catch { /* transient: keep polling */ }
     }
     return false;
   };
@@ -200,7 +200,7 @@ export default function JobsPage() {
         if (job.status === 'done')   return { outcome: 'done', jobsFound: job.result?.jobs_found ?? 0 };
         if (job.status === 'failed') return { outcome: 'failed', jobsFound: 0 };
         // 'running' or 'not_found' (server restarted) — keep waiting.
-      } catch { /* transient — keep polling */ }
+      } catch { /* transient: keep polling */ }
     }
     return { outcome: 'timeout', jobsFound: 0 };
   };
@@ -255,16 +255,16 @@ export default function JobsPage() {
       if (outcome === 'failed') {
         setError('That search failed. Please try again in a moment.');
       } else if (outcome === 'timeout') {
-        setError('The search is taking longer than usual. Results will keep arriving — refresh in a couple of minutes.');
+        setError('The search is taking longer than usual. Results will keep arriving: refresh in a couple of minutes.');
       } else if (jobsFound === 0) {
-        setScrapeStatus('Search complete — the job boards had nothing new for this. Try a different role or widen your filters.');
+        setScrapeStatus('Search complete. The job boards had nothing new for this. Try a different role or widen your filters.');
       } else if (typeof after === 'number' && after <= before) {
         // The scrape worked, but the on-screen filters hide everything it found.
         // Reporting "no new jobs" here (the old behaviour) was simply untrue.
         setHiddenByFilters(jobsFound);
         setScrapeStatus('');
       } else {
-        setScrapeStatus(`Search complete — ${jobsFound} new job${jobsFound === 1 ? '' : 's'} added.`);
+        setScrapeStatus(`Search complete: ${jobsFound} new job${jobsFound === 1 ? '' : 's'} added.`);
       }
     } catch (err: any) {
       setError(err?.message === 'Failed to fetch'
@@ -300,7 +300,7 @@ export default function JobsPage() {
       await fetchJobs(1);
       await fetchFilters();
       if (!completed) {
-        setError('The job search is taking longer than usual. Results will keep arriving — refresh in a couple of minutes.');
+        setError('The job search is taking longer than usual. Results will keep arriving: refresh in a couple of minutes.');
       } else {
         setScrapeStatus('');
       }
@@ -611,7 +611,7 @@ export default function JobsPage() {
                   options={[{ value: '', label: 'All Platforms' }, ...filters.sources.map(s => ({ value: s, label: sourceLabel(s) }))]}
                 />
                 {/* Eligibility is derived from the posting text, so "no requirement
-                    stated" rather than a guarantee — the labels shouldn't overpromise. */}
+                    stated" rather than a guarantee. The labels shouldn't overpromise. */}
                 <Select
                   value={geoRestriction} onChange={setGeoRestriction} ariaLabel="Eligibility" className={FILTER_TRIGGER}
                   options={[
@@ -642,7 +642,7 @@ export default function JobsPage() {
               <FiFilter className="flex-shrink-0 mt-0.5" size={16} />
               <div className="flex-1">
                 <p className="font-semibold">
-                  Found {hiddenByFilters} job{hiddenByFilters === 1 ? '' : 's'} — but your filters are hiding {hiddenByFilters === 1 ? 'it' : 'them'}.
+                  Found {hiddenByFilters} job{hiddenByFilters === 1 ? '' : 's'}, but your filters are hiding {hiddenByFilters === 1 ? 'it' : 'them'}.
                 </p>
                 <button
                   onClick={() => { clearFilters(); setHiddenByFilters(0); }}
@@ -664,7 +664,7 @@ export default function JobsPage() {
               {scraping && <FiLoader className="animate-spin flex-shrink-0" size={16} />}
               <span>
                 {scrapeStatus}
-                {scraping && <span className="text-blue-400"> — this usually takes 1–2 minutes. You can keep browsing.</span>}
+                {scraping && <span className="text-blue-400">. This usually takes 1–2 minutes. You can keep browsing.</span>}
               </span>
               {!scraping && (
                 <button onClick={() => setScrapeStatus('')} className="ml-auto flex-shrink-0 text-blue-400 hover:text-blue-600" aria-label="Dismiss">
@@ -701,7 +701,7 @@ export default function JobsPage() {
               <FiBriefcase className="mx-auto text-gray-200 mb-4" size={48} />
               {hasActiveFilters || search ? (
                 <>
-                  {/* The filters describe jobs we haven't collected yet — offer to
+                  {/* The filters describe jobs we haven't collected yet: offer to
                       go get them instead of dead-ending on "no results". */}
                   <h3 className="font-century text-xl font-bold text-slate-700 mb-2">No saved jobs match</h3>
                   <p className="font-raleway text-sm text-gray-500 mb-2">
@@ -741,7 +741,7 @@ export default function JobsPage() {
                       <button
                         onClick={() => toggleSave(job.id)}
                         aria-pressed={!!savedJobs[job.id]}
-                        title={savedJobs[job.id] ? 'Saved — click to remove from tracker' : 'Save to Job Tracker'}
+                        title={savedJobs[job.id] ? 'Saved: click to remove from tracker' : 'Save to Job Tracker'}
                         aria-label={savedJobs[job.id] ? 'Remove from tracker' : 'Save to tracker'}
                         className={`group/save p-2.5 rounded-xl text-xs font-bold flex items-center transition-all ${savedJobs[job.id] ? 'bg-emerald-50 text-emerald-600 hover:bg-red-50 hover:text-red-500' : 'bg-gray-50 text-gray-500 hover:bg-indigo-50 hover:text-[#4F46E5]'}`}
                       >
@@ -799,7 +799,7 @@ export default function JobsPage() {
                     )}
                   </div>
 
-                  {/* Secondary actions — things to do with the posting other than
+                  {/* Secondary actions: things to do with the posting other than
                       applying to it. Each is hidden when the board gave us too
                       little description for that destination to accept, since it
                       would only lead to a form that refuses to run. */}

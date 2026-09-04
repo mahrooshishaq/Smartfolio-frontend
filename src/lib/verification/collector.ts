@@ -608,7 +608,7 @@ async function submitCheck(payload: Record<string, unknown>): Promise<Verificati
     const aborted = (e as Error)?.name === 'AbortError';
     throw new Error(
       aborted
-        ? 'The check took too long to finish. Your connection may be slow — please try again.'
+        ? 'The check took too long to finish. Your connection may be slow: please try again.'
         : 'We could not reach the check. Please check your internet connection and try again.',
     );
   }

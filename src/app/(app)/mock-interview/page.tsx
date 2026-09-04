@@ -777,7 +777,7 @@ function MockInterviewContent() {
       }
     } catch (err: any) {
       console.warn('Submit failed:', err);
-      setError('We couldn’t submit your interview — please press Next or the end button to try again.');
+      setError('We couldn’t submit your interview: please press Next or the end button to try again.');
       setStage('round');
     }
   };
@@ -839,7 +839,7 @@ function MockInterviewContent() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-8">
             <div>
               {/* Calling an employer's interview a "Mock Interview" is not a
-                  cosmetic slip — a candidate who believes it is practice does
+                  cosmetic slip. A candidate who believes it is practice does
                   not treat it as the thing their application rests on. */}
               {campaignInterview ? (
                 <>
@@ -855,10 +855,10 @@ function MockInterviewContent() {
                   <p className="font-raleway mt-1 text-sm text-gray-400">
                     {campaignInterview.company}
                     {stage === 'round' &&
-                      ` — question ${currentQuestionIdx + 1} of ${currentRoundQuestions.length}, ${ROUND_META[currentRound].title}`}
-                    {stage === 'round_intro' && ` — round ${currentRoundIdx + 1} of ${ROUND_ORDER.length}`}
-                    {stage === 'loading' && ' — preparing your questions…'}
-                    {stage === 'results' && ' — your answers have been sent'}
+                      `: question ${currentQuestionIdx + 1} of ${currentRoundQuestions.length}, ${ROUND_META[currentRound].title}`}
+                    {stage === 'round_intro' && `: round ${currentRoundIdx + 1} of ${ROUND_ORDER.length}`}
+                    {stage === 'loading' && ': preparing your questions…'}
+                    {stage === 'results' && '. Your answers have been sent'}
                   </p>
                 </>
               ) : (
@@ -868,7 +868,7 @@ function MockInterviewContent() {
                     {stage === 'input' && 'Paste a job description to start a 3-round mock interview'}
                     {stage === 'connecting' && 'Connecting you to your interviewer…'}
                     {stage === 'round_intro' && `Get ready for Round ${currentRoundIdx + 1} of ${ROUND_ORDER.length}`}
-                    {stage === 'round' && `Question ${currentQuestionIdx + 1} of ${currentRoundQuestions.length} — ${ROUND_META[currentRound].title}`}
+                    {stage === 'round' && `Question ${currentQuestionIdx + 1} of ${currentRoundQuestions.length}: ${ROUND_META[currentRound].title}`}
                     {stage === 'results' && 'Your full interview evaluation'}
                   </p>
                 </>
@@ -876,7 +876,7 @@ function MockInterviewContent() {
             </div>
             {/* No "Start Over" on an employer's interview. It is one sitting,
                 which the invitation said, and a restart would either hand
-                somebody a second attempt at an assessment or — worse — look
+                somebody a second attempt at an assessment or, worse, look
                 like one and lose the answers already recorded. */}
             {!campaignInterview &&
               stage !== 'input' &&
@@ -904,7 +904,7 @@ function MockInterviewContent() {
             </div>
           )}
 
-          {/* Platform toast — replaces raw banner/browser alerts; dismissible + auto-hides */}
+          {/* Platform toast: replaces raw banner/browser alerts; dismissible + auto-hides */}
           {error && (
             <div role="alert" className="fixed top-6 right-6 z-[60] w-[min(24rem,calc(100vw-3rem))] rounded-2xl bg-white border border-red-100 shadow-xl px-4 py-3.5 flex items-start gap-3">
               <span className="mt-0.5 w-8 h-8 grid place-items-center rounded-xl bg-red-50 text-red-500 flex-shrink-0"><FiAlertCircle size={16} /></span>
@@ -913,7 +913,7 @@ function MockInterviewContent() {
             </div>
           )}
 
-          {/* End-interview confirm — platform-styled, replaces window.confirm */}
+          {/* End-interview confirm: platform-styled, replaces window.confirm */}
           {confirmEnd && (
             <div className="fixed inset-0 z-[70] grid place-items-center bg-black/60 backdrop-blur-sm p-4">
               <div role="dialog" aria-modal="true" aria-label="End interview" className="w-full max-w-sm rounded-3xl border border-rose-100 bg-white p-6 shadow-2xl text-center">
@@ -959,7 +959,53 @@ function MockInterviewContent() {
           )}
 
           {/* INPUT STAGE */}
-          {stage === 'input' && (
+          {/* A campaign interview never falls back to the practice form.
+              Generation can fail (a model outage, a timeout) , and when it did,
+              the candidate was dropped onto a job-description box and three
+              length options for an interview they had just been invited to.
+              They get a retry for THEIR interview instead. */}
+          {stage === 'input' && campaignInterview && (
+            <div className="mx-auto max-w-2xl">
+              <div className="rounded-[2rem] border border-violet-100 bg-white/90 p-8 text-center shadow-sm">
+                {error ? (
+                  <>
+                    <h3 className="font-century text-xl font-black text-slate-800">
+                      We could not start your interview
+                    </h3>
+                    <p className="font-raleway mx-auto mt-2 max-w-md text-sm leading-relaxed text-gray-500">
+                      {error} Your invitation is still valid and nothing has been counted against
+                      you.
+                    </p>
+                    <button
+                      onClick={() => {
+                        setError('');
+                        void generateTest({
+                          jobDescription: campaignInterview.jobDescription,
+                          lengthTier: CAMPAIGN_LENGTH_TIER,
+                          useResume: true,
+                        });
+                      }}
+                      className="sf-primary font-raleway mt-6 rounded-2xl px-8 py-3 text-sm font-bold text-white"
+                      data-testid="campaign-retry"
+                    >
+                      Try again
+                    </button>
+                    <p className="font-raleway mt-4 text-xs text-gray-400">
+                      Still failing? Come back from{' '}
+                      <Link href="/interviews" className="font-bold text-indigo-600 underline">
+                        My Interviews
+                      </Link>{' '}
+                      later. The deadline in your invitation still applies.
+                    </p>
+                  </>
+                ) : (
+                  <p className="font-raleway text-sm text-gray-500">Starting your interview…</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {stage === 'input' && !campaignInterview && (
             <InputStage
               jobDescription={jobDescription} setJobDescription={setJobDescription}
               lengthTier={lengthTier} setLengthTier={setLengthTier}
@@ -1031,7 +1077,7 @@ function MockInterviewContent() {
             </div>
           )}
 
-          {/* ROUND STAGE — VIDEO CALL */}
+          {/* ROUND STAGE: VIDEO CALL */}
           {stage === 'round' && activeQuestion && (
             <div className="max-w-5xl mx-auto">
               <div className="relative overflow-hidden rounded-[2rem] border border-violet-100 bg-gradient-to-br from-white via-[#fbfaff] to-blue-50/60 shadow-sm">
@@ -1079,7 +1125,7 @@ function MockInterviewContent() {
                     </div>
                   </div>
 
-                  {/* REST INTERSTITIAL — a breather between questions while the
+                  {/* REST INTERSTITIAL. A breather between questions while the
                       next question's audio synthesizes in the background */}
                   {resting && (
                     <div className="mt-6 text-center max-w-2xl flex flex-col items-center">
@@ -1099,17 +1145,17 @@ function MockInterviewContent() {
                       </h3>
                       <p className="font-raleway text-sm text-slate-400 mt-1.5">
                         {restHolding ? <>{INTERVIEWER.name} is about to speak…</>
-                          : restMeta.next === 'start' ? <>First question in {restCountdown}s — {INTERVIEWER.name} is preparing it</>
-                          : restMeta.next === 'followup' ? <>Follow-up question in {restCountdown}s — {INTERVIEWER.name} is preparing it</>
-                          : restMeta.next === 'round' ? <>Round complete — next round in {restCountdown}s</>
+                          : restMeta.next === 'start' ? <>First question in {restCountdown}s: {INTERVIEWER.name} is preparing it</>
+                          : restMeta.next === 'followup' ? <>Follow-up question in {restCountdown}s: {INTERVIEWER.name} is preparing it</>
+                          : restMeta.next === 'round' ? <>Round complete: next round in {restCountdown}s</>
                           : restMeta.next === 'finish' ? <>Your evaluation starts in {restCountdown}s</>
-                          : <>Next question in {restCountdown}s — {INTERVIEWER.name} is preparing it</>}
+                          : <>Next question in {restCountdown}s: {INTERVIEWER.name} is preparing it</>}
                       </p>
                       <button
                         onClick={finishRest}
                         className="font-raleway mt-4 text-xs text-slate-400 hover:text-indigo-300 underline underline-offset-4"
                       >
-                        I&apos;m ready — skip the wait
+                        I&apos;m ready: skip the wait
                       </button>
                     </div>
                   )}
@@ -1167,7 +1213,7 @@ function MockInterviewContent() {
                   </div>
                 )}
 
-                {/* TURN GUIDE — one always-visible line that says whose turn it is and what to do */}
+                {/* TURN GUIDE. One always-visible line that says whose turn it is and what to do */}
                 {!resting && (
                 <div className="relative z-10 text-center px-6 pb-2">
                   <span className={`font-raleway inline-flex items-center gap-2 text-xs font-semibold rounded-full px-3.5 py-1.5 border ${
@@ -1179,12 +1225,12 @@ function MockInterviewContent() {
                     : 'text-slate-500 bg-white/80 border-slate-100'
                   }`}>
                     {awaitingFollowUp ? <>{INTERVIEWER.name} is thinking…</>
-                      : isSpeaking ? <><span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />{INTERVIEWER.name} is asking — listen…</>
-                      : isListening ? <><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />Your turn — speak freely; press stop when you&apos;re done</>
+                      : isSpeaking ? <><span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />{INTERVIEWER.name} is asking: listen…</>
+                      : isListening ? <><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />Your turn: speak freely; press stop when you&apos;re done</>
                       : isTranscribing ? <><FiLoader size={13} className="animate-spin" />Processing your answer…</>
-                      : answerReady ? <><FiCheckCircle size={13} className="text-emerald-400" />Answer captured — press &ldquo;Submit answer&rdquo; when you&apos;re happy with it</>
+                      : answerReady ? <><FiCheckCircle size={13} className="text-emerald-400" />Answer captured: press &ldquo;Submit answer&rdquo; when you&apos;re happy with it</>
                       : activeQuestion.type === 'mcq' ? <>Pick an option, then press &ldquo;Submit answer&rdquo;</>
-                      : <>Mic is off — tap the mic to speak, type below, or skip the question</>}
+                      : <>Mic is off: tap the mic to speak, type below, or skip the question</>}
                   </span>
                 </div>
                 )}
@@ -1255,7 +1301,7 @@ function MockInterviewContent() {
                 </div>
               </div>
 
-              {/* TYPED-ANSWER FALLBACK (spoken-answer questions only) — Phase 4.3 */}
+              {/* TYPED-ANSWER FALLBACK (spoken-answer questions only): Phase 4.3 */}
               {!resting && activeQuestion.type !== 'mcq' && (
                 <div className="mt-4">
                   {typing ? (
@@ -1322,7 +1368,7 @@ function MockInterviewContent() {
                   </h3>
                   <p className="font-raleway mt-1.5 text-sm leading-relaxed text-emerald-800">
                     Your interview for {campaignInterview.role} is complete and your answers are with
-                    the hiring team. There is nothing else for you to do — they will be in touch
+                    the hiring team. There is nothing else for you to do. They will be in touch
                     through the email address on your account.
                   </p>
                   <p className="font-raleway mt-2.5 text-[13px] leading-relaxed text-emerald-700">

@@ -365,7 +365,9 @@ test('editing a campaign with applicants says what actually changes', async ({ p
   // The three tiers, stated rather than hinted at.
   await expect(page.getByText(/Free to change/)).toBeVisible();
   await expect(page.getByText(/Marks scores as stale/)).toBeVisible();
-  await expect(page.getByText(/Locked:/)).toBeVisible();
+  // Two things now say "Locked:" — the policy panel and the field hint. Both
+  // are correct; the panel is the one this test is about.
+  await expect(page.getByText(/Locked:.*the company/)).toBeVisible();
 
   // And the company field is actually disabled, so the rule is discovered
   // before retyping a name rather than after — the API refuses it either way.

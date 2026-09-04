@@ -165,7 +165,7 @@ export default function CoursesPage() {
         const runs = await res.json();
         const latest = Array.isArray(runs) ? runs[0] : null;
         if (latest && new Date(latest.createdAt).getTime() >= startedAt) return true;
-      } catch { /* transient — keep polling */ }
+      } catch { /* transient: keep polling */ }
     }
     return false;
   };
@@ -184,7 +184,7 @@ export default function CoursesPage() {
         const job = await res.json();
         if (job.status === 'done') return true;
         if (job.status === 'failed' || job.status === 'not_found') return false;
-      } catch { /* transient — keep polling */ }
+      } catch { /* transient: keep polling */ }
     }
     return false;
   };
@@ -207,7 +207,7 @@ export default function CoursesPage() {
           });
           if (res.status === 401) { router.push('/login'); return; }
           if (res.ok) jobId = (await res.json()).jobId;
-        } catch { /* proxy cut the trigger — fall back to run-history polling */ }
+        } catch { /* proxy cut the trigger: fall back to run-history polling */ }
 
         completed = jobId
           ? await waitForCustomSearch(jobId)
@@ -228,7 +228,7 @@ export default function CoursesPage() {
       await fetchCourses(1);
       await fetchFilters();
       if (!completed) {
-        setError('The course search is taking longer than usual. Results will keep arriving — refresh in a couple of minutes.');
+        setError('The course search is taking longer than usual. Results will keep arriving: refresh in a couple of minutes.');
       }
     } catch (err: any) {
       setError(err?.message === 'Failed to fetch'

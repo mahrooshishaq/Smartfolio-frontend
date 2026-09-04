@@ -178,7 +178,7 @@ export default function VerificationGate({
         </h3>
         <p className="mt-1 text-sm leading-relaxed text-[var(--sf-muted)]">{error}</p>
         <p className="mt-2 text-xs leading-relaxed text-[var(--sf-muted-soft)]">
-          This is a problem at our end or with the connection between us — not with your
+          This is a problem at our end or with the connection between us, not with your
           application. Nothing you have entered has been lost.
         </p>
         <button
@@ -221,7 +221,7 @@ export default function VerificationGate({
             {isBlocked
               ? 'One thing to change first'
               : needsReview
-                ? 'Check complete — one thing to flag'
+                ? 'Check complete. One thing to flag'
                 : 'Connection check complete'}
           </h3>
 
@@ -254,12 +254,12 @@ export default function VerificationGate({
           ) : needsReview ? (
             <>
               {/* A review is NOT a rejection and must not read like one. The
-                  candidate continues either way — but they are told what we
+                  candidate continues either way, but they are told what we
                   saw, because finding out later that something was "flagged"
                   and never explained is worse than being told now. */}
               <p className="mt-1 text-sm leading-relaxed text-[var(--sf-muted)]">
                 Your application continues as normal. One detail did not line up, so a person will
-                take a look — nothing is decided automatically.
+                take a look. Nothing is decided automatically.
               </p>
               <ul className="mt-3 space-y-2">
                 {contradictions.map((f) => (
@@ -273,7 +273,7 @@ export default function VerificationGate({
                 ))}
               </ul>
               <p className="mt-3 text-xs leading-relaxed text-[var(--sf-muted-soft)]">
-                If that looks wrong — you are not on a VPN and the country is right — you can run
+                If that looks wrong, you are not on a VPN and the country is right, you can run
                 the check again and it will use whatever it sees this time.
               </p>
               <div className="mt-4 flex flex-wrap items-center gap-2.5">
@@ -332,7 +332,7 @@ function humanise(code: string, detail: string): string {
       // database that mislabels whole consumer ISPs — telling someone on an
       // ordinary home connection to switch off something they are not using
       // makes the product look broken and them feel accused.
-      return 'A public database lists your network as a proxy or VPN. That sometimes happens to ordinary home connections, so it is not held against you on its own — if you are on a VPN, turning it off and rechecking will clear it.';
+      return 'A public database lists your network as a proxy or VPN. That sometimes happens to ordinary home connections, so it is not held against you on its own. If you are on a VPN, turning it off and rechecking will clear it.';
     case 'tor_exit':
       return 'You appear to be connecting through Tor. Please use your normal internet connection instead.';
     case 'virtual_camera':

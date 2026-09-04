@@ -176,7 +176,7 @@ export default function CampaignForm({
 
     if (v.applicationDeadline && v.interviewDeadline) {
       if (new Date(v.interviewDeadline) < new Date(v.applicationDeadline)) {
-        return error('The interview window closes before applications do — check the dates.');
+        return error('The interview window closes before applications do: check the dates.');
       }
     }
 
@@ -231,7 +231,7 @@ export default function CampaignForm({
       </h1>
       <p className="mt-1.5 max-w-[640px] text-sm leading-relaxed text-[var(--sf-muted)]">
         {mode === 'create'
-          ? 'A campaign is one role: a public apply page, the applications it collects, and the interviews you invite people to. It is created as a draft — nothing is public until you open it.'
+          ? 'A campaign is one role: a public apply page, the applications it collects, and the interviews you invite people to. It is created as a draft. Nothing is public until you open it.'
           : 'The apply link never changes. Edits appear on it straight away.'}
       </p>
 
@@ -249,7 +249,7 @@ export default function CampaignForm({
             </li>
             <li>
               <strong>Marks scores as stale:</strong> the description, target countries and
-              arrangement. Existing scores are kept and labelled, not recalculated — a score earned
+              arrangement. Existing scores are kept and labelled, not recalculated. A score earned
               against the role someone applied to should not be quietly replaced with one against a
               role they have never seen.
             </li>
@@ -257,7 +257,7 @@ export default function CampaignForm({
               <strong>Locked:</strong> the company. They applied to {v.company} by name.
             </li>
             <li>
-              Interviews already sent are unaffected — each one keeps the description it was issued
+              Interviews already sent are unaffected. Each one keeps the description it was issued
               with.
             </li>
           </ul>
@@ -286,7 +286,7 @@ export default function CampaignForm({
               label="Company"
               hint={
                 companyLocked
-                  ? 'Locked — people have applied to this employer by name'
+                  ? 'Locked: people have applied to this employer by name'
                   : undefined
               }
             >
@@ -302,11 +302,11 @@ export default function CampaignForm({
           </div>
 
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <Field label="Location" hint="Shown on the apply page — prose, not a filter">
+            <Field label="Location" hint="Shown on the apply page: prose, not a filter">
               <input
                 value={v.location}
                 onChange={(e) => set('location', e.target.value)}
-                placeholder="Remote — Europe & Asia"
+                placeholder="Remote: Europe & Asia"
                 className={inputClass}
                 data-testid="field-location"
               />
@@ -325,7 +325,7 @@ export default function CampaignForm({
           <div className="mt-4">
             <Field
               label="Open to candidates in"
-              hint="Leave empty for anywhere. This is what matching uses — the location above is prose."
+              hint="Leave empty for anywhere. This is what matching uses. The location above is prose."
             >
               <div className="rounded-xl border border-[var(--sf-border)] bg-white p-3">
                 {v.candidateCountries.length > 0 && (
@@ -383,7 +383,7 @@ export default function CampaignForm({
           <div className="mt-4">
             <Field
               label="Job description"
-              hint="Drives matching and generates the interview questions — paste the real thing"
+              hint="Drives matching and generates the interview questions: paste the real thing"
             >
               <textarea
                 value={v.jobDescription}
@@ -396,7 +396,7 @@ export default function CampaignForm({
             </Field>
             <p className="mt-1.5 text-xs text-[var(--sf-muted-soft)]">
               {v.jobDescription.trim().length} characters
-              {v.jobDescription.trim().length < 40 && ' — needs at least 40'}
+              {v.jobDescription.trim().length < 40 && ': needs at least 40'}
             </p>
           </div>
         </section>
@@ -414,7 +414,7 @@ export default function CampaignForm({
             </button>
           </div>
           <p className="mb-4 text-sm text-[var(--sf-muted)]">
-            Asked on the apply page, on top of the CV. Every extra question costs you applicants —
+            Asked on the apply page, on top of the CV. Every extra question costs you applicants;
             two or three that a CV cannot answer is usually the right number.
           </p>
 

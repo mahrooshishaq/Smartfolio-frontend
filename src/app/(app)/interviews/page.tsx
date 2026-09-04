@@ -23,7 +23,7 @@ import { invitationsApi, daysLeft, type Invitation } from '@/lib/invitations';
 import { useFeedback } from '@/components/ui/feedback';
 
 function formatDate(value: string | null): string {
-  if (!value) return '—';
+  if (!value) return 'Not set';
   return new Date(value).toLocaleDateString(undefined, {
     day: 'numeric',
     month: 'short',
@@ -120,13 +120,13 @@ function InterviewsInner() {
             That interview link had already been used to open a session
           </p>
           <p className="mt-1 text-[13px] leading-relaxed text-[var(--sf-ink-soft)]">
-            Nothing is lost. Start it again below — you are signed in, so we know it is you.
+            Nothing is lost. Start it again below. You are signed in, so we know it is you.
           </p>
         </div>
       )}
       <p className="mt-2 max-w-[620px] text-sm text-[var(--sf-muted)]">
         Interviews you have been invited to. You can start one from here even if you no longer have
-        the invitation email — you are signed in, which is all we need to know it is you.
+        the invitation email. You are signed in, which is all we need to know it is you.
       </p>
 
       {invitations === null && (
@@ -179,7 +179,7 @@ function InterviewsInner() {
               {invitation.state === 'expired' && (
                 <p className="mt-3 border-t border-[var(--sf-line)] pt-3 text-[13px] text-[var(--sf-muted)]">
                   This interview closed before it was taken. If you still want to be considered,
-                  reply to the invitation email and ask the recruiter to reopen it — the deadline is
+                  reply to the invitation email and ask the recruiter to reopen it. The deadline is
                   theirs to set, not ours.
                 </p>
               )}

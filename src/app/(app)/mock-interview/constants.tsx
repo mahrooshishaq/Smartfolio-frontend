@@ -5,7 +5,7 @@ import type { Round, LengthTier, Seniority, QuestionType, InterviewerStyle } fro
 export const ROUND_META: Record<Round, { title: string; subtitle: string; icon: IconType; color: string; bg: string }> = {
   hr: {
     title: 'HR & Behavioral',
-    subtitle: 'Get to know you — your background, motivation, and work style',
+    subtitle: 'Get to know you. Your background, motivation, and work style',
     icon: FiUser,
     color: 'text-rose-600',
     bg: 'bg-rose-50',
@@ -19,7 +19,7 @@ export const ROUND_META: Record<Round, { title: string; subtitle: string; icon: 
   },
   problem_solving: {
     title: 'Problem Solving',
-    subtitle: 'Real-world scenarios — walk us through your approach',
+    subtitle: 'Real-world scenarios: walk us through your approach',
     icon: FiZap,
     color: 'text-amber-600',
     bg: 'bg-amber-50',
@@ -59,8 +59,8 @@ export const INTERVIEWER = { name: 'Folio', role: 'AI Interviewer' };
 
 // The two interviewer looks the user can pick on the input screen (5.1 slot).
 export const INTERVIEWER_STYLE_OPTIONS: { id: InterviewerStyle; label: string; desc: string }[] = [
-  { id: 'avatar', label: 'Video avatar', desc: 'Face-to-face — Folio appears on camera and speaks to you' },
-  { id: 'orb', label: 'Voice orb', desc: 'Minimal — a calm voice-reactive tile, no face' },
+  { id: 'avatar', label: 'Video avatar', desc: 'Face-to-face: Folio appears on camera and speaks to you' },
+  { id: 'orb', label: 'Voice orb', desc: 'Minimal. A calm voice-reactive tile, no face' },
 ];
 
 export const fmtTime = (secs: number) => {

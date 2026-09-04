@@ -250,7 +250,7 @@ export default function Foli({
           opacity=".55"
         />
 
-        {/* AI spark — twinkles at rest, orbits the head during spark-play */}
+        {/* AI spark: twinkles at rest, orbits the head during spark-play */}
         <g className="spark-orbit">
           <path
             className="spark"
@@ -259,7 +259,7 @@ export default function Foli({
           />
         </g>
 
-        {/* Zzz — only while asleep */}
+        {/* Zzz: only while asleep */}
         <g className="zzz" aria-hidden="true" fill="#5D3FD3" fontFamily="ui-sans-serif, system-ui" fontWeight="700">
           <text className="z1" x="150" y="60" fontSize="15">z</text>
           <text className="z2" x="162" y="46" fontSize="19">z</text>

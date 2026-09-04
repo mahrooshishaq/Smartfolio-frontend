@@ -40,7 +40,7 @@ export default function AdminVerificationPage() {
       <h1 className="font-century text-2xl font-bold text-[var(--sf-ink)]">Verification</h1>
       <p className="mt-1.5 max-w-[660px] text-sm leading-relaxed text-[var(--sf-muted)]">
         Everything is recorded, nothing is acted on automatically. A cluster is a lead for a person
-        to look at — internet cafés, family computers and shared office machines all produce genuine
+        to look at: internet cafés, family computers and shared office machines all produce genuine
         matches.
       </p>
 
@@ -68,7 +68,7 @@ export default function AdminVerificationPage() {
         <div className="sf-panel mt-4 rounded-2xl border-l-4 border-l-[var(--sf-yellow)] p-4">
           <p className="text-sm font-semibold text-[var(--sf-ink)]">A threat list is empty</p>
           <p className="mt-1 text-sm text-[var(--sf-muted)]">
-            The rules that depend on it are skipped rather than blocking anyone — the check fails
+            The rules that depend on it are skipped rather than blocking anyone. The check fails
             open on purpose. It refills on the next refresh.
           </p>
         </div>
@@ -78,7 +78,7 @@ export default function AdminVerificationPage() {
         <section>
           <h2 className="text-base font-bold text-[var(--sf-ink)]">Shared devices</h2>
           <p className="mb-3 mt-1 text-sm text-[var(--sf-muted)]">
-            One machine, more than one account. Weak signatures — phones, privacy browsers — are
+            One machine, more than one account. Weak signatures, phones, privacy browsers, are
             never linked and never appear here.
           </p>
 
@@ -208,7 +208,7 @@ function num(value: unknown): number {
 
 function ago(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
-  if (!Number.isFinite(diff)) return '—';
+  if (!Number.isFinite(diff)) return 'n/a';
   const minutes = Math.round(diff / 60000);
   if (minutes < 1) return 'just now';
   if (minutes < 60) return `${minutes} min ago`;

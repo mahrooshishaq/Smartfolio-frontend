@@ -47,7 +47,7 @@ function AvatarFace({ isSpeaking }: { isSpeaking: boolean }) {
 
   return (
     <div className="relative w-64 sm:w-72 aspect-[16/10] rounded-2xl overflow-hidden border border-white/10 shadow-xl bg-[radial-gradient(120%_140%_at_30%_20%,#232B45_0%,#141A2E_55%,#0D1222_100%)]">
-      {/* Gentle idle sway — disabled by the media query below */}
+      {/* Gentle idle sway: disabled by the media query below */}
       <style>{`
         @keyframes folio-bob { 0%,100% { transform: rotate(-0.6deg) translateY(0); } 50% { transform: rotate(0.7deg) translateY(3px); } }
         .folio-bob { animation: folio-bob 5.2s ease-in-out infinite; transform-origin: 210px 200px; }
@@ -91,7 +91,7 @@ function AvatarFace({ isSpeaking }: { isSpeaking: boolean }) {
           </g>
           {/* nose */}
           <path d="M208 118 Q205 134 200 140 Q207 145 214 141" stroke="#B5825C" strokeWidth="3.4" fill="none" strokeLinecap="round" />
-          {/* mouth — one viseme visible at a time */}
+          {/* mouth. One viseme visible at a time */}
           {viseme === 'rest' && <path d="M188 160 Q210 168 232 160" stroke="#8C5B44" strokeWidth="4.5" fill="none" strokeLinecap="round" />}
           {viseme === 'open' && <ellipse cx="210" cy="162" rx="15" ry="10" fill="#5A3226" />}
           {viseme === 'mid' && <ellipse cx="210" cy="161" rx="17" ry="5.5" fill="#5A3226" />}

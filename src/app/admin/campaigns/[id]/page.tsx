@@ -61,7 +61,7 @@ const ACTION_RULES: Record<
     // Re-inviting someone already invited is deliberately allowed: it reissues
     // the link, which is the operator's half of "I lost the email".
     allowed: ['applied', 'shortlisted', 'invited'],
-    why: 'Already interviewed — they cannot be invited again',
+    why: 'Already interviewed. They cannot be invited again',
   },
   submit: {
     allowed: ['applied', 'shortlisted', 'invited', 'completed'],
@@ -159,7 +159,7 @@ export default function AdminCampaignDetailPage() {
       // Clipboard access can be refused (an insecure origin, a locked-down
       // browser). Show the URL so it can still be copied by hand rather than
       // failing with nothing to fall back on.
-      error(`Copy failed — the link is ${url}`);
+      error(`Copy failed. The link is ${url}`);
     }
   }
 
@@ -168,7 +168,7 @@ export default function AdminCampaignDetailPage() {
     if (action === 'reject') {
       const ok = await confirm({
         title: `Reject ${selected.size} candidate${selected.size === 1 ? '' : 's'}?`,
-        message: 'The rows are kept — rejecting records the decision, it does not delete anyone.',
+        message: 'The rows are kept: rejecting records the decision, it does not delete anyone.',
         confirmLabel: 'Reject',
         variant: 'danger',
       });
@@ -205,7 +205,7 @@ export default function AdminCampaignDetailPage() {
       const res = await adminApi.rescore(id);
       success(
         res.skipped
-          ? `${res.rescored} rescored. ${res.skipped} skipped — no profile to score against.`
+          ? `${res.rescored} rescored. ${res.skipped} skipped. No profile to score against.`
           : `${res.rescored} candidate${res.rescored === 1 ? '' : 's'} rescored.`,
       );
       await load();
@@ -221,7 +221,7 @@ export default function AdminCampaignDetailPage() {
     const ok = await confirm({
       title: `Send ${selected.size} interview invitation${selected.size === 1 ? '' : 's'}?`,
       message:
-        'Each candidate gets a one-time link by email. We cannot read the link back afterwards — only its hash is stored — but the candidate can reopen the interview from their account, and sending again reissues it.',
+        'Each candidate gets a one-time link by email. We cannot read the link back afterwards, only its hash is stored, but the candidate can reopen the interview from their account, and sending again reissues it.',
       confirmLabel: 'Send invitations',
     });
     if (!ok) return;
@@ -273,7 +273,7 @@ export default function AdminCampaignDetailPage() {
     setBusy('match');
     try {
       const res = await adminApi.runMatch(id);
-      success(`Scored ${res.scored} profiles — ${res.created} added, ${res.updated} rescored.`);
+      success(`Scored ${res.scored} profiles: ${res.created} added, ${res.updated} rescored.`);
       await load();
     } catch (e) {
       error(e instanceof Error ? e.message : 'Could not run matching.');
@@ -291,7 +291,7 @@ export default function AdminCampaignDetailPage() {
       const ok = await confirm({
         title: 'Close applications for this role?',
         message:
-          'The public apply page stops accepting new applications, and this cannot be undone — campaign status only moves forward.',
+          'The public apply page stops accepting new applications, and this cannot be undone: campaign status only moves forward.',
         confirmLabel: 'Close applications',
         variant: 'danger',
       });
@@ -481,7 +481,7 @@ export default function AdminCampaignDetailPage() {
             campaign.verification.blocked >= 3 && (
               <p className="mt-3 rounded-xl bg-[var(--sf-yellow-soft)] px-3.5 py-2.5 text-[13px] leading-relaxed text-[var(--sf-ink-soft)]">
                 Everyone blocked here left rather than fixing it, and nobody got through. That
-                pattern is worth a look before assuming it is fraud — if applicants are all being
+                pattern is worth a look before assuming it is fraud. If applicants are all being
                 blocked for the same reason, the check may be seeing something other than their own
                 connection.
               </p>
@@ -580,7 +580,7 @@ export default function AdminCampaignDetailPage() {
                 className="w-full text-[13px] text-[var(--sf-muted)]"
                 data-testid="action-blocked-reason"
               >
-                Some actions are unavailable — {unique[0]}
+                Some actions are unavailable: {unique[0]}
                 {unique.length > 1 ? `, and ${unique.length - 1} more like it` : ''}.
               </p>
             ) : null;
@@ -682,7 +682,7 @@ export default function AdminCampaignDetailPage() {
                     {Math.round(Number(c.matchScore))}
                   </span>
                 ) : (
-                  '—'
+                  'Not scored'
                 )}
               </div>
 
@@ -701,7 +701,7 @@ export default function AdminCampaignDetailPage() {
                   ) : (
                     <span
                       className="text-xs text-[var(--sf-muted-soft)]"
-                      title="The record survived but the file did not — nothing to open."
+                      title="The record survived but the file did not. Nothing to open."
                     >
                       {c.cv.fileName} (unavailable)
                     </span>
@@ -772,7 +772,7 @@ export default function AdminCampaignDetailPage() {
 
       <p className="mt-4 max-w-[640px] text-xs leading-relaxed text-[var(--sf-muted-soft)]">
         A review verdict never removes anyone from this list. It marks a candidate a person should
-        look at before inviting — a shared device or a country mismatch both have ordinary
+        look at before inviting. A shared device or a country mismatch both have ordinary
         explanations, and internet cafés and family computers are normal in these markets.
       </p>
 

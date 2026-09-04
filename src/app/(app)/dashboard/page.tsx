@@ -381,9 +381,9 @@ export default function DashboardPage() {
               <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-5">
                 <ResumeMetric label="Uploaded" value={resumeDashboard.summary.totalResumes} />
                 <ResumeMetric label="Reviews" value={resumeDashboard.summary.totalAnalyses} />
-                <ResumeMetric label="Latest" value={resumeDashboard.summary.latestScore == null ? '—' : `${resumeDashboard.summary.latestScore}%`} />
-                <ResumeMetric label="Average" value={resumeDashboard.summary.averageScore == null ? '—' : `${resumeDashboard.summary.averageScore}%`} />
-                <ResumeMetric label="Best" value={resumeDashboard.summary.bestScore == null ? '—' : `${resumeDashboard.summary.bestScore}%`} accent />
+                <ResumeMetric label="Latest" value={resumeDashboard.summary.latestScore == null ? 'None yet' : `${resumeDashboard.summary.latestScore}%`} />
+                <ResumeMetric label="Average" value={resumeDashboard.summary.averageScore == null ? 'None yet' : `${resumeDashboard.summary.averageScore}%`} />
+                <ResumeMetric label="Best" value={resumeDashboard.summary.bestScore == null ? 'None yet' : `${resumeDashboard.summary.bestScore}%`} accent />
               </div>
 
               <div className="grid gap-5 lg:grid-cols-2">
@@ -415,7 +415,7 @@ export default function DashboardPage() {
                     <div className="mt-2 flex gap-2 px-1">{[...resumeDashboard.analyses].slice(0, 8).reverse().map((analysis) => <span key={analysis.analysisId} className="min-w-0 flex-1 truncate text-center text-[10px] font-bold text-slate-500">{new Date(analysis.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>)}</div>
                   </div>
                   <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    {Object.entries(resumeDashboard.summary.categoryAverages).map(([key, score], index) => <div key={key} className="rounded-xl border border-white bg-white/80 p-2.5 shadow-sm"><div className="mb-1.5 flex items-center justify-between gap-2"><span className="truncate text-[10px] font-bold text-slate-500">{categoryLabels[key] || key}</span><span className="text-[10px] font-black" style={{ color: categoryBarColors[index % categoryBarColors.length] }}>{score ?? '—'}%</span></div><div className="h-1.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full" style={{ width: `${score || 0}%`, backgroundColor: categoryBarColors[index % categoryBarColors.length] }} /></div></div>)}
+                    {Object.entries(resumeDashboard.summary.categoryAverages).map(([key, score], index) => <div key={key} className="rounded-xl border border-white bg-white/80 p-2.5 shadow-sm"><div className="mb-1.5 flex items-center justify-between gap-2"><span className="truncate text-[10px] font-bold text-slate-500">{categoryLabels[key] || key}</span><span className="text-[10px] font-black" style={{ color: categoryBarColors[index % categoryBarColors.length] }}>{score ?? 'n/a'}%</span></div><div className="h-1.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full" style={{ width: `${score || 0}%`, backgroundColor: categoryBarColors[index % categoryBarColors.length] }} /></div></div>)}
                   </div>
                 </div>
 
@@ -429,7 +429,7 @@ export default function DashboardPage() {
                           <p className="truncate font-century text-sm font-bold text-slate-700">{resume.fileName}</p>
                           <p className="font-raleway text-[10px] text-gray-500">{new Date(resume.uploadedAt).toLocaleDateString()} · {resume.analysisCount} {resume.analysisCount === 1 ? 'review' : 'reviews'}{resume.latestAnalysis?.targetRole ? ` · ${resume.latestAnalysis.targetRole}` : ''}</p>
                         </div>
-                        <span className="font-century text-sm font-black text-[#4F46E5]">{resume.latestAnalysis ? `${resume.latestAnalysis.overallScore}%` : '—'}</span>
+                        <span className="font-century text-sm font-black text-[#4F46E5]">{resume.latestAnalysis ? `${resume.latestAnalysis.overallScore}%` : 'n/a'}</span>
                       </button>
                     ))}
                   </div>

@@ -305,7 +305,7 @@ function ResumeUploadContent() {
           </div>
         )}
 
-        {/* Arrived from a job card — name the posting, so a pre-filled
+        {/* Arrived from a job card: name the posting, so a pre-filled
             description reads as intentional rather than as leftover text. */}
         {handoffJob && (
           <div className="mb-5 w-full max-w-3xl flex items-start gap-3 rounded-3xl border border-indigo-100 bg-indigo-50/70 px-5 py-4">
@@ -369,7 +369,7 @@ function ResumeUploadContent() {
             </div>
           ) : (
             <>
-              {/* The row survived but the file did not — uploads sit on the
+              {/* The row survived but the file did not: uploads sit on the
                   container disk, which is wiped on every rebuild. Name the file
                   so this reads as "we lost your copy", not "you never uploaded
                   one", and be honest that a re-upload is the only way forward
@@ -458,7 +458,7 @@ function ResumeUploadContent() {
               disabled={isUploading}
               className="font-raleway w-full h-32 p-4 bg-slate-50 border border-transparent rounded-2xl text-sm focus:bg-white focus:border-blue-100 outline-none transition-all resize-none disabled:opacity-50"
             />
-            {jobDescription.trim() && <div className="mt-4"><label className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-gray-500">Job title <span className="normal-case tracking-normal">— used to label this evaluation</span></label><input value={jobTitle} onChange={event => setJobTitle(event.target.value)} disabled={isUploading} placeholder="e.g. MLOps Engineer" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-indigo-200 focus:bg-white" /></div>}
+            {jobDescription.trim() && <div className="mt-4"><label className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-gray-500">Job title <span className="normal-case tracking-normal">used to label this evaluation</span></label><input value={jobTitle} onChange={event => setJobTitle(event.target.value)} disabled={isUploading} placeholder="e.g. MLOps Engineer" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-indigo-200 focus:bg-white" /></div>}
             <div className="mt-2 flex items-center justify-between px-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
               <span>{jobDescription.trim() ? `Evaluating against: ${jobTitle.trim() || 'supplied job description'}` : targetRole ? `Career target: ${targetRole}` : 'General readiness analysis'}</span>
               <span className={jobDescription.trim().length > 0 && jobDescription.trim().length < 50 ? 'text-orange-500' : ''}>
@@ -502,7 +502,7 @@ function ResumeUploadContent() {
           )}
 
           {/* Action Button. The saved-CV path skips upload entirely and goes
-              straight to analysis — that is the whole point of holding a CV.
+              straight to analysis. That is the whole point of holding a CV.
               It also skips the profile-review step, which exists to enrich the
               profile from a NEWLY uploaded resume and has nothing to add here. */}
           {showSavedCard && !isUploading && (

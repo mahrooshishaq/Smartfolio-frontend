@@ -81,8 +81,8 @@ export default function AvailabilityCard({ className = '' }: { className?: strin
           <h2 className="text-base font-bold text-[var(--sf-ink)]">Job search status</h2>
           <p className="mt-0.5 text-sm text-[var(--sf-muted)]">
             {suspended
-              ? 'Paused — we are not putting you forward to companies right now.'
-              : 'Active — we can put you forward to companies.'}
+              ? 'Paused. We are not putting you forward to companies right now.'
+              : 'Active. We can put you forward to companies.'}
           </p>
         </div>
         <span
@@ -107,7 +107,7 @@ export default function AvailabilityCard({ className = '' }: { className?: strin
                 {state.suspensionReason}
               </p>
               <p className="mt-2 text-[13px] leading-relaxed text-[var(--sf-ink-soft)]">
-                Nothing has been withdrawn and nothing is held against you — we just could not tell
+                Nothing has been withdrawn and nothing is held against you. We just could not tell
                 whether you were still looking. If you are, say so below.
               </p>
             </div>

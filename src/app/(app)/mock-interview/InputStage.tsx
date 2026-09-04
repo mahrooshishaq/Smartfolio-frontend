@@ -6,7 +6,7 @@ import type { JobHandoff } from '@/lib/job-handoff';
 function Stat({ label, value }: { label: string; value: number | null }) {
   return (
     <div className="bg-gray-50 rounded-xl p-3 text-center">
-      <p className="font-century text-2xl font-black text-slate-800 tabular-nums">{value == null ? '—' : `${value}%`}</p>
+      <p className="font-century text-2xl font-black text-slate-800 tabular-nums">{value == null ? 'None yet' : `${value}%`}</p>
       <p className="font-raleway text-[10px] uppercase tracking-wider text-gray-400">{label}</p>
     </div>
   );

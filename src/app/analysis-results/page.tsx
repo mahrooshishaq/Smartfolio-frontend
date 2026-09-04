@@ -373,7 +373,7 @@ function ResultsContent() {
                 <div className="mt-4 grid grid-cols-2 gap-2 border-t border-slate-100 pt-4 sm:grid-cols-4">
                     <button onClick={() => setShowReanalysisWarning(true)} disabled={reanalyzing} className="inline-flex min-w-0 items-center justify-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2.5 text-center text-xs font-bold text-violet-700 hover:bg-violet-100 disabled:opacity-60">
                       {/* "with current profile" would be a lie once a job
-                          description can be carried over — the dialog is where
+                          description can be carried over. The dialog is where
                           the target is actually chosen. */}
                       <RefreshCw size={14} className={reanalyzing ? 'animate-spin' : ''} /> {reanalyzing ? 'Analyzing…' : data.jobDescription ? 'Re-analyze' : 'Re-analyze with current profile'}
                     </button>
@@ -400,7 +400,7 @@ function ResultsContent() {
                   structured document, then raw extracted text. The middle tier
                   used to be skipped, so losing the file dropped the user
                   straight to a wall of text that had every heading, bullet and
-                  line break mangled by extraction — even though a clean,
+                  line break mangled by extraction: even though a clean,
                   sectioned version of the same resume was already in the
                   database. */}
               {pdfUrl && resumeContent?.fileType === 'pdf' ? (
@@ -565,7 +565,7 @@ function RequirementCoveragePanel({
       <p className="mb-6 text-xs text-slate-500">
         Each requirement below is taken from {fromJobDescription ? 'the job description you supplied' : 'what this role typically expects'} and checked against your CV.
         {counts.missing + counts.partial > 0
-          ? ' Work top-down — the gaps are listed first, and the improvement plan below turns them into edits.'
+          ? ' Work top-down. The gaps are listed first, and the improvement plan below turns them into edits.'
           : ' Your CV evidences everything asked for.'}
       </p>
 

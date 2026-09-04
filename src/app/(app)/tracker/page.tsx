@@ -203,7 +203,7 @@ export default function ApplicationsPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
         <div>
           <h2 className="font-century text-2xl md:text-3xl font-black text-slate-800">Job Tracker</h2>
-          <p className="font-raleway text-sm text-gray-500 mt-1">Track every application from saved to accepted — no more spreadsheets</p>
+          <p className="font-raleway text-sm text-gray-500 mt-1">Track every application from saved to accepted. No more spreadsheets</p>
         </div>
         <button
           onClick={() => setShowManualForm(!showManualForm)}
@@ -252,7 +252,7 @@ export default function ApplicationsPage() {
         </div>
       )}
 
-      {/* Status filter chips — hidden while the list can't load (counts would be misleading) */}
+      {/* Status filter chips: hidden while the list can't load (counts would be misleading) */}
       {!loadFailed && (
       <div className="flex flex-wrap items-center gap-2 mb-8">
         <button
