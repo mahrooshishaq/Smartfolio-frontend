@@ -29,7 +29,7 @@ import BrandMark from '@/components/BrandMark';
 import { Select } from '@/components/ui/Select';
 import { useFeedback } from '@/components/ui/feedback';
 import VerificationGate from '@/components/verification/VerificationGate';
-import { publicFetch, apiFetch, getAccessToken } from '@/lib/api';
+import { publicFetch, getAccessToken } from '@/lib/api';
 import {
   rememberPostAuthPath,
   rememberPendingApplication,
@@ -208,10 +208,17 @@ export default function ApplyPage() {
 
   const claim = useCallback(async () => {
     try {
-      const res = await apiFetch(`/api/campaigns/public/${slug}/claim`, {
+      // publicFetch, not apiFetch: this call needs the draft COOKIE, and
+      // apiFetch sends everything to NEXT_PUBLIC_API_URL — a different origin,
+      // where a SameSite=Lax cookie is never sent and a credentialed request
+      // is rejected outright. publicFetch stays same-origin and still attaches
+      // the access token, which is all the authentication this needs.
+      //
+      // This is the last step of the whole flow: getting it wrong loses the
+      // application after the candidate has done every bit of the work.
+      const res = await publicFetch(`/api/campaigns/public/${slug}/claim`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({ marketingConsent: false }),
       });
       if (!res.ok) {
