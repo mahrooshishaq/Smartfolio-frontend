@@ -29,7 +29,7 @@ import BrandMark from '@/components/BrandMark';
 import { Select } from '@/components/ui/Select';
 import { useFeedback } from '@/components/ui/feedback';
 import VerificationGate from '@/components/verification/VerificationGate';
-import { publicFetch, getAccessToken } from '@/lib/api';
+import { publicFetch, sessionFetch, getAccessToken } from '@/lib/api';
 import {
   rememberPostAuthPath,
   rememberPendingApplication,
@@ -216,7 +216,7 @@ export default function ApplyPage() {
       //
       // This is the last step of the whole flow: getting it wrong loses the
       // application after the candidate has done every bit of the work.
-      const res = await publicFetch(`/api/campaigns/public/${slug}/claim`, {
+      const res = await sessionFetch(`/api/campaigns/public/${slug}/claim`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ marketingConsent: false }),

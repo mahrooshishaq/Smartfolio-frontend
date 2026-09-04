@@ -374,3 +374,37 @@ async function enterOtp(page: Page, otp: string) {
 }
 
 void API;
+
+test('a stale access token cannot break a public draft save', async ({ page }) => {
+  // The reported bug: someone already signed in, whose access token had
+  // expired, got "Unauthorized" while merely choosing a CV. publicFetch was
+  // attaching the dead token to an endpoint that needs no authentication, and
+  // unlike apiFetch it does not refresh.
+  //
+  // A rejected token must be indistinguishable from no token at all on this
+  // surface, so the check is: a garbage token still lets the draft save.
+  await page.addInitScript(() => {
+    localStorage.setItem('accessToken', 'expired.rubbish.token');
+    localStorage.setItem('refreshToken', 'also-expired');
+    localStorage.setItem('userName', 'Stale Session');
+  });
+
+  const failures: string[] = [];
+  page.on('response', (r) => {
+    if (r.url().includes('/campaigns/public/') && r.status() === 401) {
+      failures.push(`${r.status()} ${r.url()}`);
+    }
+  });
+
+  await page.goto(`/apply/${slug}`, { waitUntil: 'networkidle' });
+  await expect(page.getByTestId('apply-form')).toBeVisible();
+
+  await page.getByTestId('cv-input').setInputFiles({
+    name: 'stale-session-cv.pdf',
+    mimeType: 'application/pdf',
+    buffer: tinyPdf('Someone with an expired session'),
+  });
+
+  await expect(page.getByTestId('cv-attached')).toBeVisible({ timeout: 20_000 });
+  expect(failures, 'a dead token must not 401 a public endpoint').toEqual([]);
+});

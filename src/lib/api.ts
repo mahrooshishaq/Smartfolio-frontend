@@ -171,8 +171,10 @@ export async function resolveJobLink(
  * the cookie on every call and the draft would be unfindable on return from
  * signup.
  *
- * A token is attached when one happens to exist, so a signed-in user applying
- * to a campaign is recognised - but its absence is never an error.
+ * No token is attached, even when one exists. These endpoints are public, and a
+ * signed-in visitor carrying an EXPIRED token would otherwise get a 401 on a
+ * call that needs no authentication — with no refresh to recover it. Identity
+ * on this surface belongs to `sessionFetch`, which the claim uses.
  */
 export async function publicFetch(path: string, init?: RequestInit): Promise<Response> {
   // SAME-ORIGIN, deliberately - a relative path is left relative rather than
@@ -187,10 +189,36 @@ export async function publicFetch(path: string, init?: RequestInit): Promise<Res
   // Neither problem exists same-origin, and these endpoints have no reason to
   // leave the origin: unlike the verification check, none of them care which
   // machine made the outbound call.
-  const headers = new Headers(init?.headers);
+  // NO Authorization header. These endpoints are public, and attaching a token
+  // can only hurt: a signed-in visitor whose access token has expired gets a 401
+  // on a call that needs no authentication at all, and publicFetch — unlike
+  // apiFetch — does not refresh. The symptom was an "Unauthorized" toast while
+  // merely saving a draft, on a page designed for people with no account.
+  //
+  // The one public-surface call that DOES need identity is the claim, and it
+  // uses sessionFetch below.
+  return fetch(path, { ...init, headers: new Headers(init?.headers), credentials: 'include' });
+}
 
-  const token = getAccessToken();
-  if (token) headers.set('Authorization', `Bearer ${token}`);
+/**
+ * Same-origin, cookie-carrying, and token-refreshing.
+ *
+ * For the one call that needs all three: claiming a draft after signup. It has
+ * to be same-origin (the draft cookie is SameSite=Lax), it has to identify the
+ * new account, and it has to survive an access token that expired while the
+ * candidate was reading the job description.
+ */
+export async function sessionFetch(path: string, init?: RequestInit): Promise<Response> {
+  const call = (token: string | null) => {
+    const headers = new Headers(init?.headers);
+    if (token) headers.set('Authorization', `Bearer ${token}`);
+    return fetch(path, { ...init, headers, credentials: 'include' });
+  };
 
-  return fetch(path, { ...init, headers, credentials: 'include' });
+  let res = await call(getAccessToken());
+  if (res.status === 401) {
+    const refreshed = await refreshAccessToken();
+    if (refreshed) res = await call(refreshed);
+  }
+  return res;
 }
