@@ -8,7 +8,23 @@
 // across concurrent calls), retries the original request, and only if the
 // refresh itself fails does it clear the session and redirect to /login.
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+// Same-origin by default, and same-origin is the right answer here.
+//
+// Every path this client is given — /auth, /jobs, /resume, /scraper, /api/* —
+// already has a rewrite in next.config.ts that proxies it to the backend, so an
+// empty base means "go through the rewrite". The old default of
+// 'http://localhost:3000' happened to BE the frontend's own dev port, so it
+// worked locally for the wrong reason and hid what this variable really does.
+//
+// In production it did not work for the wrong reason, it just did the wrong
+// thing: NEXT_PUBLIC_API_URL was set to the app's other deployment, so every
+// authenticated call from the live domain went browser → that deployment →
+// rewrite → backend. Two hops and a cross-origin round trip for a request that
+// had no reason to leave the origin.
+//
+// Set NEXT_PUBLIC_API_URL only to call a backend that is genuinely elsewhere and
+// not proxied. Pointing it at another copy of this frontend is always a mistake.
+const API = process.env.NEXT_PUBLIC_API_URL || '';
 
 const ACCESS_KEY = 'accessToken';
 const REFRESH_KEY = 'refreshToken';

@@ -210,6 +210,22 @@ export const adminApi = {
   duplicateCampaign: (id: string) =>
     json<Campaign>(`/api/admin/campaigns/${id}/duplicate`, { method: 'POST' }),
 
+  /** Rescore the people already on this campaign — see rescore() on the service. */
+  rescore: (id: string) =>
+    json<{ total: number; rescored: number; skipped: number }>(
+      `/api/admin/campaigns/${id}/rescore`,
+      { method: 'POST' },
+    ),
+
+  /** Where emailed links point, and whether mail can be delivered at all. */
+  diagnostics: () =>
+    json<{
+      inviteLinkExample: string;
+      frontendUrl: string;
+      mail: { smtp: string; host: string | null; error: string | null };
+      canDeliverInvitations: boolean;
+    }>('/api/admin/campaigns/diagnostics'),
+
   clusters: () =>
     json<{ count: number; clusters: DeviceCluster[] }>('/api/admin/verification/clusters'),
 

@@ -3,10 +3,24 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { FiChevronLeft, FiZap, FiSend, FiCheck, FiCopy, FiExternalLink } from 'react-icons/fi';
-import { adminApi, type Campaign, type CampaignCandidate } from '@/lib/admin';
+import {
+  FiChevronLeft,
+  FiZap,
+  FiSend,
+  FiCheck,
+  FiCopy,
+  FiExternalLink,
+  FiRefreshCw,
+} from 'react-icons/fi';
+import {
+  adminApi,
+  type Campaign,
+  type CampaignCandidate,
+  type CandidateStatus,
+} from '@/lib/admin';
 import { useFeedback } from '@/components/ui/feedback';
 import StatusBadge from '@/components/admin/StatusBadge';
+import DeliveryBanner from '@/components/admin/DeliveryBanner';
 
 /**
  * The views an operator actually works in. Each answers one question:
@@ -22,6 +36,42 @@ const VIEWS: Array<{ id: string; label: string; status?: string; sort?: 'score' 
   { id: 'completed', label: 'Interviewed', status: 'completed', sort: 'score' },
   { id: 'submitted', label: 'Submitted', status: 'submitted', sort: 'recent' },
 ];
+
+/**
+ * What each bulk action may be applied to.
+ *
+ * Every button used to be offered for every selection, which is how you invite
+ * somebody who has already interviewed. The backend now refuses that outright —
+ * it would have mailed them a link that dies on arrival — so the rule has to
+ * exist here too, or the operator meets it as a red toast after the fact.
+ *
+ * These are the states in which the action is MEANINGFUL, not merely permitted.
+ * Anything else is disabled with the reason attached, because a greyed-out
+ * button with no explanation is its own kind of dead end.
+ */
+const ACTION_RULES: Record<
+  string,
+  { allowed: CandidateStatus[]; why: string }
+> = {
+  shortlist: {
+    allowed: ['applied', 'rejected'],
+    why: 'Already past the shortlist stage',
+  },
+  invite: {
+    // Re-inviting someone already invited is deliberately allowed: it reissues
+    // the link, which is the operator's half of "I lost the email".
+    allowed: ['applied', 'shortlisted', 'invited'],
+    why: 'Already interviewed — they cannot be invited again',
+  },
+  submit: {
+    allowed: ['applied', 'shortlisted', 'invited', 'completed'],
+    why: 'Already submitted to the company',
+  },
+  reject: {
+    allowed: ['applied', 'shortlisted', 'invited', 'completed', 'submitted'],
+    why: 'Already rejected',
+  },
+};
 
 export default function AdminCampaignDetailPage() {
   const params = useParams<{ id: string }>();
@@ -77,6 +127,26 @@ export default function AdminCampaignDetailPage() {
 
   const ids = () => [...selected];
 
+  /**
+   * Why an action is unavailable for the current selection, or null if it is.
+   *
+   * Reports the FIRST blocking candidate by name rather than a count: "Ayesha
+   * Khan has already interviewed" tells the operator which checkbox to clear,
+   * where "1 candidate is ineligible" sends them hunting.
+   */
+  const blockedReason = useCallback(
+    (action: string): string | null => {
+      const rule = ACTION_RULES[action];
+      if (!rule || !candidates) return null;
+      const chosen = candidates.filter((c) => selected.has(c.id));
+      const offender = chosen.find((c) => !rule.allowed.includes(c.status));
+      if (!offender) return null;
+      const who = offender.name || offender.email || 'One of these candidates';
+      return `${who}: ${rule.why.toLowerCase()}`;
+    },
+    [candidates, selected],
+  );
+
   /** The full public URL, not the path — nobody can paste `/apply/x` into a DM. */
   async function copyApplyLink() {
     if (!campaign) return;
@@ -117,12 +187,41 @@ export default function AdminCampaignDetailPage() {
     }
   }
 
+  const staleCount = useMemo(
+    () => (candidates ?? []).filter((c) => c.scoreStale).length,
+    [candidates],
+  );
+
+  /**
+   * Re-answer the score question for the people already here.
+   *
+   * Run match cannot do this: it searches the whole user base for new people and
+   * deliberately refuses to overwrite an applicant's score, so after a material
+   * edit every applicant was flagged stale with no tool that could clear it.
+   */
+  async function rescore() {
+    setBusy('rescore');
+    try {
+      const res = await adminApi.rescore(id);
+      success(
+        res.skipped
+          ? `${res.rescored} rescored. ${res.skipped} skipped — no profile to score against.`
+          : `${res.rescored} candidate${res.rescored === 1 ? '' : 's'} rescored.`,
+      );
+      await load();
+    } catch (e) {
+      error(e instanceof Error ? e.message : 'Could not rescore.');
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function invite() {
     if (!selected.size) return;
     const ok = await confirm({
       title: `Send ${selected.size} interview invitation${selected.size === 1 ? '' : 's'}?`,
       message:
-        'Each candidate gets a one-time link by email. The link cannot be recovered afterwards — only its hash is stored.',
+        'Each candidate gets a one-time link by email. We cannot read the link back afterwards — only its hash is stored — but the candidate can reopen the interview from their account, and sending again reissues it.',
       confirmLabel: 'Send invitations',
     });
     if (!ok) return;
@@ -307,8 +406,28 @@ export default function AdminCampaignDetailPage() {
           >
             <FiZap className="h-4 w-4" /> {busy === 'match' ? 'Matching…' : 'Run match'}
           </button>
+          {/* Only when there is something to fix. Run match searches for NEW
+              people and will not touch an applicant's score, so after a material
+              edit it is the wrong tool and this is the right one. */}
+          {staleCount > 0 && (
+            <button
+              type="button"
+              onClick={rescore}
+              disabled={busy === 'rescore'}
+              title="Recompute the scores of everyone already on this campaign against the current description"
+              className="sf-subtle-control inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold disabled:opacity-50"
+              data-testid="rescore-campaign"
+            >
+              <FiRefreshCw className="h-4 w-4" />
+              {busy === 'rescore' ? 'Rescoring…' : `Rescore ${staleCount}`}
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Above the stats, because it changes whether pressing Invite means
+          anything at all. */}
+      <DeliveryBanner />
 
       <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <Stat label="Applied" value={counts.applied} />
@@ -402,7 +521,8 @@ export default function AdminCampaignDetailPage() {
             <button
               type="button"
               onClick={() => act('shortlist')}
-              disabled={busy !== null}
+              disabled={busy !== null || blockedReason('shortlist') !== null}
+              title={blockedReason('shortlist') ?? 'Mark as under consideration'}
               className="sf-subtle-control inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold disabled:opacity-50"
               data-testid="action-shortlist"
             >
@@ -411,7 +531,11 @@ export default function AdminCampaignDetailPage() {
             <button
               type="button"
               onClick={invite}
-              disabled={busy !== null}
+              disabled={busy !== null || blockedReason('invite') !== null}
+              title={
+                blockedReason('invite') ??
+                'Email a one-time interview link. Sending again reissues the link.'
+              }
               className="sf-primary inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-bold disabled:opacity-50"
               data-testid="action-invite"
             >
@@ -420,21 +544,47 @@ export default function AdminCampaignDetailPage() {
             <button
               type="button"
               onClick={() => act('submit')}
-              disabled={busy !== null}
+              disabled={busy !== null || blockedReason('submit') !== null}
+              title={
+                blockedReason('submit') ??
+                'Record that this CV went to the client. Does not affect their interview.'
+              }
               className="sf-subtle-control rounded-xl px-3.5 py-2 text-sm font-semibold disabled:opacity-50"
+              data-testid="action-submit"
             >
               Submit to company
             </button>
             <button
               type="button"
               onClick={() => act('reject')}
-              disabled={busy !== null}
+              disabled={busy !== null || blockedReason('reject') !== null}
+              title={blockedReason('reject') ?? 'Record the decision. Nothing is deleted.'}
               className="rounded-xl border border-[var(--sf-red-soft)] bg-[var(--sf-red-soft)] px-3.5 py-2 text-sm font-semibold text-[var(--sf-red)] disabled:opacity-50"
+              data-testid="action-reject"
             >
               Reject
             </button>
           </div>
         )}
+
+        {/* The reason, spelled out. A disabled button that will not say why is
+            the thing an operator files a bug about. */}
+        {selected.size > 0 &&
+          (() => {
+            const reasons = ['shortlist', 'invite', 'submit', 'reject']
+              .map((a) => blockedReason(a))
+              .filter((r): r is string => r !== null);
+            const unique = [...new Set(reasons)];
+            return unique.length ? (
+              <p
+                className="w-full text-[13px] text-[var(--sf-muted)]"
+                data-testid="action-blocked-reason"
+              >
+                Some actions are unavailable — {unique[0]}
+                {unique.length > 1 ? `, and ${unique.length - 1} more like it` : ''}.
+              </p>
+            ) : null;
+          })()}
       </div>
 
       <div className="sf-panel overflow-hidden rounded-2xl">
@@ -524,7 +674,7 @@ export default function AdminCampaignDetailPage() {
                     className={c.scoreStale ? 'text-[var(--sf-muted-soft)] line-through' : ''}
                     title={
                       c.scoreStale
-                        ? 'Scored against an earlier version of this role. Run match to rescore.'
+                        ? 'Scored against an earlier version of this role. Use Rescore to bring it up to date.'
                         : undefined
                     }
                     data-stale={c.scoreStale ? 'true' : 'false'}

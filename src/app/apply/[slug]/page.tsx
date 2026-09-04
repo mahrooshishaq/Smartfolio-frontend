@@ -253,11 +253,13 @@ export default function ApplyPage() {
 
   const claim = useCallback(async () => {
     try {
-      // publicFetch, not apiFetch: this call needs the draft COOKIE, and
-      // apiFetch sends everything to NEXT_PUBLIC_API_URL — a different origin,
-      // where a SameSite=Lax cookie is never sent and a credentialed request
-      // is rejected outright. publicFetch stays same-origin and still attaches
-      // the access token, which is all the authentication this needs.
+      // sessionFetch, not apiFetch: this call needs the draft COOKIE, which is
+      // SameSite=Lax and therefore never sent on a cross-site request.
+      // sessionFetch is same-origin unconditionally and still attaches the
+      // access token, which is all the authentication this needs. apiFetch is
+      // same-origin too now unless NEXT_PUBLIC_API_URL is set — but "unless
+      // somebody sets an env var" is not a basis on which to stake the last
+      // step of the flow.
       //
       // This is the last step of the whole flow: getting it wrong loses the
       // application after the candidate has done every bit of the work.

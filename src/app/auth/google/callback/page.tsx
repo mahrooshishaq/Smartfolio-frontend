@@ -6,8 +6,9 @@ import axios from 'axios';
 import FoliLoader from '@/components/foli/FoliLoader';
 import AuthTransition from '@/components/foli/AuthTransition';
 import { resolvePostAuthDestination } from '@/lib/post-auth';
+import { API } from '@/lib/api';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+
 
 function GoogleCallbackContent() {
   const router = useRouter();

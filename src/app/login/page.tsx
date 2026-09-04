@@ -8,8 +8,9 @@ import AuthShell from "@/components/auth/AuthShell";
 import type { FoliState } from "@/components/foli/Foli";
 import AuthTransition from "@/components/foli/AuthTransition";
 import { resolvePostAuthDestination } from "@/lib/post-auth";
+import { API } from '@/lib/api';
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
 
 const inputClass =

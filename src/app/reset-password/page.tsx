@@ -8,8 +8,9 @@ import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import AuthShell from '@/components/auth/AuthShell';
 import type { FoliState } from '@/components/foli/Foli';
 import FoliLoader from '@/components/foli/FoliLoader';
+import { API } from '@/lib/api';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+
 
 const inputClass =
   'auth-input w-full rounded-lg border border-[#ddd8e4] bg-white px-3.5 py-3 text-[15px] text-[#343044] outline-none transition-colors placeholder:text-[#aaa4b5] focus:border-[#9a8db7] focus:ring-4 focus:ring-[#ece7f2]';

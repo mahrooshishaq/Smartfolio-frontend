@@ -7,6 +7,7 @@ import {
   FiFile,
   FiBriefcase,
   FiClipboard,
+  FiSend,
   FiSettings,
 } from 'react-icons/fi';
 
@@ -34,6 +35,10 @@ export const NAV_ITEMS: NavItem[] = [
   { href: '/document-generation', label: 'Document Generation', icon: FiFile, placement: 'more' },
   { href: '/jobs', label: 'Jobs', icon: FiBriefcase, placement: 'tab', tabOrder: 2 },
   { href: '/tracker', label: 'Job Tracker', tabLabel: 'Tracker', icon: FiClipboard, placement: 'more' },
+  // The one place a candidate can reach an interview they were invited to. It
+  // has to be reachable without the email, because the email is exactly what
+  // goes missing — and the link inside it cannot be reissued from our side.
+  { href: '/interviews', label: 'My Interviews', icon: FiSend, placement: 'more' },
 ];
 
 export const SUPPORT_ITEMS: NavItem[] = [
