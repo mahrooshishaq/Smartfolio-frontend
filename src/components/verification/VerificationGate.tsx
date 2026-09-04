@@ -328,7 +328,11 @@ function humanise(code: string, detail: string): string {
     case 'datacenter_range':
       return 'Your connection looks like a VPN, proxy or company network rather than an ordinary home or mobile one. Please turn off any VPN and run the check again.';
     case 'known_proxy':
-      return 'Your connection is flagged as a proxy or VPN. If you are using one, please turn it off and try again.';
+      // Never phrased as "turn off your VPN". This flag comes from a public
+      // database that mislabels whole consumer ISPs — telling someone on an
+      // ordinary home connection to switch off something they are not using
+      // makes the product look broken and them feel accused.
+      return 'A public database lists your network as a proxy or VPN. That sometimes happens to ordinary home connections, so it is not held against you on its own — if you are on a VPN, turning it off and rechecking will clear it.';
     case 'tor_exit':
       return 'You appear to be connecting through Tor. Please use your normal internet connection instead.';
     case 'virtual_camera':
