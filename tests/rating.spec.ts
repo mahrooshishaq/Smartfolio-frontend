@@ -432,3 +432,33 @@ test('an unknown role in the link is ignored, not an error', async ({ page }) =>
   await expect(page.getByText(/Paste a job description/i)).toBeVisible({ timeout: 20_000 });
   await expect(page.locator('textarea').first()).toHaveValue('');
 });
+
+test('rejecting warns that it writes to the person, before the click', async ({ page }) => {
+  const created = await apiAs(admin, '/admin/campaigns', {
+    method: 'POST',
+    body: JSON.stringify({
+      title: `Reject Warning ${Date.now().toString(36)}`,
+      company: 'Northwind Labs',
+      jobDescription: JD,
+      location: 'Remote',
+      mustHaveSkills: ['React', 'TypeScript'],
+    }),
+  });
+  const campaign = created.body;
+  await apiAs(admin, `/admin/campaigns/${campaign.id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status: 'collecting' }),
+  });
+  await applicant(campaign, 'Wrong File', WEAK_CV);
+
+  await signIn(page, admin);
+  await page.goto(`/admin/campaigns/${campaign.id}`, { waitUntil: 'networkidle' });
+  await page.getByTestId('candidate-row').first().getByRole('checkbox').check();
+  await page.getByTestId('action-reject').click();
+
+  // Bringing them back is possible; taking the email back is not, so the
+  // warning has to arrive before the decision rather than after it.
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toContainText(/emailed straight away/i);
+  await expect(dialog).toContainText(/cannot be unsent/i);
+});

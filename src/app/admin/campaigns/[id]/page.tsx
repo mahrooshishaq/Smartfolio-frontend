@@ -182,7 +182,14 @@ export default function AdminCampaignDetailPage() {
     if (action === 'reject') {
       const ok = await confirm({
         title: `Reject ${selected.size} candidate${selected.size === 1 ? '' : 's'}?`,
-        message: 'The rows are kept: rejecting records the decision, it does not delete anyone.',
+        // Rejecting writes to the person immediately, and an email cannot be
+        // unsent. Bringing them back afterwards is possible; taking the message
+        // back is not, so the warning belongs before the click rather than in a
+        // toast after it.
+        message:
+          feedback?.enabled === false
+            ? 'The rows are kept: rejecting records the decision, it does not delete anyone. Feedback is switched off for this campaign, so nobody is written to.'
+            : 'They are emailed straight away with what their CV did not show. You can still bring them back afterwards, but the email cannot be unsent. The row is kept either way.',
         confirmLabel: 'Reject',
         variant: 'danger',
       });
