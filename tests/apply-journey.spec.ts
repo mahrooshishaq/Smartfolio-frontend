@@ -114,6 +114,10 @@ test('apply logged out, sign up mid-flow, land with everything intact', async ({
 
   const email = uniqueEmail('journey');
   const password = 'Password@123';
+  // Scopes the verdict lookup below to THIS journey. Every suite that runs an
+  // apply-context check writes to the same table, so "the newest session" was
+  // quietly reading another test's verdict and asserting the wrong summary line.
+  const startedAt = new Date(Date.now() - 1000).toISOString();
 
   /* ------------------------------------------------------- land, logged out */
   // Chromium's fake devices are named "fake_device_0", which the virtual-camera
@@ -209,7 +213,8 @@ test('apply logged out, sign up mid-flow, land with everything intact', async ({
   await expect(account).toBeVisible({ timeout: 30_000 });
 
   const verdict = sql(
-    `select verdict from verification_sessions where context = 'apply' order by "createdAt" desc limit 1`,
+    `select verdict from verification_sessions where context = 'apply'
+       and "createdAt" > '${startedAt}' order by "createdAt" desc limit 1`,
   );
   console.log('  verification verdict in the journey:', verdict);
   expect(
@@ -225,7 +230,7 @@ test('apply logged out, sign up mid-flow, land with everything intact', async ({
   await expect(
     page.getByText(
       verdict === 'review'
-        ? 'Connection check complete — one detail flagged'
+        ? 'Connection check complete. One detail flagged'
         : 'Connection check passed',
     ),
   ).toBeVisible();
