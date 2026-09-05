@@ -207,6 +207,18 @@ export default function AdminCampaignDetailPage() {
   );
 
   /**
+   * Scored, but with no reasons stored — so scored before the current rubric.
+   *
+   * Nothing marked these stale, because swapping the scoring engine is not a
+   * campaign edit. They would have sat on a number from a different question
+   * forever, and the only clue is that no breakdown exists behind it.
+   */
+  const legacyCount = useMemo(
+    () => (candidates ?? []).filter((c) => c.matchScore !== null && !c.fit).length,
+    [candidates],
+  );
+
+  /**
    * Re-answer the score question for the people already here.
    *
    * Run match cannot do this: it searches the whole user base for new people and
@@ -439,28 +451,48 @@ export default function AdminCampaignDetailPage() {
           >
             <FiZap className="h-4 w-4" /> {busy === 'match' ? 'Matching…' : 'Run match'}
           </button>
-          {/* Only when there is something to fix. Run match searches for NEW
-              people and will not touch an applicant's score, so after a material
-              edit it is the wrong tool and this is the right one. */}
-          {staleCount > 0 && (
-            <button
-              type="button"
-              onClick={rescore}
-              disabled={busy === 'rescore'}
-              title="Recompute the scores of everyone already on this campaign against the current description"
-              className="sf-subtle-control inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold disabled:opacity-50"
-              data-testid="rescore-campaign"
-            >
-              <FiRefreshCw className="h-4 w-4" />
-              {busy === 'rescore' ? 'Rescoring…' : `Rescore ${staleCount}`}
-            </button>
-          )}
+          {/* Always available. Run match searches for NEW people and will not
+              touch an applicant's score, so this is the only way to recompute
+              the people already here — and hiding it behind a stale flag meant
+              scores from an older engine could never be fixed, because changing
+              the engine is not an edit and nothing marked them. */}
+          <button
+            type="button"
+            onClick={rescore}
+            disabled={busy === 'rescore'}
+            title="Recompute the scores of everyone already on this campaign against what it asks for now"
+            className="sf-subtle-control inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold disabled:opacity-50"
+            data-testid="rescore-campaign"
+          >
+            <FiRefreshCw className="h-4 w-4" />
+            {busy === 'rescore'
+              ? 'Rescoring…'
+              : staleCount > 0
+                ? `Rescore ${staleCount}`
+                : 'Rescore'}
+          </button>
         </div>
       </div>
 
       {/* Above the stats, because it changes whether pressing Invite means
           anything at all. */}
       <DeliveryBanner />
+
+      {legacyCount > 0 && (
+        <div
+          className="mb-5 rounded-2xl border border-[var(--sf-border)] bg-[var(--sf-primary-soft)] p-4"
+          data-testid="legacy-scores-banner"
+        >
+          <p className="text-sm font-bold text-[var(--sf-ink)]">
+            {legacyCount} {legacyCount === 1 ? 'score was' : 'scores were'} produced before the
+            current rubric
+          </p>
+          <p className="mt-1 text-[13px] leading-relaxed text-[var(--sf-ink-soft)]">
+            They carry no breakdown, so there is nothing behind them to read. Press{' '}
+            <strong>Rescore</strong> to read the CVs against what this role actually asks for.
+          </p>
+        </div>
+      )}
 
       {/* Silence is what candidates resent most, and it is also the easiest
           thing in a pipeline to let happen by accident — nobody decides to

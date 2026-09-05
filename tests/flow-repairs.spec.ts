@@ -207,13 +207,17 @@ test('stale scores can be cleared from the screen that flags them', async ({ pag
 
   await expect(page.locator('[data-stale="true"]').first()).toBeVisible();
   const rescore = page.getByTestId('rescore-campaign');
-  await expect(rescore, 'the button appears only when there is something stale').toBeVisible();
+  // Always offered. Hiding it behind a stale flag meant scores from an older
+  // engine could never be fixed — changing the engine is not a campaign edit,
+  // so nothing ever marked them.
+  await expect(rescore).toBeVisible();
+  await expect(rescore, 'and it says how many are flagged').toContainText('Rescore 1');
 
   await rescore.click();
   await expect(page.getByText(/rescored/i)).toBeVisible({ timeout: 20_000 });
 
   expect(sql(`select "scoreStale" from campaign_candidates where id = '${candidateId}'`)).toBe('f');
-  await expect(page.getByTestId('rescore-campaign')).toHaveCount(0);
+  await expect(rescore, 'still there afterwards, without a count').toHaveText(/^Rescore$/);
 });
 
 test('an operator is warned when invitation links point at another site', async ({ page }) => {
