@@ -24,6 +24,7 @@ import {
 import { useAppChrome } from '@/components/app-shell/AppShell';
 
 import Link from 'next/link';
+import { fetchRoleFromParam, ROLE_PARAM, type RolePrefill } from '@/lib/role-prefill';
 import { apiFetch } from '@/lib/api';
 import { peekJobHandoff, clearJobHandoff, HANDOFF_PARAM, type JobHandoff } from '@/lib/job-handoff';
 import {
@@ -82,6 +83,8 @@ function MockInterviewContent() {
   // One-shot guard: the auto-start effect must never fire twice, or a candidate
   // gets two sessions and the second overwrites the first.
   const campaignAutoStarted = useRef(false);
+  /** The role this practice run is for, when they came from the email. */
+  const [practisingFor, setPractisingFor] = useState<RolePrefill | null>(null);
   // Whether the finished interview was successfully attached to its invitation.
   // null while unknown; false means the answers are safely scored but the link
   // back to the campaign row did not stick, which the candidate must not be
@@ -242,6 +245,26 @@ function MockInterviewContent() {
     // A campaign invitation carries the same description, plus the token saying
     // which invitation this interview is for. Read without consuming, for the
     // same remount reason as above.
+    /*
+     * Arriving from "Practise this interview" in the confirmation email.
+     *
+     * Deliberately NOT the campaign handoff below. That one is the employer's
+     * real interview — prescribed, locked, and attached to an invitation. This
+     * is practice for a role they applied to, so it fills the description in
+     * and then behaves exactly like any other practice run: they can change the
+     * length, the seniority, everything. Confusing the two would either lock a
+     * practice session down or, far worse, let a real assessment be configured.
+     */
+    const roleSlug = searchParams.get(ROLE_PARAM);
+    if (roleSlug && !prefillConsumed.current) {
+      prefillConsumed.current = true;
+      void fetchRoleFromParam(window.location.search).then((role) => {
+        if (!role) return;
+        setJobDescription((current) => current.trim() || role.jobDescription);
+        setPractisingFor(role);
+      });
+    }
+
     if (searchParams.get(CAMPAIGN_PARAM) === '1' && !prefillConsumed.current) {
       const campaign = peekCampaignInterview();
       if (campaign) {
@@ -859,6 +882,19 @@ function MockInterviewContent() {
                     {stage === 'round_intro' && `: round ${currentRoundIdx + 1} of ${ROUND_ORDER.length}`}
                     {stage === 'loading' && ': preparing your questions…'}
                     {stage === 'results' && '. Your answers have been sent'}
+                  </p>
+                </>
+              ) : practisingFor ? (
+                <>
+                  <span className="font-raleway inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-slate-600">
+                    Practice
+                  </span>
+                  <h2 className="font-century mt-2 text-2xl font-black text-slate-800 md:text-3xl">
+                    {practisingFor.title}
+                  </h2>
+                  <p className="font-raleway mt-1 text-sm text-gray-400">
+                    Practising for the role you applied to at {practisingFor.company}. This is not
+                    the employer&rsquo;s interview and nothing here is sent to them.
                   </p>
                 </>
               ) : (

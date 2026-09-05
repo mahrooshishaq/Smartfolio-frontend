@@ -9,6 +9,7 @@ import ResumeProfileReview from '@/components/ResumeProfileReview';
 import { apiFetch } from '@/lib/api';
 import { peekJobHandoff, clearJobHandoff, HANDOFF_PARAM, type JobHandoff } from '@/lib/job-handoff';
 import { useFeedback } from '@/components/ui/feedback';
+import { fetchRoleFromParam } from '@/lib/role-prefill';
 
 /** The user's stored CV, and whether it can actually be analysed right now. */
 interface SavedResume {
@@ -36,6 +37,29 @@ function ResumeUploadContent() {
   const [jobUrl, setJobUrl] = useState('');
   const [urlState, setUrlState] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
   const [urlNote, setUrlNote] = useState('');
+
+  /*
+   * Arriving from "Sharpen your CV" in the confirmation email.
+   *
+   * The description is filled in from the role they applied to, because they no
+   * longer have it: they applied, and the advert is behind them. Only when the
+   * box is still empty, so it can never overwrite something typed.
+   */
+  useEffect(() => {
+    let cancelled = false;
+    void fetchRoleFromParam(window.location.search).then((role) => {
+      if (cancelled || !role) return;
+      setJobDescription((current) => current.trim() || role.jobDescription);
+      setJobTitle((current) => current.trim() || role.title);
+      setUrlState('ok');
+      setUrlNote(
+        `Filled in from your application to ${role.title}${role.company ? ` at ${role.company}` : ''}.`,
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   /**
    * Read the advert off a link and put it in the box.

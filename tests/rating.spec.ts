@@ -347,3 +347,53 @@ test('a link can be read into the job description box', async ({ page }) => {
   await expect(note).toContainText('Northwind Labs');
   await expect(note, 'and it says how sure the read was').toContainText(/posting data/i);
 });
+
+test('the email links open ready for the role you applied to', async ({ page }) => {
+  const created = await apiAs(admin, '/admin/campaigns', {
+    method: 'POST',
+    body: JSON.stringify({
+      title: `Prefill Role ${Date.now().toString(36)}`,
+      company: 'Northwind Labs',
+      jobDescription: JD,
+      location: 'Remote',
+    }),
+  });
+  const campaign = created.body;
+  await apiAs(admin, `/admin/campaigns/${campaign.id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status: 'collecting' }),
+  });
+
+  const candidate = await createVerifiedUser('Prefill User', uniqueEmail('prefill'));
+  await signIn(page, candidate);
+
+  // "Practise this interview" — the description is filled in, and it is clearly
+  // practice rather than the employer's own interview.
+  await page.goto(`/mock-interview?role=${campaign.slug}`, { waitUntil: 'networkidle' });
+  await expect(page.getByText('Practice', { exact: true })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('heading', { name: campaign.title })).toBeVisible();
+  await expect(page.getByText(/not the employer/i)).toBeVisible();
+  await expect(page.locator('textarea').first()).toHaveValue(/own our React and TypeScript/);
+
+  // And it stays a practice run: every control is still there.
+  await expect(page.getByText('Quick Screen')).toBeVisible();
+  await expect(page.getByText('Full Interview')).toBeVisible();
+
+  // "Sharpen your CV" — same role, the analysis box filled in.
+  await page.goto(`/upload-resume?role=${campaign.slug}`, { waitUntil: 'networkidle' });
+  await expect(page.locator('textarea').first()).toHaveValue(/own our React and TypeScript/, {
+    timeout: 20_000,
+  });
+  await expect(page.getByTestId('job-url-note')).toContainText(/Filled in from your application/);
+});
+
+test('an unknown role in the link is ignored, not an error', async ({ page }) => {
+  const candidate = await createVerifiedUser('Bad Link', uniqueEmail('badlink'));
+  await signIn(page, candidate);
+
+  // An old email, a closed campaign, a mistyped link. Carrying on with an empty
+  // box loses nothing that was not already missing.
+  await page.goto('/mock-interview?role=does-not-exist-at-all', { waitUntil: 'networkidle' });
+  await expect(page.getByText(/Paste a job description/i)).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator('textarea').first()).toHaveValue('');
+});
