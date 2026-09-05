@@ -462,3 +462,49 @@ test('rejecting warns that it writes to the person, before the click', async ({ 
   await expect(dialog).toContainText(/emailed straight away/i);
   await expect(dialog).toContainText(/cannot be unsent/i);
 });
+
+test('dates cannot be set into the past, and the reason is shown', async ({ page }) => {
+  const created = await apiAs(admin, '/admin/campaigns', {
+    method: 'POST',
+    body: JSON.stringify({
+      title: `Date Guard ${Date.now().toString(36)}`,
+      company: 'Northwind Labs',
+      jobDescription: JD,
+      location: 'Remote',
+    }),
+  });
+  const campaign = created.body;
+
+  await signIn(page, admin);
+  await page.goto(`/admin/campaigns/${campaign.id}/edit`, { waitUntil: 'networkidle' });
+
+  // The picker itself refuses to offer yesterday, and the interview date can
+  // never sit before the application date.
+  const appDate = page.getByTestId('field-app-deadline');
+  const interviewDate = page.getByTestId('field-interview-deadline');
+  const today = new Date().toISOString().slice(0, 10);
+  await expect(appDate).toHaveAttribute('min', today);
+  await appDate.fill('2027-03-01');
+  await expect(interviewDate, 'the interview floor follows the application date').toHaveAttribute(
+    'min',
+    '2027-03-01',
+  );
+
+  // A `min` on an input is advisory, so the API is the real gate — and when it
+  // refuses, the operator has to be told why rather than watching a save do
+  // nothing.
+  await page.route('**/api/admin/campaigns/**', async (route) => {
+    if (route.request().method() !== 'PATCH') return route.continue();
+    await route.fulfill({
+      status: 400,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        message:
+          'Somebody has already been invited until 2026-10-30. Moving the deadline earlier would close their interview without telling them.',
+      }),
+    });
+  });
+  await page.getByTestId('create-submit').click();
+  await expect(page.getByText(/already been invited until/)).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText(/without telling them/)).toBeVisible();
+});

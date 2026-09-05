@@ -162,8 +162,21 @@ export default function CampaignForm({
   const [v, setV] = useState<CampaignFormValues>(initial);
   const [saving, setSaving] = useState(false);
 
-  /** Anyone at all on this campaign — the warning is about live edits, not status. */
-  const applicants = Object.values(counts ?? {}).reduce<number>((a, b) => a + (b ?? 0), 0);
+  /*
+   * Anyone at all on this campaign — the warning is about live edits, not status.
+   *
+   * Summing every value in `counts` was right while it held only statuses. It
+   * now also carries `applications` and `sourced`, which describe the SAME rows
+   * a second way, so the naive sum reported everybody twice.
+   */
+  const applied = counts?.applications ?? 0;
+  const sourced = counts?.sourced ?? 0;
+  const attached =
+    counts?.applications !== undefined || counts?.sourced !== undefined
+      ? applied + sourced
+      : // Older shape, or a caller that only passes statuses.
+        Object.values(counts ?? {}).reduce<number>((a, b) => a + (b ?? 0), 0);
+  const applicants = attached;
 
   // Not a UI preference — the API refuses it. Disabling the field means finding
   // that out before retyping a company name rather than after.
@@ -299,7 +312,19 @@ export default function CampaignForm({
       {mode === 'edit' && applicants > 0 && (
         <div className="sf-panel mt-4 max-w-[820px] rounded-2xl border-l-4 border-l-[var(--sf-yellow)] p-4">
           <p className="text-sm font-bold text-[var(--sf-ink)]">
-            {applicants} {applicants === 1 ? 'person has' : 'people have'} applied to this role
+            {applied > 0 ? (
+              <>
+                {applied} {applied === 1 ? 'person has' : 'people have'} applied to this role
+                {/* Leads are attached too and their scores go stale the same
+                    way, but they did not apply and must not be counted as
+                    though they did. */}
+                {sourced > 0 ? `, and ${sourced} more were found by matching` : ''}
+              </>
+            ) : (
+              <>
+                {sourced} {sourced === 1 ? 'person is' : 'people are'} on this role from matching
+              </>
+            )}
           </p>
           <ul className="mt-2 space-y-1.5 text-[13px] leading-relaxed text-[var(--sf-ink-soft)]">
             <li>
