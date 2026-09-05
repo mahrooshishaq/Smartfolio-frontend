@@ -16,6 +16,7 @@ import {
   adminApi,
   type Campaign,
   type CampaignCandidate,
+  type CandidateFit,
   type CandidateInterview,
   type CandidateStatus,
 } from '@/lib/admin';
@@ -89,6 +90,7 @@ export default function AdminCampaignDetailPage() {
   const [interview, setInterview] = useState<
     { loading: boolean; name: string; data: CandidateInterview | null } | null
   >(null);
+  const [fit, setFit] = useState<{ name: string; data: CandidateFit } | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -707,6 +709,27 @@ export default function AdminCampaignDetailPage() {
                 ) : (
                   'Not scored'
                 )}
+                {/* A number a reviewer cannot interrogate is the thing this
+                    whole rubric exists to stop. */}
+                {c.fit && (
+                  <button
+                    type="button"
+                    onClick={() => setFit({ name: c.name || c.email || 'this candidate', data: c.fit! })}
+                    className="mt-0.5 block text-[11px] font-semibold text-[var(--sf-primary-dark)] hover:underline"
+                    data-testid="why-score"
+                  >
+                    Why?
+                  </button>
+                )}
+                {c.eligible === false && (
+                  <span
+                    className="mt-1 inline-block rounded bg-[var(--sf-red-soft)] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--sf-red)]"
+                    title={(c.fit?.gateFailures ?? []).map((g) => g.reason).join(' ')}
+                    data-testid="ineligible-badge"
+                  >
+                    Ineligible
+                  </span>
+                )}
               </div>
 
               <div className="min-w-0 text-sm">
@@ -807,6 +830,107 @@ export default function AdminCampaignDetailPage() {
         look at before inviting. A shared device or a country mismatch both have ordinary
         explanations, and internet cafés and family computers are normal in these markets.
       </p>
+
+      {fit && (
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 sm:p-8"
+          onClick={() => setFit(null)}
+          data-testid="fit-panel"
+        >
+          <div
+            className="w-full max-w-[620px] rounded-2xl bg-[var(--sf-surface-strong)] p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-bold text-[var(--sf-ink)]">
+                  Why {fit.name} scored {fit.data.score}
+                </h2>
+                <p className="mt-0.5 text-sm text-[var(--sf-muted)]">
+                  {fit.data.experienceUnknown
+                    ? 'No dates could be read from this CV, so experience was left out of the score rather than guessed.'
+                    : `${fit.data.yearsRelevant} years counted${
+                        Object.keys(fit.data.yearsByType).length > 1
+                          ? ` (${Object.entries(fit.data.yearsByType)
+                              .map(([k, y]) => `${y}y ${k}`)
+                              .join(', ')})`
+                          : ''
+                      }`}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFit(null)}
+                className="sf-subtle-control rounded-xl px-3 py-1.5 text-sm font-semibold"
+              >
+                Close
+              </button>
+            </div>
+
+            {fit.data.gateFailures.length > 0 && (
+              <div className="mb-5 rounded-xl border border-[var(--sf-red-soft)] bg-[var(--sf-red-soft)] p-4">
+                <p className="text-sm font-bold text-[var(--sf-red)]">
+                  Does not meet a stated requirement
+                </p>
+                <ul className="mt-1.5 space-y-1">
+                  {fit.data.gateFailures.map((g) => (
+                    <li key={g.gate} className="text-[13px] leading-relaxed text-[var(--sf-ink-soft)]">
+                      {g.reason}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-2 text-[12px] text-[var(--sf-muted)]">
+                  They stay on the list. Nothing is decided automatically.
+                </p>
+              </div>
+            )}
+
+            <ul className="space-y-2.5">
+              {fit.data.components.map((comp) => (
+                <li key={comp.key} className={comp.applicable ? '' : 'opacity-45'}>
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="text-sm font-semibold text-[var(--sf-ink)]">{comp.label}</span>
+                    <span className="text-sm font-bold tabular-nums text-[var(--sf-ink)]">
+                      {comp.applicable ? `${comp.points} / ${comp.outOf}` : 'not asked'}
+                    </span>
+                  </div>
+                  {comp.applicable && (
+                    <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-[var(--sf-surface-sunk,var(--sf-primary-soft))]">
+                      <div
+                        className="h-full rounded-full bg-[var(--sf-primary)]"
+                        style={{ width: `${Math.max(0, Math.min(100, (comp.points / comp.outOf) * 100))}%` }}
+                      />
+                    </div>
+                  )}
+                  <p className="mt-1 text-[12.5px] leading-relaxed text-[var(--sf-muted)]">{comp.detail}</p>
+                </li>
+              ))}
+            </ul>
+
+            {(fit.data.matched.length > 0 || fit.data.missing.length > 0) && (
+              <div className="mt-5 border-t border-[var(--sf-line)] pt-4">
+                {fit.data.matched.length > 0 && (
+                  <p className="text-[13px] leading-relaxed text-[var(--sf-ink-soft)]">
+                    <strong className="text-[var(--sf-green)]">Evidenced:</strong>{' '}
+                    {fit.data.matched.join(', ')}
+                  </p>
+                )}
+                {fit.data.missing.length > 0 && (
+                  <p className="mt-1.5 text-[13px] leading-relaxed text-[var(--sf-ink-soft)]">
+                    <strong className="text-[var(--sf-red)]">Not found:</strong>{' '}
+                    {fit.data.missing.join(', ')}
+                  </p>
+                )}
+              </div>
+            )}
+
+            <p className="mt-4 text-[12px] leading-relaxed text-[var(--sf-muted)]">
+              Components the role did not ask about are excluded rather than half-paid, so the
+              score always means the same thing: of what was asked for, how much this CV shows.
+            </p>
+          </div>
+        </div>
+      )}
 
       {interview && (
         <div

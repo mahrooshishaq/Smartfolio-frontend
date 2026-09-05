@@ -45,6 +45,20 @@ export interface Campaign {
   shortlistTarget: number;
   applicationDeadline: string | null;
   interviewDeadline: string | null;
+
+  /** What this role screens on. All optional; absent means "not asked". */
+  mustHaveSkills: string[] | null;
+  niceToHaveSkills: string[] | null;
+  minYears: number | null;
+  targetYears: number | null;
+  seniority: 'entry' | 'mid' | 'senior' | 'lead' | null;
+  minEducation: string | null;
+  educationIsGate: boolean;
+  requiredCertifications: string[] | null;
+  requiredLanguages: string[] | null;
+  requiresWorkAuthorization: boolean;
+  freelancePolicy: 'full' | 'discounted' | 'permanent_only';
+  experienceWeighting: 'low' | 'normal' | 'high';
   createdAt: string;
   /** Candidates by status. Present on the list, and on the detail for the live-edit warning. */
   counts?: Partial<Record<CandidateStatus, number>>;
@@ -72,6 +86,27 @@ export interface CandidateCv {
   uploadedAt: string;
   /** False when the row outlived its file — never offer a link that 404s. */
   analyzable: boolean;
+}
+
+/** The reasons behind a score: gates, components, evidence. */
+export interface CandidateFit {
+  eligible: boolean;
+  gateFailures: Array<{ gate: string; reason: string }>;
+  score: number;
+  components: Array<{
+    key: string;
+    label: string;
+    points: number;
+    outOf: number;
+    detail: string;
+    applicable: boolean;
+  }>;
+  matched: string[];
+  missing: string[];
+  yearsRelevant: number;
+  yearsTotal: number;
+  yearsByType: Record<string, number>;
+  experienceUnknown: boolean;
 }
 
 /** A completed interview, as a reviewer needs to read it. */
@@ -123,6 +158,10 @@ export interface CampaignCandidate {
   cv: CandidateCv | null;
   /** Scored against a description the campaign has since materially changed. */
   scoreStale: boolean;
+  /** Null when no gates were set or the CV could not be read. */
+  eligible: boolean | null;
+  /** Why the score is what it is. Null before the rubric ran. */
+  fit: CandidateFit | null;
   /** True when there is an interview to read. */
   hasInterview: boolean;
   elsewhere: CandidateElsewhere;

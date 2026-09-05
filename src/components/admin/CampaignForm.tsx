@@ -32,6 +32,25 @@ export interface CampaignFormValues {
    */
   candidateCountries: string[];
   /**
+   * What this role screens on.
+   *
+   * All optional. A campaign that sets none still works — it scores on the
+   * description's own vocabulary and says so on every candidate row — but
+   * nothing can be gated or weighted until the requirements are separable.
+   */
+  mustHaveSkills: string[];
+  niceToHaveSkills: string[];
+  minYears: string;
+  targetYears: string;
+  seniority: string;
+  minEducation: string;
+  educationIsGate: boolean;
+  requiredCertifications: string[];
+  requiredLanguages: string[];
+  requiresWorkAuthorization: boolean;
+  freelancePolicy: string;
+  experienceWeighting: string;
+  /**
    * Held as a STRING while editing.
    *
    * Coercing on every keystroke is what made clearing the field show 0, and
@@ -69,6 +88,18 @@ export function emptyValues(): CampaignFormValues {
     location: '',
     jobType: 'Remote',
     candidateCountries: [],
+    mustHaveSkills: [],
+    niceToHaveSkills: [],
+    minYears: '',
+    targetYears: '',
+    seniority: '',
+    minEducation: '',
+    educationIsGate: false,
+    requiredCertifications: [],
+    requiredLanguages: [],
+    requiresWorkAuthorization: false,
+    freelancePolicy: 'full',
+    experienceWeighting: 'normal',
     shortlistTarget: '25',
     applicationDeadline: '',
     interviewDeadline: '',
@@ -84,6 +115,18 @@ export function valuesFrom(campaign: Campaign): CampaignFormValues {
     location: campaign.location ?? '',
     jobType: campaign.jobType ?? 'Remote',
     candidateCountries: campaign.candidateCountries ?? [],
+    mustHaveSkills: campaign.mustHaveSkills ?? [],
+    niceToHaveSkills: campaign.niceToHaveSkills ?? [],
+    minYears: campaign.minYears == null ? '' : String(campaign.minYears),
+    targetYears: campaign.targetYears == null ? '' : String(campaign.targetYears),
+    seniority: campaign.seniority ?? '',
+    minEducation: campaign.minEducation ?? '',
+    educationIsGate: campaign.educationIsGate ?? false,
+    requiredCertifications: campaign.requiredCertifications ?? [],
+    requiredLanguages: campaign.requiredLanguages ?? [],
+    requiresWorkAuthorization: campaign.requiresWorkAuthorization ?? false,
+    freelancePolicy: campaign.freelancePolicy ?? 'full',
+    experienceWeighting: campaign.experienceWeighting ?? 'normal',
     shortlistTarget: String(campaign.shortlistTarget ?? 25),
     applicationDeadline: toDateInput(campaign.applicationDeadline),
     interviewDeadline: toDateInput(campaign.interviewDeadline),
@@ -192,6 +235,18 @@ export default function CampaignForm({
         location: v.location.trim(),
         jobType: v.jobType || undefined,
         candidateCountries: v.candidateCountries,
+        mustHaveSkills: v.mustHaveSkills,
+        niceToHaveSkills: v.niceToHaveSkills,
+        minYears: v.minYears === '' ? undefined : Number(v.minYears),
+        targetYears: v.targetYears === '' ? undefined : Number(v.targetYears),
+        seniority: v.seniority || undefined,
+        minEducation: v.minEducation || undefined,
+        educationIsGate: v.educationIsGate,
+        requiredCertifications: v.requiredCertifications,
+        requiredLanguages: v.requiredLanguages,
+        requiresWorkAuthorization: v.requiresWorkAuthorization,
+        freelancePolicy: v.freelancePolicy,
+        experienceWeighting: v.experienceWeighting,
         shortlistTarget: shortlistTarget,
         // Dates arrive as YYYY-MM-DD; the API wants an instant. End of day so a
         // deadline of "the 30th" includes the whole of the 30th.
@@ -388,6 +443,7 @@ export default function CampaignForm({
               <textarea
                 value={v.jobDescription}
                 onChange={(e) => set('jobDescription', e.target.value)}
+                data-testid="field-jobDescription"
                 rows={10}
                 placeholder="Responsibilities, requirements, team, working arrangement…"
                 className={`${inputClass} leading-relaxed`}
@@ -400,6 +456,186 @@ export default function CampaignForm({
             </p>
           </div>
         </section>
+
+        {/* ------------------------------------------------ screening spec --
+            A free-text description reads well and ranks nothing: no
+            requirement in it is separable, so none can be weighted or gated.
+            This is what a CV is actually compared against. */}
+        <section className="sf-panel rounded-2xl p-5 sm:p-6">
+          <h2 className="mb-1 text-base font-bold text-[var(--sf-ink)]">What this role screens on</h2>
+          <p className="mb-5 text-sm text-[var(--sf-muted)]">
+            All optional. Leave it empty and CVs are scored on the description&rsquo;s wording,
+            which is weaker and is labelled as such on every candidate.
+          </p>
+
+          <div className="grid gap-5 sm:grid-cols-2">
+            <ChipField
+              label="Required skills"
+              hint="A missing one costs heavily. Keep it to what you would actually reject over."
+              testid="must-have"
+              values={v.mustHaveSkills}
+              onChange={(next) => set('mustHaveSkills', next)}
+            />
+            <ChipField
+              label="Nice to have"
+              hint="Real upside, capped low so a long list cannot outweigh a missing essential."
+              testid="nice-to-have"
+              values={v.niceToHaveSkills}
+              onChange={(next) => set('niceToHaveSkills', next)}
+            />
+          </div>
+
+          <div className="mt-5 grid gap-4 sm:grid-cols-3">
+            <Field label="Ideal years" hint="Credit rises to this, then stops">
+              <input
+                type="number" min={0} max={40}
+                value={v.targetYears}
+                onChange={(e) => set('targetYears', e.target.value)}
+                placeholder="5"
+                className={inputClass}
+                data-testid="field-targetYears"
+              />
+            </Field>
+            <Field label="Hard minimum" hint="Refuses anyone below it — use sparingly">
+              <input
+                type="number" min={0} max={40}
+                value={v.minYears}
+                onChange={(e) => set('minYears', e.target.value)}
+                placeholder="none"
+                className={inputClass}
+                data-testid="field-minYears"
+              />
+            </Field>
+            <Field label="Seniority" hint="What scope the role expects">
+              <Select
+                value={v.seniority}
+                onChange={(x) => set('seniority', x)}
+                placeholder="Not specified"
+                ariaLabel="Seniority"
+                options={[
+                  { value: '', label: 'Not specified' },
+                  { value: 'entry', label: 'Entry — contributes' },
+                  { value: 'mid', label: 'Mid — contributes independently' },
+                  { value: 'senior', label: 'Senior — owns things' },
+                  { value: 'lead', label: 'Lead — leads people' },
+                ]}
+              />
+            </Field>
+          </div>
+
+          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <Field label="How much does experience matter here?" hint="Moves emphasis between skills and time">
+              <Select
+                value={v.experienceWeighting}
+                onChange={(x) => set('experienceWeighting', x)}
+                ariaLabel="Experience weighting"
+                options={[
+                  { value: 'low', label: 'Less — breadth of skills matters more' },
+                  { value: 'normal', label: 'Normal' },
+                  { value: 'high', label: 'More — depth and years matter most' },
+                ]}
+              />
+            </Field>
+            <Field label="Freelance and contract work" hint="Counted as calendar time either way, never stacked">
+              <Select
+                value={v.freelancePolicy}
+                onChange={(x) => set('freelancePolicy', x)}
+                ariaLabel="Freelance policy"
+                options={[
+                  { value: 'full', label: 'Counts fully' },
+                  { value: 'discounted', label: 'Counts at a discount' },
+                  { value: 'permanent_only', label: 'Permanent roles only' },
+                ]}
+              />
+            </Field>
+          </div>
+
+          {v.freelancePolicy === 'permanent_only' && (
+            <p className="mt-2 text-[13px] leading-relaxed text-[var(--sf-yellow-ink,var(--sf-muted))]">
+              Worth knowing: in several of the markets this platform serves, freelance work is
+              the normal way to have a career. Excluding it will narrow your shortlist in ways
+              that have little to do with ability.
+            </p>
+          )}
+
+          <div className="mt-6 border-t border-[var(--sf-line)] pt-5">
+            <h3 className="mb-1 text-sm font-bold text-[var(--sf-ink)]">Hard requirements</h3>
+            <p className="mb-4 text-[13px] text-[var(--sf-muted)]">
+              Anyone who does not meet these is marked ineligible with the reason, and stays on
+              the list. They are never quietly scored down.
+            </p>
+
+            <div className="grid gap-5 sm:grid-cols-2">
+              <ChipField
+                label="Certifications or licences"
+                hint="Matched against the CV"
+                testid="certifications"
+                values={v.requiredCertifications}
+                onChange={(next) => set('requiredCertifications', next)}
+              />
+              <ChipField
+                label="Languages"
+                hint="Must appear on the CV"
+                testid="languages"
+                values={v.requiredLanguages}
+                onChange={(next) => set('requiredLanguages', next)}
+              />
+            </div>
+
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              <Field label="Minimum education" hint="Leave unset for most commercial roles">
+                <Select
+                  value={v.minEducation}
+                  onChange={(x) => set('minEducation', x)}
+                  placeholder="Not required"
+                  ariaLabel="Minimum education"
+                  options={[
+                    { value: '', label: 'Not required' },
+                    { value: 'highschool', label: 'High school' },
+                    { value: 'diploma', label: 'Diploma' },
+                    { value: 'bachelors', label: "Bachelor's" },
+                    { value: 'masters', label: "Master's" },
+                    { value: 'phd', label: 'PhD' },
+                  ]}
+                />
+              </Field>
+              <div className="flex flex-col justify-end gap-3 pb-1">
+                <label className="flex items-start gap-2.5 text-sm text-[var(--sf-ink-soft)]">
+                  <input
+                    type="checkbox"
+                    checked={v.educationIsGate}
+                    disabled={!v.minEducation}
+                    onChange={(e) => set('educationIsGate', e.target.checked)}
+                    className="mt-0.5"
+                    data-testid="field-educationIsGate"
+                  />
+                  <span>
+                    Refuse anyone below it
+                    <span className="block text-[13px] text-[var(--sf-muted)]">
+                      Otherwise it only affects the score
+                    </span>
+                  </span>
+                </label>
+                <label className="flex items-start gap-2.5 text-sm text-[var(--sf-ink-soft)]">
+                  <input
+                    type="checkbox"
+                    checked={v.requiresWorkAuthorization}
+                    onChange={(e) => set('requiresWorkAuthorization', e.target.checked)}
+                    className="mt-0.5"
+                    data-testid="field-workAuth"
+                  />
+                  <span>
+                    Must already be authorised to work here
+                    <span className="block text-[13px] text-[var(--sf-muted)]">
+                      Asked on the apply page, never guessed from a CV
+                    </span>
+                  </span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </section>
+
 
         <section className="sf-panel rounded-2xl p-5 sm:p-6">
           <div className="mb-1 flex items-center justify-between gap-3">
@@ -645,6 +881,80 @@ function today(): string {
 
 const inputClass =
   'w-full rounded-xl border border-[var(--sf-border)] bg-white px-3.5 py-2.5 text-sm text-[var(--sf-ink)] outline-none focus:border-[var(--sf-primary)]';
+
+/**
+ * A free-text list, entered one item at a time.
+ *
+ * Deliberately not a comma-separated text box: "React, TypeScript, CI/CD"
+ * splits wrongly on anything containing a comma, and a reviewer cannot see at a
+ * glance what the role is actually screening on. Chips make the list countable.
+ */
+function ChipField({
+  label,
+  hint,
+  testid,
+  values,
+  onChange,
+}: {
+  label: string;
+  hint: string;
+  testid: string;
+  values: string[];
+  onChange: (next: string[]) => void;
+}) {
+  const [draft, setDraft] = useState('');
+
+  function add() {
+    const value = draft.trim();
+    if (!value) return;
+    // Case-insensitive, so "React" and "react" are not two requirements.
+    if (!values.some((x) => x.toLowerCase() === value.toLowerCase())) {
+      onChange([...values, value]);
+    }
+    setDraft('');
+  }
+
+  return (
+    <div>
+      <label className="block text-sm font-semibold text-[var(--sf-ink-soft)]">{label}</label>
+      <p className="mt-0.5 text-[13px] leading-relaxed text-[var(--sf-muted)]">{hint}</p>
+      {values.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {values.map((value) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => onChange(values.filter((x) => x !== value))}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--sf-primary-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--sf-primary-dark)]"
+              aria-label={`Remove ${value}`}
+              data-testid={`${testid}-chip`}
+            >
+              {value}
+              <FiX className="h-3 w-3" />
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="mt-2 flex gap-2">
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              // Enter adds an item; it must never submit the whole campaign.
+              e.preventDefault();
+              add();
+            }
+          }}
+          onBlur={add}
+          placeholder="Type and press Enter"
+          className="sf-input w-full rounded-xl px-3 py-2 text-sm"
+          data-testid={`${testid}-input`}
+        />
+      </div>
+    </div>
+  );
+}
 
 function Field({
   label,
