@@ -294,3 +294,56 @@ test('the calibration panel appears once there is enough to measure', async ({ p
     /never auto-applied/i,
   );
 });
+
+test('a link can be read into the job description box', async ({ page }) => {
+  const candidate = await createVerifiedUser('Link User', uniqueEmail('linkui'));
+  await signIn(page, candidate);
+  await page.goto('/upload-resume', { waitUntil: 'networkidle' });
+
+  const url = page.getByTestId('job-url-input');
+  await expect(url, 'the link box sits with the description, not on another screen').toBeVisible();
+
+  // A page that is not a job advert must be refused in words, never scored
+  // against silently.
+  await page.route('**/api/me/readiness/job-from-url', (route) =>
+    route.fulfill({
+      status: 400,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        message:
+          'That looks like a list of jobs rather than one job. Open the role itself and use that link. Copy the description text and paste it here instead.',
+      }),
+    }),
+  );
+  await url.fill('https://example.com/jobs');
+  await page.getByTestId('job-url-fetch').click();
+
+  const note = page.getByTestId('job-url-note');
+  await expect(note).toBeVisible();
+  await expect(note).toContainText(/list of jobs rather than one job/);
+  await expect(page.locator('textarea').first(), 'and nothing is scored against').toHaveValue('');
+
+  // A real posting fills the box, so the person can see what will be compared.
+  await page.unroute('**/api/me/readiness/job-from-url');
+  await page.route('**/api/me/readiness/job-from-url', (route) =>
+    route.fulfill({
+      status: 201,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        title: 'Senior Frontend Engineer',
+        company: 'Northwind Labs',
+        location: 'Berlin',
+        description: 'We are hiring a Senior Frontend Engineer. 5+ years of React required.',
+        source: 'structured',
+        confidence: 'certain',
+        url: 'https://example.com/jobs/1',
+      }),
+    }),
+  );
+  await url.fill('https://example.com/jobs/1');
+  await page.getByTestId('job-url-fetch').click();
+
+  await expect(page.locator('textarea').first()).toHaveValue(/Senior Frontend Engineer/);
+  await expect(note).toContainText('Northwind Labs');
+  await expect(note, 'and it says how sure the read was').toContainText(/posting data/i);
+});

@@ -33,6 +33,56 @@ function ResumeUploadContent() {
   const { error: showError } = useFeedback();
   const [file, setFile] = useState<File | null>(null);
   const [jobDescription, setJobDescription] = useState('');
+  const [jobUrl, setJobUrl] = useState('');
+  const [urlState, setUrlState] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
+  const [urlNote, setUrlNote] = useState('');
+
+  /**
+   * Read the advert off a link and put it in the box.
+   *
+   * It fills the textarea rather than scoring straight from the fetch, on
+   * purpose: the person sees exactly what will be compared against their CV and
+   * can correct it. A silent fetch that scored against the wrong half of a page
+   * would look identical to a good one, which is the failure worth designing
+   * against here.
+   */
+  async function loadFromUrl() {
+    const url = jobUrl.trim();
+    if (!url) return;
+    setUrlState('loading');
+    setUrlNote('');
+    try {
+      const res = await apiFetch('/api/me/readiness/job-from-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      const body = await res.json().catch(() => null);
+      if (!res.ok) {
+        setUrlState('error');
+        // The server's refusals already say what to do instead, so they are
+        // shown as written rather than replaced with something vaguer.
+        setUrlNote(body?.message || 'We could not read that page. Paste the description instead.');
+        return;
+      }
+      setJobDescription(body.description ?? '');
+      if (body.title && !jobTitle.trim()) setJobTitle(body.title);
+      setUrlState('ok');
+      setUrlNote(
+        [
+          body.confidence === 'certain'
+            ? 'Read from the posting data this board publishes.'
+            : 'Read from the page text, so check it looks right before analysing.',
+          [body.title, body.company, body.location].filter(Boolean).join(' · '),
+        ]
+          .filter(Boolean)
+          .join(' ')
+      );
+    } catch {
+      setUrlState('error');
+      setUrlNote('We could not reach that page. Paste the description instead.');
+    }
+  }
   const [jobTitle, setJobTitle] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [targetRole, setTargetRole] = useState('');
@@ -451,6 +501,53 @@ function ResumeUploadContent() {
             <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3">
               Job description for targeted analysis
             </label>
+
+            {/* One box, either kind of input.
+                People do not have the advert text, they have the tab it is open
+                in — and asking them to select exactly the right part of a job
+                board page is where they give up. Pasting a link fills the box
+                below with what the page actually said, so they can see and edit
+                what is being scored against rather than trusting a fetch. */}
+            <div className="mb-3 flex flex-col gap-2 sm:flex-row">
+              <input
+                value={jobUrl}
+                onChange={(e) => setJobUrl(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    void loadFromUrl();
+                  }
+                }}
+                disabled={isUploading || urlState === 'loading'}
+                placeholder="Or paste a link to the job posting"
+                className="font-raleway w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-indigo-200 focus:bg-white disabled:opacity-50"
+                data-testid="job-url-input"
+              />
+              <button
+                type="button"
+                onClick={() => void loadFromUrl()}
+                disabled={!jobUrl.trim() || isUploading || urlState === 'loading'}
+                className="font-raleway shrink-0 rounded-2xl bg-slate-800 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-900 disabled:opacity-40"
+                data-testid="job-url-fetch"
+              >
+                {urlState === 'loading' ? 'Reading…' : 'Read it'}
+              </button>
+            </div>
+
+            {urlNote && (
+              <p
+                className={
+                  'mb-3 rounded-xl px-3 py-2 text-[13px] leading-relaxed ' +
+                  (urlState === 'error'
+                    ? 'bg-amber-50 text-amber-900'
+                    : 'bg-emerald-50 text-emerald-900')
+                }
+                data-testid="job-url-note"
+              >
+                {urlNote}
+              </p>
+            )}
+
             <textarea 
               placeholder={`Paste at least 50 characters for a specific job match. Leave blank to analyze for ${targetRole || 'your career target'}.`}
               value={jobDescription}
