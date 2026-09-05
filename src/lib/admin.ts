@@ -116,6 +116,13 @@ export interface CandidateFit {
   eligible: boolean;
   gateFailures: Array<{ gate: string; reason: string }>;
   score: number;
+  /** Raw points. The percentage sorts a list; these are what you read. */
+  earned: number;
+  available: number;
+  /** How much of the rubric this role engaged, 0-1. */
+  specificity: number;
+  asked: number;
+  measurable: number;
   components: Array<{
     key: string;
     label: string;

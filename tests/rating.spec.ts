@@ -156,6 +156,44 @@ test('a reviewer can read why a candidate scored what they did', async ({ page }
   await expect(panel, 'the years it read out of the CV').toContainText(/years counted/);
   await expect(panel, 'the skills it found').toContainText('React');
   await expect(panel).toContainText(/Evidenced:/);
+
+  // The percentage sorts the list; the points are what a person reads. Two
+  // scores out of 100 from roles of different detail are not the same fact.
+  await expect(panel, 'raw points, not only a percentage').toContainText(/\d+(\.\d+)? of \d+/);
+  await expect(page.getByTestId('fit-specificity')).toContainText(
+    /stated \d+ of the \d+ things we can measure/,
+  );
+});
+
+test('a vague role says its score is a weaker signal', async ({ page }) => {
+  // No required skills, no target years, no seniority: the rubric can only
+  // engage a fraction of itself, and the number should say so rather than
+  // looking exactly as confident as a fully specified role.
+  const created = await apiAs(admin, '/admin/campaigns', {
+    method: 'POST',
+    body: JSON.stringify({
+      title: `Vague Role ${Date.now().toString(36)}`,
+      company: 'Northwind Labs',
+      jobDescription: JD,
+      location: 'Remote',
+    }),
+  });
+  const campaign = created.body;
+  await apiAs(admin, `/admin/campaigns/${campaign.id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status: 'collecting' }),
+  });
+  await applicant(campaign, 'Sana Riaz', STRONG_CV);
+
+  await signIn(page, admin);
+  await page.goto(`/admin/campaigns/${campaign.id}`, { waitUntil: 'networkidle' });
+  await page.getByTestId('why-score').first().click();
+
+  const note = page.getByTestId('fit-specificity');
+  await expect(note).toBeVisible();
+  await expect(note, 'and it says what would sharpen it').toContainText(
+    /Add required skills, target years or seniority/,
+  );
 });
 
 test('a candidate who fails a hard requirement is marked, not buried', async ({ page }) => {

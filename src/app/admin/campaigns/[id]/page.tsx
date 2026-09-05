@@ -972,8 +972,16 @@ export default function AdminCampaignDetailPage() {
                   Why {fit.name} scored {fit.data.score}
                 </h2>
                 <p className="mt-0.5 text-sm text-[var(--sf-muted)]">
+                  {fit.data.earned != null && fit.data.available > 0 && (
+                    <>
+                      <strong className="text-[var(--sf-ink)]">
+                        {fit.data.earned} of {fit.data.available} points
+                      </strong>
+                      {' · '}
+                    </>
+                  )}
                   {fit.data.experienceUnknown
-                    ? 'No dates could be read from this CV, so experience was left out of the score rather than guessed.'
+                    ? 'no dates could be read from this CV, so experience was left out rather than guessed'
                     : `${fit.data.yearsRelevant} years counted${
                         Object.keys(fit.data.yearsByType).length > 1
                           ? ` (${Object.entries(fit.data.yearsByType)
@@ -982,6 +990,34 @@ export default function AdminCampaignDetailPage() {
                           : ''
                       }`}
                 </p>
+                {/* A score from a role that stated almost nothing is a weak
+                    signal dressed as a precise one. Saying how much of the
+                    rubric it engaged lets a reviewer weigh the number rather
+                    than trust it. */}
+                {fit.data.asked != null && fit.data.measurable > 0 && (() => {
+                  // Two ways a score can be a weak signal, and they are not the
+                  // same. Few components engaged means most of the rubric never
+                  // ran; low weight engaged means the ones that did carry
+                  // little. Either is worth saying out loud.
+                  const thin =
+                    fit.data.specificity < 0.6 ||
+                    fit.data.asked < fit.data.measurable * 0.6;
+                  return (
+                    <p
+                      className={
+                        'mt-1 text-[12.5px] ' +
+                        (thin ? 'font-semibold text-[var(--sf-yellow)]' : 'text-[var(--sf-muted)]')
+                      }
+                      data-testid="fit-specificity"
+                    >
+                      This role stated {fit.data.asked} of the {fit.data.measurable} things we can
+                      measure
+                      {thin
+                        ? '. Add required skills, target years or seniority to sharpen it.'
+                        : '.'}
+                    </p>
+                  );
+                })()}
               </div>
               <button
                 type="button"
