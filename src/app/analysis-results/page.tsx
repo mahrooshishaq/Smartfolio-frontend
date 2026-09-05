@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 
 import { apiFetch } from '@/lib/api';
+import ReadinessPanel from '@/components/ReadinessPanel';
 
 interface AnalysisResult {
   analysisId: string;
@@ -242,6 +243,10 @@ function ResultsContent() {
     { label: 'Formatting Clarity', score: data.categoryScores.formatting_clarity },
   ];
   const issueCount = data.remarks.weaknesses.length;
+  // Only on a general analysis. With a job description pasted, the page already
+  // answers a sharper question and two different percentages side by side would
+  // read as one contradicting the other.
+  const showReadiness = data.lensType === 'general';
 
   /**
    * Run a fresh analysis of the same resume.
@@ -344,6 +349,15 @@ function ResultsContent() {
             )}
             {data.remarks.actionable.length > 0 && (
               <FeedbackCard title="What you should do next" tone="blue" icon={<Sparkles size={21} />} items={data.remarks.actionable} numbered />
+            )}
+            {/* The market benchmark: what roles like theirs are actually asking
+                for. Only on a general analysis — with a job description pasted
+                the page already answers a sharper question, and two different
+                percentages side by side read as one contradicting the other. */}
+            {showReadiness && (
+              <div className="md:col-span-2 xl:col-span-3">
+                <ReadinessPanel />
+              </div>
             )}
             {data.remarks.improvements?.length > 0 && (
               <section className="rounded-3xl border border-indigo-100 bg-white p-7 shadow-lg md:col-span-2 xl:col-span-3">

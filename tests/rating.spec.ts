@@ -189,3 +189,70 @@ test('a candidate who fails a hard requirement is marked, not buried', async ({ 
   await expect(panel).toContainText(/AWS Certified Solutions Architect/);
   await expect(panel, 'and it is not a rejection').toContainText(/stay on the list/i);
 });
+
+test('the campaign says who is still waiting to hear', async ({ page }) => {
+  const created = await apiAs(admin, '/admin/campaigns', {
+    method: 'POST',
+    body: JSON.stringify({
+      title: `Waiting Role ${Date.now().toString(36)}`,
+      company: 'Northwind Labs',
+      jobDescription: JD,
+      location: 'Remote',
+      mustHaveSkills: ['React', 'TypeScript', 'design systems'],
+    }),
+  });
+  const campaign = created.body;
+  await apiAs(admin, `/admin/campaigns/${campaign.id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status: 'collecting' }),
+  });
+  await applicant(campaign, 'Wrong File', WEAK_CV);
+
+  await signIn(page, admin);
+  await page.goto(`/admin/campaigns/${campaign.id}`, { waitUntil: 'networkidle' });
+
+  // Silence is the easiest thing in a pipeline to let happen by accident, so
+  // the count is on the screen rather than in someone's memory.
+  const banner = page.getByTestId('waiting-banner');
+  await expect(banner).toBeVisible();
+  await expect(banner).toContainText(/still waiting to hear/);
+  await expect(banner, 'and it says what releases the news').toContainText(/close this campaign/i);
+});
+
+test('the calibration panel appears once there is enough to measure', async ({ page }) => {
+  const created = await apiAs(admin, '/admin/campaigns', {
+    method: 'POST',
+    body: JSON.stringify({
+      title: `Calibration UI ${Date.now().toString(36)}`,
+      company: 'Northwind Labs',
+      jobDescription: JD,
+      location: 'Remote',
+      mustHaveSkills: ['React', 'TypeScript'],
+    }),
+  });
+  const campaign = created.body;
+  await apiAs(admin, `/admin/campaigns/${campaign.id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status: 'collecting' }),
+  });
+
+  // Five scored candidates is the floor below which a rate is noise.
+  const ids: string[] = [];
+  for (let i = 0; i < 3; i++) ids.push(await applicant(campaign, `Strong ${i}`, STRONG_CV));
+  for (let i = 0; i < 2; i++) await applicant(campaign, `Weak ${i}`, WEAK_CV);
+  await apiAs(admin, `/admin/campaigns/${campaign.id}/shortlist`, {
+    method: 'POST',
+    body: JSON.stringify({ candidateIds: ids.slice(0, 2) }),
+  });
+
+  await signIn(page, admin);
+  await page.goto(`/admin/campaigns/${campaign.id}`, { waitUntil: 'networkidle' });
+
+  const panel = page.getByTestId('calibration-panel');
+  await expect(panel).toBeVisible();
+  await expect(panel).toContainText('Is the scoring working?');
+  await expect(panel, 'the bands are shown, not just a verdict').toContainText('80-100');
+  await expect(panel, 'and it never claims to have changed anything').toContainText(
+    /never auto-applied/i,
+  );
+});

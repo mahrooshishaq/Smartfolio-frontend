@@ -50,6 +50,7 @@ export interface CampaignFormValues {
   requiresWorkAuthorization: boolean;
   freelancePolicy: string;
   experienceWeighting: string;
+  rejectionFeedback: boolean;
   /**
    * Held as a STRING while editing.
    *
@@ -100,6 +101,7 @@ export function emptyValues(): CampaignFormValues {
     requiresWorkAuthorization: false,
     freelancePolicy: 'full',
     experienceWeighting: 'normal',
+    rejectionFeedback: true,
     shortlistTarget: '25',
     applicationDeadline: '',
     interviewDeadline: '',
@@ -127,6 +129,7 @@ export function valuesFrom(campaign: Campaign): CampaignFormValues {
     requiresWorkAuthorization: campaign.requiresWorkAuthorization ?? false,
     freelancePolicy: campaign.freelancePolicy ?? 'full',
     experienceWeighting: campaign.experienceWeighting ?? 'normal',
+    rejectionFeedback: campaign.rejectionFeedback ?? true,
     shortlistTarget: String(campaign.shortlistTarget ?? 25),
     applicationDeadline: toDateInput(campaign.applicationDeadline),
     interviewDeadline: toDateInput(campaign.interviewDeadline),
@@ -247,6 +250,7 @@ export default function CampaignForm({
         requiresWorkAuthorization: v.requiresWorkAuthorization,
         freelancePolicy: v.freelancePolicy,
         experienceWeighting: v.experienceWeighting,
+        rejectionFeedback: v.rejectionFeedback,
         shortlistTarget: shortlistTarget,
         // Dates arrive as YYYY-MM-DD; the API wants an instant. End of day so a
         // deadline of "the 30th" includes the whole of the 30th.
@@ -443,7 +447,6 @@ export default function CampaignForm({
               <textarea
                 value={v.jobDescription}
                 onChange={(e) => set('jobDescription', e.target.value)}
-                data-testid="field-jobDescription"
                 rows={10}
                 placeholder="Responsibilities, requirements, team, working arrangement…"
                 className={`${inputClass} leading-relaxed`}
@@ -549,6 +552,24 @@ export default function CampaignForm({
               />
             </Field>
           </div>
+
+          <label className="mt-5 flex items-start gap-2.5 text-sm text-[var(--sf-ink-soft)]">
+            <input
+              type="checkbox"
+              checked={v.rejectionFeedback}
+              onChange={(e) => set('rejectionFeedback', e.target.checked)}
+              className="mt-0.5"
+              data-testid="field-rejectionFeedback"
+            />
+            <span>
+              Tell unsuccessful candidates what their CV did not show
+              <span className="block text-[13px] text-[var(--sf-muted)]">
+                Sent when you close this campaign, or straight away if you reject someone. Never
+                while applications are open. Leave this on unless the client objects: silence is
+                what people resent most about applying for work.
+              </span>
+            </span>
+          </label>
 
           {v.freelancePolicy === 'permanent_only' && (
             <p className="mt-2 text-[13px] leading-relaxed text-[var(--sf-yellow-ink,var(--sf-muted))]">

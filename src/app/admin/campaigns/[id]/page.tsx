@@ -18,6 +18,7 @@ import {
   type CampaignCandidate,
   type CandidateFit,
   type CandidateInterview,
+  type Calibration,
   type CandidateStatus,
 } from '@/lib/admin';
 import { useFeedback } from '@/components/ui/feedback';
@@ -91,6 +92,10 @@ export default function AdminCampaignDetailPage() {
     { loading: boolean; name: string; data: CandidateInterview | null } | null
   >(null);
   const [fit, setFit] = useState<{ name: string; data: CandidateFit } | null>(null);
+  const [feedback, setFeedback] = useState<{
+    enabled: boolean; told: number; waiting: number; sendsOnClose: boolean;
+  } | null>(null);
+  const [calibration, setCalibration] = useState<Calibration | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -103,6 +108,9 @@ export default function AdminCampaignDetailPage() {
       ]);
       setCampaign(c);
       setCandidates(list.candidates);
+      // Both fail silently: neither is worth blocking the candidate list for.
+      adminApi.feedbackStatus(id).then(setFeedback).catch(() => {});
+      adminApi.calibration(id).then(setCalibration).catch(() => {});
       // Drop selections that are no longer on screen, so an action can never
       // apply to a row the operator can no longer see.
       setSelected((prev) => {
@@ -453,6 +461,29 @@ export default function AdminCampaignDetailPage() {
       {/* Above the stats, because it changes whether pressing Invite means
           anything at all. */}
       <DeliveryBanner />
+
+      {/* Silence is what candidates resent most, and it is also the easiest
+          thing in a pipeline to let happen by accident — nobody decides to
+          ghost anyone. Making the number visible is the whole intervention. */}
+      {feedback && feedback.waiting > 0 && (
+        <div
+          className="mb-5 rounded-2xl border border-[var(--sf-yellow-soft)] bg-[var(--sf-yellow-soft)] p-4"
+          data-testid="waiting-banner"
+        >
+          <p className="text-sm font-bold text-[var(--sf-ink)]">
+            {feedback.waiting} {feedback.waiting === 1 ? 'person is' : 'people are'} still waiting
+            to hear
+            {feedback.told > 0 ? ` · ${feedback.told} already told` : ''}
+          </p>
+          <p className="mt-1 text-[13px] leading-relaxed text-[var(--sf-ink-soft)]">
+            {!feedback.enabled
+              ? 'Feedback is switched off for this campaign, so they will not be written to.'
+              : feedback.sendsOnClose
+                ? 'They are written to automatically when you close this campaign, telling them what their CV did not show. Rejecting someone tells them straight away.'
+                : 'They will be written to in the next sweep.'}
+          </p>
+        </div>
+      )}
 
       <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <Stat label="Applied" value={counts.applied} />
@@ -830,6 +861,68 @@ export default function AdminCampaignDetailPage() {
         look at before inviting. A shared device or a country mismatch both have ordinary
         explanations, and internet cafés and family computers are normal in these markets.
       </p>
+
+      {/* Your instrument panel, not the client's. Whether the rubric is
+          predicting anything, and whether it is quietly holding a group back.
+          It reports; it never changes a weight — a weight moved by a loop is
+          one nobody can explain to the person it ranked. */}
+      {calibration && calibration.scored >= 5 && (
+        <section className="mt-8 max-w-[820px]" data-testid="calibration-panel">
+          <h2 className="text-base font-bold text-[var(--sf-ink)]">Is the scoring working?</h2>
+          <p className="mt-1 text-[13px] leading-relaxed text-[var(--sf-muted)]">
+            {calibration.scored} scored candidates. {calibration.predictive === null
+              ? 'Not enough in any band yet to tell whether the score predicts your choices.'
+              : calibration.predictive
+                ? 'Higher scores are being shortlisted more often, which is what you want.'
+                : 'Higher scores are NOT being shortlisted more often. Either the rubric is not measuring what you actually pick on, or the sample is still small.'}
+          </p>
+
+          <div className="mt-3 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-[11px] uppercase tracking-wide text-[var(--sf-muted-soft)]">
+                  <th className="pb-2 pr-4 text-left font-semibold">Score band</th>
+                  <th className="pb-2 pr-4 text-right font-semibold">Candidates</th>
+                  <th className="pb-2 pr-4 text-right font-semibold">Shortlisted</th>
+                  <th className="pb-2 text-right font-semibold">Rate</th>
+                </tr>
+              </thead>
+              <tbody>
+                {calibration.bands.map((b) => (
+                  <tr key={b.band} className="border-t border-[var(--sf-line)]">
+                    <td className="py-2 pr-4 font-semibold text-[var(--sf-ink)]">{b.band}</td>
+                    <td className="py-2 pr-4 text-right tabular-nums">{b.candidates}</td>
+                    <td className="py-2 pr-4 text-right tabular-nums">{b.shortlisted}</td>
+                    <td className="py-2 text-right tabular-nums">
+                      {b.candidates ? `${Math.round(b.advanceRate * 100)}%` : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {calibration.needsReview.length > 0 && (
+            <div className="mt-4 rounded-xl border border-[var(--sf-yellow-soft)] bg-[var(--sf-yellow-soft)] p-4">
+              <p className="text-sm font-bold text-[var(--sf-ink)]">Worth a look</p>
+              <ul className="mt-1.5 space-y-1">
+                {calibration.needsReview.map((g) => (
+                  <li key={g.group} className="text-[13px] leading-relaxed text-[var(--sf-ink-soft)]">
+                    <strong className="capitalize">{g.group}</strong> advance at{' '}
+                    {Math.round(g.advanceRate * 100)}%, which is {g.impactRatio} of the best group&rsquo;s
+                    rate. Below 0.8 is the point where it is worth opening a few of those CVs
+                    yourself.
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <p className="mt-3 text-[12px] leading-relaxed text-[var(--sf-muted)]">
+            {calibration.note}
+          </p>
+        </section>
+      )}
 
       {fit && (
         <div

@@ -59,6 +59,8 @@ export interface Campaign {
   requiresWorkAuthorization: boolean;
   freelancePolicy: 'full' | 'discounted' | 'permanent_only';
   experienceWeighting: 'low' | 'normal' | 'high';
+  /** Whether unsuccessful candidates are told what their CV did not show. */
+  rejectionFeedback: boolean;
   createdAt: string;
   /** Candidates by status. Present on the list, and on the detail for the live-edit warning. */
   counts?: Partial<Record<CandidateStatus, number>>;
@@ -86,6 +88,27 @@ export interface CandidateCv {
   uploadedAt: string;
   /** False when the row outlived its file — never offer a link that 404s. */
   analyzable: boolean;
+}
+
+/** Whether the rubric is predicting anything, and whether it skews. */
+export interface Calibration {
+  candidates: number;
+  scored: number;
+  ineligible: number;
+  bands: Array<{ band: string; candidates: number; shortlisted: number; interviewed: number; advanceRate: number }>;
+  predictive: boolean | null;
+  byExperience: GroupOutcome[];
+  byEmployment: GroupOutcome[];
+  needsReview: GroupOutcome[];
+  note: string;
+}
+
+export interface GroupOutcome {
+  group: string;
+  candidates: number;
+  advanced: number;
+  advanceRate: number;
+  impactRatio: number;
 }
 
 /** The reasons behind a score: gates, components, evidence. */
@@ -307,6 +330,16 @@ export const adminApi = {
       `/api/admin/campaigns/${id}/rescore`,
       { method: 'POST' },
     ),
+
+  /** Who is still waiting to hear about this campaign. */
+  feedbackStatus: (id: string) =>
+    json<{ enabled: boolean; told: number; waiting: number; sendsOnClose: boolean }>(
+      `/api/admin/campaigns/${id}/feedback`,
+    ),
+
+  /** Does the score predict who gets picked, and does it skew anyone. */
+  calibration: (id: string) =>
+    json<Calibration>(`/api/admin/campaigns/${id}/calibration`),
 
   /** Where emailed links point, and whether mail can be delivered at all. */
   diagnostics: () =>
