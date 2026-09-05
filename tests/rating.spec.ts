@@ -384,7 +384,42 @@ test('the email links open ready for the role you applied to', async ({ page }) 
   await expect(page.locator('textarea').first()).toHaveValue(/own our React and TypeScript/, {
     timeout: 20_000,
   });
-  await expect(page.getByTestId('job-url-note')).toContainText(/Filled in from your application/);
+  await expect(page.getByTestId('arrived-for-role')).toContainText(campaign.title);
+});
+
+test('arriving from the email with a CV on file is one press', async ({ page }) => {
+  const created = await apiAs(admin, '/admin/campaigns', {
+    method: 'POST',
+    body: JSON.stringify({
+      title: `One Press ${Date.now().toString(36)}`,
+      company: 'Northwind Labs',
+      jobDescription: JD,
+      location: 'Remote',
+    }),
+  });
+  const campaign = created.body;
+  await apiAs(admin, `/admin/campaigns/${campaign.id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status: 'collecting' }),
+  });
+
+  // Somebody who applied has a CV on file — that is what "applied" means.
+  const candidate = await createVerifiedUser('Has A CV', uniqueEmail('hascv'));
+  sql(
+    'insert into resumes ("userId", "originalFileName", "filePath", "fileType", "fileSizeBytes", "isExtracted", "extractedText", "fileData") values (' +
+      `'${candidate.userId}', 'MyCV.pdf', 'db://resume', 'pdf', 1024, true, ` +
+      "$q$React TypeScript design systems testing accessibility$q$, " +
+      "decode('255044462d312e340a25','hex'))",
+  );
+
+  await signIn(page, candidate);
+  await page.goto(`/upload-resume?role=${campaign.slug}`, { waitUntil: 'networkidle' });
+
+  const note = page.getByTestId('arrived-for-role');
+  await expect(note).toBeVisible({ timeout: 20_000 });
+  await expect(note, 'both halves are ready and it says so').toContainText(/one press/i);
+  await expect(page.getByText('Using your saved CV')).toBeVisible();
+  await expect(page.locator('textarea').first()).toHaveValue(/own our React and TypeScript/);
 });
 
 test('an unknown role in the link is ignored, not an error', async ({ page }) => {

@@ -37,6 +37,8 @@ function ResumeUploadContent() {
   const [jobUrl, setJobUrl] = useState('');
   const [urlState, setUrlState] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
   const [urlNote, setUrlNote] = useState('');
+  /** Set when they came from the confirmation email for a role they applied to. */
+  const [arrivedForRole, setArrivedForRole] = useState<{ title: string; company: string } | null>(null);
 
   /*
    * Arriving from "Sharpen your CV" in the confirmation email.
@@ -52,9 +54,7 @@ function ResumeUploadContent() {
       setJobDescription((current) => current.trim() || role.jobDescription);
       setJobTitle((current) => current.trim() || role.title);
       setUrlState('ok');
-      setUrlNote(
-        `Filled in from your application to ${role.title}${role.company ? ` at ${role.company}` : ''}.`,
-      );
+      setArrivedForRole(role);
     });
     return () => {
       cancelled = true;
@@ -557,6 +557,23 @@ function ResumeUploadContent() {
                 {urlState === 'loading' ? 'Reading…' : 'Read it'}
               </button>
             </div>
+
+            {/* Two things are ready and they arrived separately: the CV from
+                their application, the description from the link. Saying so in
+                one line is the difference between "one press" and a page that
+                looks like it still wants work. */}
+            {arrivedForRole && (
+              <p
+                className="mb-3 rounded-xl bg-emerald-50 px-3 py-2 text-[13px] leading-relaxed text-emerald-900"
+                data-testid="arrived-for-role"
+              >
+                Set up for <strong>{arrivedForRole.title}</strong>
+                {arrivedForRole.company ? ` at ${arrivedForRole.company}` : ''}.{' '}
+                {savedIsUsable
+                  ? 'The CV you applied with and the job description are both loaded, so this is one press.'
+                  : 'The job description is loaded. Add your CV below to analyse it.'}
+              </p>
+            )}
 
             {urlNote && (
               <p
