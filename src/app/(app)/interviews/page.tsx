@@ -16,7 +16,7 @@
  * out working interviews, and proving who you are first defeats nothing.
  */
 
-import { Suspense, useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { FiSend, FiClock, FiCheckCircle, FiAlertCircle, FiArrowRight } from 'react-icons/fi';
 import { invitationsApi, daysLeft, type Invitation } from '@/lib/invitations';
@@ -75,6 +75,14 @@ function InterviewsInner() {
   // session, a bookmarked URL, a second tab. Saying so beats a list that
   // silently appeared for no reason the candidate can see.
   const resumed = searchParams.get('resume') === '1';
+  /**
+   * Arriving from the tracker's "Start your interview".
+   *
+   * They pressed a button that said start, so making them find the same row
+   * again and press a second one is a step that exists only because two pages
+   * were built separately.
+   */
+  const openId = searchParams.get('open');
   const { error } = useFeedback();
   const [invitations, setInvitations] = useState<Invitation[] | null>(null);
   const [opening, setOpening] = useState<string | null>(null);
@@ -91,6 +99,19 @@ function InterviewsInner() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Opens once, and only while the invitation is genuinely open — a closed or
+  // completed one would mint a link that immediately refuses.
+  const autoOpened = useRef(false);
+  useEffect(() => {
+    if (!openId || autoOpened.current || !invitations) return;
+    const target = invitations.find((i) => i.candidateId === openId && i.state === 'open');
+    if (!target) return;
+    autoOpened.current = true;
+    void open(target);
+    // `open` is stable enough for this one-shot; the ref guarantees it runs once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openId, invitations]);
 
   async function open(invitation: Invitation) {
     setOpening(invitation.candidateId);

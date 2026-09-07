@@ -34,6 +34,7 @@ import {
   CAMPAIGN_PARAM,
   type CampaignInterviewHandoff,
 } from '@/lib/campaign-interview';
+import { track } from '@/lib/funnel';
 
 // Breather between questions: long enough to reset (and for the next question's
 // audio to finish synthesizing in the background), short enough to keep pace.
@@ -786,6 +787,7 @@ function MockInterviewContent() {
       // here is logged rather than surfaced — it must not read to a candidate
       // as though the interview did not count.
       if (campaignInterview && sessionId) {
+        track('interview_completed', campaignInterview.campaignId, 'id');
         const linked = await recordCampaignInterview(campaignInterview, sessionId, apiFetch);
         // Only the stashed handoff is cleared, never `campaignInterview` itself.
         // Nulling the state here wiped the employer's name off the screen at the

@@ -27,6 +27,7 @@ import VerificationGate from '@/components/verification/VerificationGate';
 import { publicFetch, getAccessToken } from '@/lib/api';
 import { rememberPostAuthPath } from '@/lib/post-auth';
 import { stashCampaignInterview, CAMPAIGN_PARAM } from '@/lib/campaign-interview';
+import { track } from '@/lib/funnel';
 import type { VerificationResult } from '@/lib/verification/collector';
 
 type Invite = {
@@ -69,8 +70,12 @@ export default function InterviewInvitePage() {
         setStage('invalid');
         return;
       }
-      setInvite(await res.json());
+      const loaded = await res.json();
+      setInvite(loaded);
       setStage('intro');
+      // An invitation that is opened and never started is the drop this pair
+      // exists to make visible.
+      track('interview_opened', loaded?.campaign?.id, 'id');
     } catch {
       setMessage('We could not reach the server. Please try again in a moment.');
       setStage('invalid');
@@ -99,6 +104,7 @@ export default function InterviewInvitePage() {
 
   function startInterview() {
     if (!invite) return;
+    track('interview_started', invite.campaign.id, 'id');
     // The interview is generated from the campaign's own description, and the
     // token travels with it so the finished session can be attached to this
     // invitation.

@@ -91,6 +91,25 @@ export interface CandidateCv {
 }
 
 /** Whether the rubric is predicting anything, and whether it skews. */
+export interface FunnelStage {
+  step: string;
+  label: string;
+  reached: number;
+  lost: number;
+  lostShare: number | null;
+  medianSeconds: number | null;
+}
+
+export interface Funnel {
+  empty: boolean;
+  stages: FunnelStage[];
+  interview: FunnelStage[];
+  check: { started: number; passed: number; flagged: number; blocked: number };
+  signup: { shown: number; wentOn: number };
+  medianCompletionSeconds: number | null;
+  worstStep: { from: string; to: string; lost: number; lostShare: number } | null;
+}
+
 export interface Calibration {
   candidates: number;
   scored: number;
@@ -157,6 +176,14 @@ export interface CandidateInterview {
     feedback: string | null;
   }>;
   followUps: unknown[];
+  /** The two answers worth reading before the transcript. */
+  highlights: {
+    strongest: { question: string; round: string; score: number | null; answer: string | null } | null;
+    weakest: { question: string; round: string; score: number | null; answer: string | null } | null;
+    answered: number;
+    skipped: number;
+    averageScore: number | null;
+  };
 }
 
 /** What this person has done on OTHER campaigns. */
@@ -190,6 +217,8 @@ export interface CampaignCandidate {
   scoreStale: boolean;
   /** Null when no gates were set or the CV could not be read. */
   eligible: boolean | null;
+  /** What the reviewer thought. The status says what was decided, not why. */
+  reviewerNote: string | null;
   /** Why the score is what it is. Null before the rubric ran. */
   fit: CandidateFit | null;
   /** True when there is an interview to read. */
@@ -331,6 +360,17 @@ export const adminApi = {
       `/api/admin/campaigns/${campaignId}/candidates/${candidateId}/interview`,
     ),
 
+  /** Write or clear the reviewer's note on a candidate. */
+  setNote: (campaignId: string, candidateId: string, note: string) =>
+    json<{ note: string | null }>(
+      `/api/admin/campaigns/${campaignId}/candidates/${candidateId}/note`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ note }),
+      },
+    ),
+
   /** Rescore the people already on this campaign — see rescore() on the service. */
   rescore: (id: string) =>
     json<{ total: number; rescored: number; skipped: number }>(
@@ -347,6 +387,9 @@ export const adminApi = {
   /** Does the score predict who gets picked, and does it skew anyone. */
   calibration: (id: string) =>
     json<Calibration>(`/api/admin/campaigns/${id}/calibration`),
+
+  /** Where people stopped, and how long each step took them. */
+  funnel: (id: string) => json<Funnel>(`/api/admin/campaigns/${id}/funnel`),
 
   /** Where emailed links point, and whether mail can be delivered at all. */
   diagnostics: () =>

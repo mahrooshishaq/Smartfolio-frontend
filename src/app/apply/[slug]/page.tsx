@@ -31,6 +31,7 @@ import { Select } from '@/components/ui/Select';
 import { useFeedback } from '@/components/ui/feedback';
 import VerificationGate from '@/components/verification/VerificationGate';
 import { publicFetch, sessionFetch, getAccessToken, clearSession } from '@/lib/api';
+import { track } from '@/lib/funnel';
 import {
   rememberPostAuthPath,
   rememberPendingApplication,
@@ -115,7 +116,11 @@ export default function ApplyPage() {
           throw new Error(body?.message || 'This role could not be found.');
         }
         const data = (await res.json()) as PublicCampaign;
-        if (!cancelled) setCampaign(data);
+        if (cancelled) return;
+        setCampaign(data);
+        // The denominator for the whole funnel, and the only event that can be
+        // sent by somebody who then does nothing at all.
+        track('opened', slug);
       } catch (e) {
         if (!cancelled) setLoadError(e instanceof Error ? e.message : 'Could not load this role.');
       }
@@ -192,6 +197,7 @@ export default function ApplyPage() {
       if (country) form.append('declaredCountry', country);
       await saveDraft(form);
       setFile({ name: chosen.name, size: chosen.size });
+      track('cv_uploaded', slug);
     } catch (e) {
       error(e instanceof Error ? e.message : 'Could not upload your CV.');
     } finally {
@@ -227,6 +233,8 @@ export default function ApplyPage() {
     if (missing) return error(missing);
     try {
       await saveDraft({ answers, declaredCountry: country });
+      track('details_completed', slug);
+      track('check_started', slug);
       setStage('checking');
     } catch (e) {
       error(e instanceof Error ? e.message : 'Could not save your application.');
@@ -235,6 +243,14 @@ export default function ApplyPage() {
 
   async function onVerified(outcome: VerificationResult) {
     setVerification(outcome);
+    track(
+      outcome.verdict === 'clean'
+        ? 'check_passed'
+        : outcome.verdict === 'blocked'
+          ? 'check_blocked'
+          : 'check_flagged',
+      slug,
+    );
     try {
       await saveDraft({ verificationSessionId: outcome.id, declaredCountry: country });
     } catch {
@@ -246,6 +262,7 @@ export default function ApplyPage() {
     // finding they never saw is how a candidate later discovers they were
     // "flagged" and was never told. The gate shows a Continue button.
     if (outcome.verdict !== 'clean') return;
+    if (!signedIn) track('signup_shown', slug);
     setStage(signedIn ? 'submitting' : 'account');
   }
 
@@ -275,6 +292,7 @@ export default function ApplyPage() {
       const data = await res.json();
       setResult(data);
       setStage('done');
+      track('submitted', slug);
       if (!data.alreadyApplied) success('Your application is in.');
     } catch (e) {
       error(e instanceof Error ? e.message : 'Could not submit your application.');
@@ -570,7 +588,10 @@ export default function ApplyPage() {
                   campaignId={campaign.id}
                   autoStart
                   onComplete={onVerified}
-                  onContinue={() => setStage(signedIn ? 'submitting' : 'account')}
+                  onContinue={() => {
+                    if (!signedIn) track('signup_shown', slug);
+                    setStage(signedIn ? 'submitting' : 'account');
+                  }}
                 />
                 <p className="mt-3 text-xs text-[var(--sf-muted-soft)]">
                   Your CV and answers are already saved.

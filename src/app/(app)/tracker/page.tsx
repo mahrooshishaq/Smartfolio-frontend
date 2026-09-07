@@ -2,8 +2,9 @@
 import { TrackerSkeleton } from '@/components/SkeletonScreens';
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
-  FiClipboard, FiExternalLink, FiLoader, FiMapPin, FiTrash2,
+  FiArrowRight, FiClipboard, FiExternalLink, FiLoader, FiMapPin, FiTrash2,
   FiEdit3, FiCheck, FiX, FiPlus, FiWifiOff, FiRefreshCw,
 } from 'react-icons/fi';
 
@@ -48,6 +49,10 @@ interface Application {
   notes: string;
   appliedAt: string | null;
   statusUpdatedAt: string | null;
+  /** Set when this row mirrors an application made through this platform. */
+  campaignCandidateId: string | null;
+  /** The campaign stage in plain words, where the tracker's own scale is coarser. */
+  stageDetail: string | null;
   createdAt: string;
 }
 
@@ -322,13 +327,27 @@ export default function ApplicationsPage() {
                   <h3 className="font-century text-base font-bold text-slate-800 truncate group-hover:text-[#4F46E5] transition-colors">{app.title}</h3>
                   <p className="font-raleway text-sm text-gray-500 mt-0.5">{app.company}</p>
                 </div>
-                <Select
-                  value={app.status}
-                  onChange={(v) => updateStatus(app.id, v as Status)}
-                  ariaLabel="Application status"
-                  className={`font-raleway text-[11px] font-bold px-3 py-1.5 rounded-lg focus:outline-none ${STATUS_STYLES[app.status]}`}
-                  options={STATUSES.map((s) => ({ value: s, label: STATUS_LABELS[s] }))}
-                />
+                {app.campaignCandidateId ? (
+                  /* Mirrored from an application made here, so it keeps itself
+                     right. Offering a dropdown would invite a tracker that
+                     contradicts the platform — marked "rejected" the week
+                     before we invite them. */
+                  <span
+                    className={`font-raleway text-[11px] font-bold px-3 py-1.5 rounded-lg ${STATUS_STYLES[app.status]}`}
+                    title="Updates itself as your application moves"
+                    data-testid="auto-status"
+                  >
+                    {app.stageDetail ?? STATUS_LABELS[app.status]}
+                  </span>
+                ) : (
+                  <Select
+                    value={app.status}
+                    onChange={(v) => updateStatus(app.id, v as Status)}
+                    ariaLabel="Application status"
+                    className={`font-raleway text-[11px] font-bold px-3 py-1.5 rounded-lg focus:outline-none ${STATUS_STYLES[app.status]}`}
+                    options={STATUSES.map((s) => ({ value: s, label: STATUS_LABELS[s] }))}
+                  />
+                )}
               </div>
 
               <div className="flex flex-wrap items-center gap-2 mt-4">
@@ -341,7 +360,24 @@ export default function ApplicationsPage() {
                 {app.appliedAt && (
                   <span className="font-raleway text-[11px] text-gray-500">Applied {formatDate(app.appliedAt)}</span>
                 )}
+                {app.campaignCandidateId && (
+                  <span className="font-raleway text-[11px] font-bold text-[#4F46E5]">
+                    Tracked automatically
+                  </span>
+                )}
               </div>
+
+              {/* An interview waiting is the one row on this page that is a
+                  task rather than a record, so it gets the only button. */}
+              {app.campaignCandidateId && app.stageDetail === 'Interview invited' && (
+                <Link
+                  href={`/interviews?open=${app.campaignCandidateId}`}
+                  className="font-raleway mt-4 inline-flex items-center gap-2 rounded-2xl bg-[#4F46E5] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#4338CA]"
+                  data-testid="tracker-start-interview"
+                >
+                  Start your interview <FiArrowRight size={14} />
+                </Link>
+              )}
 
               {/* Notes */}
               <div className="mt-4 pt-4 border-t border-gray-50">

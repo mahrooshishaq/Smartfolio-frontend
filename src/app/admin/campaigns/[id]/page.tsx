@@ -19,6 +19,7 @@ import {
   type CandidateFit,
   type CandidateInterview,
   type Calibration,
+  Funnel,
   type CandidateStatus,
 } from '@/lib/admin';
 import { useFeedback } from '@/components/ui/feedback';
@@ -76,6 +77,21 @@ const ACTION_RULES: Record<
   },
 };
 
+/**
+ * Seconds as something a person can react to.
+ *
+ * "Applying takes 847 seconds" is a number; "takes 14 minutes" is a fact about
+ * a form that is too long. The rounding is deliberately coarse, because the
+ * decision this informs never turns on a second.
+ */
+function formatDuration(seconds: number): string {
+  if (seconds < 60) return `${Math.max(1, Math.round(seconds))} seconds`;
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'}`;
+  const hours = Math.round((seconds / 3600) * 10) / 10;
+  return `${hours} hour${hours === 1 ? '' : 's'}`;
+}
+
 export default function AdminCampaignDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params.id;
@@ -88,6 +104,20 @@ export default function AdminCampaignDetailPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  /*
+   * Narrowing the list — at sixty candidates the difference between scrolling
+   * and working. All client-side: the rows are already loaded, and a round trip
+   * per keystroke would feel worse than scrolling.
+   */
+  const [query, setQuery] = useState('');
+  const [onlyEligible, setOnlyEligible] = useState(false);
+  const [onlyFlagged, setOnlyFlagged] = useState(false);
+  const [minScore, setMinScore] = useState(0);
+  /** Which row's note is open, and its working text. */
+  const [noteFor, setNoteFor] = useState<string | null>(null);
+  const [noteText, setNoteText] = useState('');
+  /** Side-by-side on the selected rows: the shortlisting act itself. */
+  const [comparing, setComparing] = useState(false);
   const [interview, setInterview] = useState<
     { loading: boolean; name: string; data: CandidateInterview | null } | null
   >(null);
@@ -96,6 +126,7 @@ export default function AdminCampaignDetailPage() {
     enabled: boolean; told: number; waiting: number; sendsOnClose: boolean;
   } | null>(null);
   const [calibration, setCalibration] = useState<Calibration | null>(null);
+  const [funnel, setFunnel] = useState<Funnel | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -111,6 +142,7 @@ export default function AdminCampaignDetailPage() {
       // Both fail silently: neither is worth blocking the candidate list for.
       adminApi.feedbackStatus(id).then(setFeedback).catch(() => {});
       adminApi.calibration(id).then(setCalibration).catch(() => {});
+      adminApi.funnel(id).then(setFunnel).catch(() => {});
       // Drop selections that are no longer on screen, so an action can never
       // apply to a row the operator can no longer see.
       setSelected((prev) => {
@@ -208,6 +240,93 @@ export default function AdminCampaignDetailPage() {
     }
   }
 
+  /**
+   * Narrow the list: search plus the three filters a shortlist is actually read
+   * with. "Who here has Kubernetes" and "who is missing testing" are both real
+   * questions, so both are askable, separately.
+   */
+  const shown = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return (candidates ?? []).filter((c) => {
+      if (onlyEligible && c.eligible === false) return false;
+      if (onlyFlagged && c.verification?.verdict !== 'review') return false;
+      if (minScore > 0 && (c.matchScore === null || Number(c.matchScore) < minScore)) return false;
+      if (!q) return true;
+
+      /*
+       * Plain text searches the person; `has:` and `missing:` search the CV.
+       *
+       * One box matching both matched AND missing skills sounds convenient and
+       * is useless: typing "design systems" returns everyone, because everyone
+       * either has it or does not. The two questions a shortlist is actually
+       * asked deserve to be asked separately.
+       */
+      const has = q.match(/^has:\s*(.+)$/);
+      if (has) return (c.fit?.matched ?? []).some((m) => m.toLowerCase().includes(has[1].trim()));
+
+      const missing = q.match(/^missing:\s*(.+)$/);
+      if (missing) {
+        return (c.fit?.missing ?? []).some((m) => m.toLowerCase().includes(missing[1].trim()));
+      }
+
+      return [c.name ?? '', c.email ?? '', c.reviewerNote ?? '']
+        .join(' ').toLowerCase().includes(q);
+    });
+  }, [candidates, query, onlyEligible, onlyFlagged, minScore]);
+
+  const compared = useMemo(
+    () => (candidates ?? []).filter((c) => selected.has(c.id)),
+    [candidates, selected],
+  );
+
+  /**
+   * The rows of the comparison, in the order a reviewer reads them.
+   *
+   * Headline first, then the components, then the evidence. Only components at
+   * least one of them was scored on appear, so a column of dashes for a
+   * question nobody was asked does not take up the screen.
+   */
+  const compareRows = useMemo(() => {
+    const keys = new Set<string>();
+    for (const c of compared) {
+      for (const comp of c.fit?.components ?? []) if (comp.applicable) keys.add(comp.key);
+    }
+    const componentRows = [...keys].map((key) => ({
+      key,
+      label:
+        compared
+          .flatMap((c) => c.fit?.components ?? [])
+          .find((comp) => comp.key === key)?.label ?? key,
+      value: (c: CampaignCandidate) => {
+        const comp = (c.fit?.components ?? []).find((x) => x.key === key);
+        if (!comp) return 'not scored';
+        if (!comp.applicable) return 'not asked';
+        return `${comp.points} / ${comp.outOf}`;
+      },
+    }));
+
+    return [
+      {
+        key: 'years',
+        label: 'Relevant years',
+        value: (c: CampaignCandidate) =>
+          c.fit?.experienceUnknown ? 'no dates' : c.fit ? `${c.fit.yearsRelevant}` : 'not scored',
+      },
+      ...componentRows,
+      {
+        key: 'missing',
+        label: 'Not evidenced',
+        value: (c: CampaignCandidate) =>
+          c.fit?.missing?.length ? c.fit.missing.join(', ') : 'nothing',
+      },
+      {
+        key: 'note',
+        label: 'Your note',
+        value: (c: CampaignCandidate) => c.reviewerNote ?? 'none yet',
+      },
+    ];
+  }, [compared]);
+
   const staleCount = useMemo(
     () => (candidates ?? []).filter((c) => c.scoreStale).length,
     [candidates],
@@ -248,6 +367,16 @@ export default function AdminCampaignDetailPage() {
     } catch (e) {
       setInterview(null);
       error(e instanceof Error ? e.message : 'Could not open this interview.');
+    }
+  }
+
+  async function saveNote(candidateId: string) {
+    try {
+      await adminApi.setNote(id, candidateId, noteText);
+      setNoteFor(null);
+      await load();
+    } catch (e) {
+      error(e instanceof Error ? e.message : 'Could not save that note.');
     }
   }
 
@@ -604,7 +733,7 @@ export default function AdminCampaignDetailPage() {
           ))}
         </div>
         <span className="text-sm text-[var(--sf-muted)]">
-          {candidates?.length ?? 0} shown ·{' '}
+          {shown.length} shown{shown.length !== (candidates?.length ?? 0) ? ` of ${candidates?.length ?? 0}` : ''} ·{' '}
           {VIEWS.find((v) => v.id === view)?.sort === 'recent' ? 'newest first' : 'best match first'}
         </span>
 
@@ -613,6 +742,16 @@ export default function AdminCampaignDetailPage() {
             <span className="text-sm font-semibold text-[var(--sf-ink-soft)]">
               {selected.size} selected
             </span>
+            {selected.size > 1 && (
+              <button
+                type="button"
+                onClick={() => setComparing(true)}
+                className="sf-subtle-control inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold"
+                data-testid="action-compare"
+              >
+                Compare {selected.size}
+              </button>
+            )}
             <button
               type="button"
               onClick={() => act('shortlist')}
@@ -682,6 +821,42 @@ export default function AdminCampaignDetailPage() {
           })()}
       </div>
 
+      {(candidates?.length ?? 0) > 5 && (
+        <div className="mb-3 flex flex-wrap items-center gap-2" data-testid="candidate-filters">
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search a name, an email or your notes. Or has:react, missing:testing"
+            className="sf-input min-w-[260px] flex-1 rounded-xl px-3 py-2 text-sm"
+            data-testid="candidate-search"
+          />
+          <label className="flex items-center gap-1.5 text-[13px] text-[var(--sf-ink-soft)]">
+            <input type="checkbox" checked={onlyEligible}
+              onChange={(e) => setOnlyEligible(e.target.checked)} data-testid="filter-eligible" />
+            Eligible only
+          </label>
+          <label className="flex items-center gap-1.5 text-[13px] text-[var(--sf-ink-soft)]">
+            <input type="checkbox" checked={onlyFlagged}
+              onChange={(e) => setOnlyFlagged(e.target.checked)} data-testid="filter-flagged" />
+            Flagged for review
+          </label>
+          <label className="flex items-center gap-1.5 text-[13px] text-[var(--sf-ink-soft)]">
+            Score at least
+            <input type="number" min={0} max={100} value={minScore || ''}
+              onChange={(e) => setMinScore(Number(e.target.value) || 0)}
+              className="sf-input w-20 rounded-xl px-2 py-1.5 text-sm" data-testid="filter-min-score" />
+          </label>
+          {(query || onlyEligible || onlyFlagged || minScore > 0) && (
+            <button type="button"
+              onClick={() => { setQuery(''); setOnlyEligible(false); setOnlyFlagged(false); setMinScore(0); }}
+              className="sf-subtle-control rounded-xl px-3 py-1.5 text-[13px] font-semibold"
+              data-testid="clear-filters">
+              Clear
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="sf-panel overflow-hidden rounded-2xl">
         <div className="hidden grid-cols-[40px_minmax(0,1.8fr)_72px_1.1fr_1.2fr_1.2fr_112px] gap-2 px-4 pb-2.5 pt-4 text-[11.5px] font-bold uppercase tracking-wide text-[var(--sf-muted-soft)] lg:grid">
           <span>
@@ -717,7 +892,7 @@ export default function AdminCampaignDetailPage() {
           </div>
         )}
 
-        {candidates?.map((c) => {
+        {shown.map((c) => {
           const needsReview = c.verification?.verdict === 'review';
           return (
             <div
@@ -890,6 +1065,54 @@ export default function AdminCampaignDetailPage() {
               <div>
                 <StatusBadge status={c.status} />
               </div>
+
+              {/* The reasoning, kept with the person it is about. A status
+                  records what was decided; this is the only place the WHY
+                  survives once the week is over. */}
+              <div className="lg:col-span-7">
+                {noteFor === c.id ? (
+                  <div className="mt-1 flex flex-col gap-1.5 sm:flex-row">
+                    <input
+                      autoFocus
+                      value={noteText}
+                      onChange={(e) => setNoteText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') void saveNote(c.id);
+                        if (e.key === 'Escape') setNoteFor(null);
+                      }}
+                      placeholder="Strong, but wants 20% more. Call back after March."
+                      className="sf-input w-full rounded-xl px-3 py-1.5 text-[13px]"
+                      data-testid="note-input"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => void saveNote(c.id)}
+                      className="sf-primary shrink-0 rounded-xl px-3 py-1.5 text-[13px] font-bold"
+                      data-testid="note-save"
+                    >
+                      Save
+                    </button>
+                  </div>
+                ) : c.reviewerNote ? (
+                  <button
+                    type="button"
+                    onClick={() => { setNoteFor(c.id); setNoteText(c.reviewerNote ?? ''); }}
+                    className="mt-1 block w-full text-left text-[13px] italic leading-relaxed text-[var(--sf-ink-soft)] hover:underline"
+                    data-testid="candidate-note"
+                  >
+                    &ldquo;{c.reviewerNote}&rdquo;
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => { setNoteFor(c.id); setNoteText(''); }}
+                    className="mt-1 text-[12px] font-semibold text-[var(--sf-muted)] hover:text-[var(--sf-primary-dark)]"
+                    data-testid="add-note"
+                  >
+                    + Add a note
+                  </button>
+                )}
+              </div>
             </div>
           );
         })}
@@ -900,6 +1123,118 @@ export default function AdminCampaignDetailPage() {
         look at before inviting. A shared device or a country mismatch both have ordinary
         explanations, and internet cafés and family computers are normal in these markets.
       </p>
+
+      {/*
+        Where people stopped.
+
+        The candidate list only ever contained people who FINISHED. Everything
+        above this point is a report on them, which means every number on the
+        page had already survived the thing most worth knowing about: what the
+        other applicants hit and gave up on. This section is the only one that
+        describes people who are not in the database as candidates at all.
+      */}
+      {funnel && !funnel.empty && (
+        <section className="mt-8 max-w-[820px]" data-testid="funnel-panel">
+          <h2 className="text-base font-bold text-[var(--sf-ink)]">Where people stopped</h2>
+          <p className="mt-1 text-[13px] leading-relaxed text-[var(--sf-muted)]">
+            {funnel.worstStep ? (
+              <>
+                The biggest fall is between{' '}
+                <span className="font-semibold text-[var(--sf-ink)]">{funnel.worstStep.from}</span>{' '}
+                and{' '}
+                <span className="font-semibold text-[var(--sf-ink)]">{funnel.worstStep.to}</span>:{' '}
+                {funnel.worstStep.lost} {funnel.worstStep.lost === 1 ? 'person' : 'people'} (
+                {Math.round(funnel.worstStep.lostShare * 100)}%) got that far and no further.
+              </>
+            ) : (
+              'Nobody has dropped out yet.'
+            )}
+            {funnel.medianCompletionSeconds !== null && (
+              <> Applying takes {formatDuration(funnel.medianCompletionSeconds)} for a typical person.</>
+            )}
+          </p>
+
+          <ol className="mt-4 space-y-1.5" data-testid="funnel-stages">
+            {funnel.stages.map((stage, i) => {
+              const top = funnel.stages[0].reached || 1;
+              return (
+                <li key={stage.step} data-testid={`funnel-${stage.step}`}>
+                  <div className="flex items-baseline justify-between gap-3 text-[13px]">
+                    <span className="text-[var(--sf-ink)]">{stage.label}</span>
+                    <span className="shrink-0 tabular-nums text-[var(--sf-muted)]">
+                      {stage.reached}
+                      {stage.medianSeconds !== null && i > 0 && (
+                        <span className="ml-2">after {formatDuration(stage.medianSeconds)}</span>
+                      )}
+                    </span>
+                  </div>
+                  <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-[var(--sf-surface-2)]">
+                    <div
+                      className="h-full rounded-full bg-[var(--sf-accent)]"
+                      style={{ width: `${Math.round((stage.reached / top) * 100)}%` }}
+                    />
+                  </div>
+                  {stage.lost > 0 && (
+                    <p className="mt-1 text-[12px] text-[var(--sf-muted)]">
+                      {stage.lost} left here
+                      {stage.lostShare !== null && ` (${Math.round(stage.lostShare * 100)}%)`}
+                    </p>
+                  )}
+                </li>
+              );
+            })}
+          </ol>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {funnel.check.started > 0 && (
+              <div className="sf-card rounded-xl p-3" data-testid="funnel-check">
+                <h3 className="text-[13px] font-semibold text-[var(--sf-ink)]">
+                  The connection check
+                </h3>
+                <p className="mt-1 text-[12px] leading-relaxed text-[var(--sf-muted)]">
+                  {funnel.check.started} started it. {funnel.check.passed} passed,{' '}
+                  {funnel.check.flagged} were flagged for review, {funnel.check.blocked} were
+                  blocked.
+                  {funnel.check.blocked > funnel.check.passed &&
+                    ' More people are being blocked than let through, which is worth looking at before it is read as fraud.'}
+                </p>
+              </div>
+            )}
+            {funnel.signup.shown > 0 && (
+              <div className="sf-card rounded-xl p-3" data-testid="funnel-signup">
+                <h3 className="text-[13px] font-semibold text-[var(--sf-ink)]">The account wall</h3>
+                <p className="mt-1 text-[12px] leading-relaxed text-[var(--sf-muted)]">
+                  {funnel.signup.shown} reached it without an account and {funnel.signup.wentOn}{' '}
+                  went on to submit.
+                  {funnel.signup.shown - funnel.signup.wentOn > 0 &&
+                    ` ${funnel.signup.shown - funnel.signup.wentOn} did all the work and stopped at "make an account".`}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {funnel.interview[0].reached > 0 && (
+            <div className="mt-3 sf-card rounded-xl p-3" data-testid="funnel-interview">
+              <h3 className="text-[13px] font-semibold text-[var(--sf-ink)]">
+                The interviews you invited
+              </h3>
+              <p className="mt-1 text-[12px] leading-relaxed text-[var(--sf-muted)]">
+                {funnel.interview.map((stage, i) => (
+                  <span key={stage.step}>
+                    {i > 0 && ' '}
+                    {stage.reached} {stage.label.toLowerCase()}.
+                  </span>
+                ))}
+              </p>
+            </div>
+          )}
+
+          <p className="mt-3 text-[12px] leading-relaxed text-[var(--sf-muted)]">
+            Counted per browser, not per person, and nothing here identifies anybody. Someone who
+            applies from a phone and a laptop is two.
+          </p>
+        </section>
+      )}
 
       {/* Your instrument panel, not the client's. Whether the rubric is
           predicting anything, and whether it is quietly holding a group back.
@@ -961,6 +1296,77 @@ export default function AdminCampaignDetailPage() {
             {calibration.note}
           </p>
         </section>
+      )}
+
+      {/* Choosing five of sixty is a comparison, and doing it one modal at a
+          time is why it takes an afternoon. Same components, same scale, in
+          columns — where the differences are the only thing on screen. */}
+      {comparing && (
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-auto bg-black/40 p-4 sm:p-8"
+          onClick={() => setComparing(false)}
+          data-testid="compare-panel"
+        >
+          <div
+            className="w-full max-w-[1000px] rounded-2xl bg-[var(--sf-surface-strong)] p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-start justify-between gap-4">
+              <h2 className="text-lg font-bold text-[var(--sf-ink)]">
+                Comparing {selected.size} candidates
+              </h2>
+              <button
+                type="button"
+                onClick={() => setComparing(false)}
+                className="sf-subtle-control rounded-xl px-3 py-1.5 text-sm font-semibold"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[640px] text-sm">
+                <thead>
+                  <tr>
+                    <th className="pb-2 pr-4 text-left text-[11px] uppercase tracking-wide text-[var(--sf-muted-soft)]">
+                      &nbsp;
+                    </th>
+                    {compared.map((c) => (
+                      <th key={c.id} className="pb-2 pr-4 text-left align-bottom">
+                        <span className="block text-sm font-bold text-[var(--sf-ink)]">
+                          {c.name ?? c.email}
+                        </span>
+                        <span className="block text-[12px] font-semibold text-[var(--sf-muted)]">
+                          {c.matchScore === null ? 'Not scored' : `${Math.round(Number(c.matchScore))}`}
+                          {c.eligible === false ? ' · ineligible' : ''}
+                        </span>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {compareRows.map((row) => (
+                    <tr key={row.key} className="border-t border-[var(--sf-line)]">
+                      <td className="py-2 pr-4 text-[13px] font-semibold text-[var(--sf-ink-soft)]">
+                        {row.label}
+                      </td>
+                      {compared.map((c) => (
+                        <td key={c.id} className="py-2 pr-4 text-[13px] tabular-nums text-[var(--sf-ink)]">
+                          {row.value(c)}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <p className="mt-3 text-[12px] leading-relaxed text-[var(--sf-muted)]">
+              Components the role did not ask about are left out for everyone, so the columns are
+              comparable. A dash means that candidate had nothing to score there.
+            </p>
+          </div>
+        </div>
       )}
 
       {fit && (
@@ -1136,6 +1542,59 @@ export default function AdminCampaignDetailPage() {
 
             {interview.loading && (
               <p className="text-sm text-[var(--sf-muted)]">Loading the transcript…</p>
+            )}
+
+            {/* Read these before the transcript. Choosing five of twenty
+                means twenty transcripts, and most of each one is the middle —
+                what a reviewer wants is the moment somebody was convincing and
+                the moment they were not. */}
+            {interview.data?.highlights && (
+              <div className="mb-5 grid gap-3 sm:grid-cols-2" data-testid="interview-highlights">
+                {interview.data.highlights.strongest && (
+                  <div className="rounded-xl border border-[var(--sf-line)] bg-[var(--sf-green-soft)] p-3.5">
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--sf-green)]">
+                      Strongest answer
+                      {interview.data.highlights.strongest.score !== null
+                        ? ` · ${interview.data.highlights.strongest.score}/10`
+                        : ''}
+                    </p>
+                    <p className="mt-1 text-[13px] font-semibold text-[var(--sf-ink)]">
+                      {interview.data.highlights.strongest.question}
+                    </p>
+                    <p className="mt-1 line-clamp-4 text-[13px] leading-relaxed text-[var(--sf-ink-soft)]">
+                      {interview.data.highlights.strongest.answer}
+                    </p>
+                  </div>
+                )}
+                {interview.data.highlights.weakest && (
+                  <div className="rounded-xl border border-[var(--sf-line)] bg-[var(--sf-yellow-soft)] p-3.5">
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--sf-yellow)]">
+                      Weakest answer
+                      {interview.data.highlights.weakest.score !== null
+                        ? ` · ${interview.data.highlights.weakest.score}/10`
+                        : ''}
+                    </p>
+                    <p className="mt-1 text-[13px] font-semibold text-[var(--sf-ink)]">
+                      {interview.data.highlights.weakest.question}
+                    </p>
+                    <p className="mt-1 line-clamp-4 text-[13px] leading-relaxed text-[var(--sf-ink-soft)]">
+                      {interview.data.highlights.weakest.answer}
+                    </p>
+                  </div>
+                )}
+                <p className="text-[12px] text-[var(--sf-muted)] sm:col-span-2">
+                  {interview.data.highlights.answered} answered
+                  {interview.data.highlights.skipped > 0
+                    ? `, ${interview.data.highlights.skipped} skipped`
+                    : ''}
+                  {interview.data.highlights.averageScore !== null
+                    ? ` · ${interview.data.highlights.averageScore}/10 average`
+                    : ''}
+                  {interview.data.highlights.skipped > 0
+                    ? ' — somebody who skipped half the interview is a different story from one who answered everything moderately, and the average hides it.'
+                    : ''}
+                </p>
+              </div>
             )}
 
             {interview.data?.evaluation?.summary && (

@@ -508,3 +508,98 @@ test('dates cannot be set into the past, and the reason is shown', async ({ page
   await expect(page.getByText(/already been invited until/)).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText(/without telling them/)).toBeVisible();
 });
+
+test('the list can be narrowed, and notes stay with the person', async ({ page }) => {
+  const created = await apiAs(admin, '/admin/campaigns', {
+    method: 'POST',
+    body: JSON.stringify({
+      title: `Shortlisting ${Date.now().toString(36)}`,
+      company: 'Northwind Labs',
+      jobDescription: JD,
+      location: 'Remote',
+      mustHaveSkills: ['React', 'TypeScript', 'design systems'],
+    }),
+  });
+  const campaign = created.body;
+  await apiAs(admin, `/admin/campaigns/${campaign.id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status: 'collecting' }),
+  });
+
+  // Six people, so the filters are worth showing at all.
+  for (let i = 0; i < 4; i++) await applicant(campaign, `Strong ${i}`, STRONG_CV);
+  await applicant(campaign, 'Weak One', WEAK_CV);
+  await applicant(campaign, 'Weak Two', WEAK_CV);
+
+  await signIn(page, admin);
+  await page.goto(`/admin/campaigns/${campaign.id}`, { waitUntil: 'networkidle' });
+
+  const rows = page.getByTestId('candidate-row');
+  await expect(rows).toHaveCount(6);
+
+  // "Who has X" and "who is missing X" are separate questions, because one box
+  // answering both returns everyone.
+  await page.getByTestId('candidate-search').fill('has:design systems');
+  await expect(rows, 'only the CVs that evidence it').toHaveCount(4);
+
+  await page.getByTestId('candidate-search').fill('missing:design systems');
+  await expect(rows, 'and the ones that do not').toHaveCount(2);
+
+  await page.getByTestId('clear-filters').click();
+  await expect(rows).toHaveCount(6);
+
+  await page.getByTestId('filter-min-score').fill('70');
+  await expect(rows, 'and a score floor narrows it too').toHaveCount(4);
+  await page.getByTestId('clear-filters').click();
+
+  // A note is the only record of WHY, and it survives a reload.
+  await rows.first().getByTestId('add-note').click();
+  await page.getByTestId('note-input').fill('Strong, but wants 20% more. Call back after March.');
+  await page.getByTestId('note-save').click();
+  await expect(page.getByTestId('candidate-note').first()).toContainText('wants 20% more');
+
+  await page.reload({ waitUntil: 'networkidle' });
+  await expect(page.getByTestId('candidate-note').first()).toContainText('Call back after March');
+
+  // And it is searchable, because that is how you find it a week later.
+  await page.getByTestId('candidate-search').fill('March');
+  await expect(page.getByTestId('candidate-row')).toHaveCount(1);
+});
+
+test('candidates can be compared side by side', async ({ page }) => {
+  const created = await apiAs(admin, '/admin/campaigns', {
+    method: 'POST',
+    body: JSON.stringify({
+      title: `Compare ${Date.now().toString(36)}`,
+      company: 'Northwind Labs',
+      jobDescription: JD,
+      location: 'Remote',
+      mustHaveSkills: ['React', 'TypeScript', 'design systems'],
+      targetYears: 5,
+    }),
+  });
+  const campaign = created.body;
+  await apiAs(admin, `/admin/campaigns/${campaign.id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status: 'collecting' }),
+  });
+  await applicant(campaign, 'Sana Riaz', STRONG_CV);
+  await applicant(campaign, 'Wrong File', WEAK_CV);
+
+  await signIn(page, admin);
+  await page.goto(`/admin/campaigns/${campaign.id}`, { waitUntil: 'networkidle' });
+
+  // Compare only appears once there is something to compare against.
+  await page.getByTestId('candidate-row').first().getByRole('checkbox').check();
+  await expect(page.getByTestId('action-compare')).toHaveCount(0);
+  await page.getByTestId('candidate-row').nth(1).getByRole('checkbox').check();
+  await page.getByTestId('action-compare').click();
+
+  const panel = page.getByTestId('compare-panel');
+  await expect(panel).toBeVisible();
+  await expect(panel).toContainText('Sana Riaz');
+  await expect(panel).toContainText('Wrong File');
+  await expect(panel, 'the components, on one scale, in columns').toContainText('Required skills');
+  await expect(panel).toContainText('Relevant years');
+  await expect(panel, 'and what each is missing').toContainText('Not evidenced');
+});
