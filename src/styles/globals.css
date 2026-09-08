@@ -775,27 +775,37 @@ html[data-pwa-standalone] .sf-splash {
   filter: blur(21px);
 }
 
+/*
+ * Both arcs are sized off the stage's own width, with the height following an
+ * aspect ratio, so the rotated ellipse's bounding box still fits inside the
+ * stage. Sizing the width past 100% and the height off the viewport (as this
+ * used to) made the wider arc's box ~14% broader than the stage - and from the
+ * lg breakpoint up to the 1260px cap the stage's right edge IS the viewport's,
+ * so the arc was sliced off flat against the edge of the screen instead of
+ * curving back. The tops are anchored near the stage's middle so the arcs stay
+ * centred on Foli however tall the window is.
+ */
 .auth-stage-arc {
   position: absolute;
   left: 50%;
   pointer-events: none;
   border-top: 1px solid rgba(255, 255, 255, 0.62);
   border-radius: 50%;
-  transform: translateX(-50%) rotate(-8deg);
+  transform: translate(-50%, -50%) rotate(-8deg);
 }
 
 .auth-stage-arc-one {
-  top: 27%;
-  width: 82%;
-  height: 38%;
+  top: 46%;
+  width: 74%;
+  aspect-ratio: 1.4;
 }
 
 .auth-stage-arc-two {
-  top: 39%;
-  width: 105%;
-  height: 44%;
+  top: 61%;
+  width: 90%;
+  aspect-ratio: 1.6;
   border-color: rgba(168, 177, 207, 0.24);
-  transform: translateX(-50%) rotate(8deg);
+  transform: translate(-50%, -50%) rotate(8deg);
 }
 
 @keyframes auth-foli-drift {
