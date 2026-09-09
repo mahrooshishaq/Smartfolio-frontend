@@ -182,20 +182,28 @@ export default function SkillGaps({
     );
   }
 
-  // No readable CV: there is nothing to subtract the requirements FROM. Not the
-  // same as "no gaps", which would read as "your CV covers everything".
+  /*
+   * No readable CV. Still a distinct state from "no gaps" — that would read as
+   * "your CV covers everything" when we have not compared anything — but it is
+   * written as the next step rather than as a confession.
+   *
+   * The earlier copy led with what we could not do and named the formats that
+   * defeat us. A candidate cannot act on our extraction limits, and an apology
+   * where the answer should be makes the product look unsure of itself. Same
+   * information, told as guidance: what to add, and what happens when they do.
+   */
   if (!cvReadable) {
     return (
       <Frame>
         <Header
           title="Skills worth learning next"
-          subtitle="We compare what roles ask for against your CV — and none of your uploaded CVs can be read yet."
+          subtitle="Add your CV and we will match it against what real roles are asking for, then list the skills worth learning."
         />
-        <div className="mt-5 flex items-start gap-3 rounded-2xl bg-[#fdf8ee] px-4 py-3.5">
-          <FiFileText className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-          <p className="font-raleway text-sm leading-relaxed text-amber-900">
-            A scanned photograph or an unusual PDF will not do. Upload it again on{' '}
-            <span className="font-semibold">Resume Analysis</span> and this fills in straight away.
+        <div className="mt-5 flex items-start gap-3 rounded-2xl bg-[#f5f9ff] px-4 py-3.5">
+          <FiFileText className="mt-0.5 h-4 w-4 shrink-0 text-[var(--sf-violet)]" />
+          <p className="font-raleway text-sm leading-relaxed text-slate-700">
+            Upload it on <span className="font-semibold">Resume Analysis</span> and this fills in
+            straight away. A PDF or DOCX you exported from your editor works best.
           </p>
         </div>
       </Frame>
