@@ -29,6 +29,8 @@ type Props = {
   market: SkillGap[];
   applications: number;
   jobsScanned: number;
+  /** Total matched jobs looked at, readable or not. */
+  jobsInFeed?: number;
   cvReadable?: boolean;
   activeGap: string;
   onSelect: (skill: string) => void;
@@ -169,6 +171,7 @@ export default function SkillGaps({
   market,
   applications,
   jobsScanned,
+  jobsInFeed = 0,
   cvReadable = true,
   activeGap,
   onSelect,
@@ -241,7 +244,17 @@ export default function SkillGaps({
       <Group
         icon={FiGlobe}
         label="What the market is asking for"
-        hint={`Across ${jobsScanned} job${jobsScanned === 1 ? '' : 's'} matched to you. You have not applied to these.`}
+        /*
+          When the feed carried adverts we could not read, say so rather than
+          quietly reporting the smaller number as if it were the whole feed.
+          A count whose denominator is hidden invites more confidence than the
+          evidence supports.
+        */
+        hint={
+          jobsInFeed > jobsScanned
+            ? `From ${jobsScanned} of the ${jobsInFeed} jobs matched to you — the rest had adverts too short to read. You have not applied to these.`
+            : `Across ${jobsScanned} job${jobsScanned === 1 ? '' : 's'} matched to you. You have not applied to these.`
+        }
         gaps={market}
         denominator={(g) => `in ${g.demandedBy}`}
         activeGap={activeGap}
