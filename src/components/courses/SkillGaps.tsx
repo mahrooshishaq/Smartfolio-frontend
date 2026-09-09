@@ -16,7 +16,8 @@
  */
 
 import { useState } from 'react';
-import { FiTarget, FiArrowRight, FiChevronDown, FiChevronUp, FiFileText, FiGlobe } from 'react-icons/fi';
+import Link from 'next/link';
+import { FiTarget, FiArrowRight, FiChevronDown, FiChevronUp, FiFileText, FiGlobe, FiUpload, FiBriefcase } from 'react-icons/fi';
 
 export interface SkillGap {
   skill: string;
@@ -199,12 +200,28 @@ export default function SkillGaps({
           title="Skills worth learning next"
           subtitle="Add your CV and we will match it against what real roles are asking for, then list the skills worth learning."
         />
-        <div className="mt-5 flex items-start gap-3 rounded-2xl bg-[#f5f9ff] px-4 py-3.5">
-          <FiFileText className="mt-0.5 h-4 w-4 shrink-0 text-[var(--sf-violet)]" />
-          <p className="font-raleway text-sm leading-relaxed text-slate-700">
-            Upload it on <span className="font-semibold">Resume Analysis</span> and this fills in
-            straight away. A PDF or DOCX you exported from your editor works best.
-          </p>
+        {/*
+          A button, not the name of a page.
+          
+          Telling somebody the answer is on Resume Analysis leaves them to find
+          it: it is under "More" in the nav, so the instruction was the longest
+          part of the journey. The one action this state exists to prompt should
+          be one click away from where they are standing.
+        */}
+        <div className="mt-5 flex flex-col gap-3 rounded-2xl bg-[#f5f9ff] px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <FiFileText className="mt-0.5 h-4 w-4 shrink-0 text-[var(--sf-violet)]" />
+            <p className="font-raleway text-sm leading-relaxed text-slate-700">
+              A PDF or DOCX you exported from your editor works best.
+            </p>
+          </div>
+          <Link
+            href="/upload-resume"
+            className="sf-primary font-raleway inline-flex shrink-0 items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold"
+            data-testid="skill-gaps-upload-cv"
+          >
+            <FiUpload size={15} /> Add your CV
+          </Link>
         </div>
       </Frame>
     );
@@ -222,9 +239,24 @@ export default function SkillGaps({
               ? `Nothing missing. Your CV shows everything the ${applications === 1 ? 'role you applied to' : `${applications} roles you applied to`} asked for.`
               : jobsScanned > 0
                 ? `Nothing missing — your CV covers what the ${jobsScanned} roles matched to you are asking for.`
-                : 'Once jobs are matched to you, or you apply to a role, we will list the skills those adverts ask for that your CV does not show.'
+                : 'Find jobs that match you, and we will list the skills those adverts ask for that your CV does not show.'
           }
         />
+        {/*
+          The same rule as the CV state: the one action worth taking gets a
+          button. Nothing to show here is not a dead end, it is a step they
+          have not taken yet — and a message naming a page they must go and
+          find is where that step gets abandoned.
+        */}
+        {applications === 0 && jobsScanned === 0 && (
+          <Link
+            href="/jobs"
+            className="sf-primary font-raleway mt-5 inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold"
+            data-testid="skill-gaps-browse-jobs"
+          >
+            <FiBriefcase size={15} /> Find matching jobs
+          </Link>
+        )}
       </Frame>
     );
   }
