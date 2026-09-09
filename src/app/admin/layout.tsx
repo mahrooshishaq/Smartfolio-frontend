@@ -14,13 +14,14 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { FiGrid, FiShield, FiArrowLeft, FiUsers } from 'react-icons/fi';
+import { FiGrid, FiShield, FiArrowLeft, FiUsers, FiHome } from 'react-icons/fi';
 import { apiFetch } from '@/lib/api';
 import BrandMark from '@/components/BrandMark';
 
 type Me = { id: string; name: string; email: string; role: string };
 
 const NAV = [
+  { href: '/admin', label: 'Home', icon: FiHome },
   { href: '/admin/campaigns', label: 'Campaigns', icon: FiGrid },
   { href: '/admin/users', label: 'Users', icon: FiUsers },
   { href: '/admin/verification', label: 'Verification', icon: FiShield },
@@ -94,7 +95,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         <nav className="flex flex-col gap-0.5">
           {NAV.map(({ href, label, icon: Icon }) => {
-            const active = pathname.startsWith(href);
+            // Home is an exact match: every admin path starts with '/admin',
+            // so startsWith would light Home up on every page in the section.
+            const active = href === '/admin' ? pathname === '/admin' : pathname.startsWith(href);
             return (
               <Link
                 key={href}
