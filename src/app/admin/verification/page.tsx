@@ -2,11 +2,21 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { adminApi, type DeviceCluster, type VerificationSessionRow } from '@/lib/admin';
+import VerificationTabs from '@/components/admin/VerificationTabs';
 import { useFeedback } from '@/components/ui/feedback';
 import StatusBadge from '@/components/admin/StatusBadge';
 
 export default function AdminVerificationPage() {
   const { error } = useFeedback();
+  // Just the badge count — the queue itself lives on its own route.
+  const [openAppeals, setOpenAppeals] = useState(0);
+  useEffect(() => {
+    adminApi
+      .listAppeals('open')
+      .then((r) => setOpenAppeals(r.count))
+      .catch(() => setOpenAppeals(0));
+  }, []);
+
   const [clusters, setClusters] = useState<DeviceCluster[] | null>(null);
   const [sessions, setSessions] = useState<VerificationSessionRow[] | null>(null);
   const [lists, setLists] = useState<Record<string, unknown> | null>(null);
@@ -44,7 +54,11 @@ export default function AdminVerificationPage() {
         matches.
       </p>
 
-      <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="mt-5">
+        <VerificationTabs openAppeals={openAppeals} />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat
           value={num(lists?.torListSize)}
           label="Tor exits loaded"

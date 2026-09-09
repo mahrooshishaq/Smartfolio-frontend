@@ -283,6 +283,26 @@ export interface AdminUserPage {
   activeWindowDays: number;
 }
 
+/** A candidate's dispute of their own connection check. */
+export interface AdminAppeal {
+  id: string;
+  verdict: 'clean' | 'review' | 'blocked';
+  declaredCountry: string | null;
+  /** What the check actually saw — the point of comparison. */
+  detectedCountry: string | null;
+  findings: Array<{ level: string; code: string; detail: string }>;
+  appealReason: string | null;
+  appealNote: string | null;
+  appealStatus: 'open' | 'accepted' | 'declined' | null;
+  appealedAt: string | null;
+  appealResolvedAt: string | null;
+  appealResolutionNote: string | null;
+  userId: string | null;
+  name: string | null;
+  email: string | null;
+  createdAt: string;
+}
+
 export interface AdminUserStats {
   total: number;
   active: number;
@@ -314,6 +334,18 @@ export interface AdminUserFilters {
 
 export const adminApi = {
   listCampaigns: () => json<Campaign[]>('/api/admin/campaigns'),
+
+  listAppeals: (status: 'open' | 'accepted' | 'declined' | 'all' = 'open') =>
+    json<{ count: number; appeals: AdminAppeal[] }>(
+      `/api/admin/verification/appeals?status=${status}`,
+    ),
+
+  resolveAppeal: (id: string, status: 'accepted' | 'declined', note?: string) =>
+    json<{ status: string; resolvedAt: string }>(`/api/admin/verification/${id}/appeal`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status, note }),
+    }),
 
   userStats: () => json<AdminUserStats>('/api/admin/users/stats'),
 

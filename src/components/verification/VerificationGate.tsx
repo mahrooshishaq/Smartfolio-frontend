@@ -30,6 +30,25 @@ import {
   type VerificationResult,
 } from '@/lib/verification/collector';
 import { APPLY_COUNTRIES } from '@/lib/countries';
+import { apiFetch } from '@/lib/api';
+
+/**
+ * The reasons an honest person actually gives when a check is wrong.
+ *
+ * A fixed list rather than a text box, because appeals only become useful when
+ * they can be COUNTED: forty people all answering "employer_vpn" is a rule that
+ * needs changing, and that pattern is invisible if every dispute is a
+ * paragraph. The note is there for anything the list does not cover.
+ */
+const APPEAL_REASONS: Array<[string, string]> = [
+  ['not_using_vpn', 'I am not using a VPN or proxy'],
+  ['employer_vpn', 'My employer requires a VPN I cannot turn off'],
+  ['travelling', 'I am travelling, and the country I chose is where I am'],
+  ['isp_routing', 'My internet provider routes through another country'],
+  ['mobile_network', 'I am on mobile data'],
+  ['wrong_country_detected', 'The country you detected is wrong'],
+  ['other', 'Something else'],
+];
 
 type Props = {
   context: VerificationContext;
@@ -51,6 +70,7 @@ type Props = {
 };
 
 type Phase = 'idle' | 'running' | 'done' | 'error';
+type AppealPhase = 'hidden' | 'open' | 'sending' | 'sent';
 
 export default function VerificationGate({
   context,
@@ -68,6 +88,42 @@ export default function VerificationGate({
     ip: 'pending', latency: 'pending', submit: 'pending',
   });
   const [result, setResult] = useState<VerificationResult | null>(null);
+
+  /* --------------------------------------------------------------- appeal */
+  const [appealPhase, setAppealPhase] = useState<AppealPhase>('hidden');
+  const [appealReason, setAppealReason] = useState('');
+  const [appealNote, setAppealNote] = useState('');
+  const [appealError, setAppealError] = useState('');
+
+  /**
+   * Tell us the check got it wrong.
+   *
+   * Every rule behind these verdicts can misfire on somebody honest — a
+   * corporate VPN nobody can switch off, satellite internet, a carrier that
+   * geolocates to the wrong country. `blocked` ends an application, so without
+   * this the cost of a false positive lands entirely on the applicant and is
+   * invisible to us: they simply cannot apply, and nobody ever finds out.
+   */
+  async function sendAppeal(sessionId: string) {
+    if (!appealReason) return setAppealError('Please pick the closest reason.');
+    setAppealPhase('sending');
+    setAppealError('');
+    try {
+      const res = await apiFetch(`/api/verification/session/${sessionId}/appeal`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: appealReason, note: appealNote.trim() || undefined }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.message || 'That could not be sent.');
+      }
+      setAppealPhase('sent');
+    } catch (e) {
+      setAppealError(e instanceof Error ? e.message : 'That could not be sent.');
+      setAppealPhase('open');
+    }
+  }
   const [error, setError] = useState<string | null>(null);
   const started = useRef(false);
 
@@ -194,6 +250,90 @@ export default function VerificationGate({
 
   if (!result) return null;
 
+  /**
+   * The dispute panel, shared by both verdicts that cost the candidate
+   * something. A clean check never offers it: there is nothing to dispute, and
+   * offering it anyway invites noise into a queue that only works while
+   * everything in it matters.
+   */
+  const appealPanel = (
+    <div className="mt-4 border-t border-[var(--sf-border)] pt-4">
+      {appealPhase === 'sent' ? (
+        <p className="text-[13px] leading-relaxed text-[var(--sf-muted)]" data-testid="appeal-sent">
+          Thank you — a person will look at this. Your application is not held up while they do.
+        </p>
+      ) : appealPhase === 'hidden' ? (
+        <button
+          type="button"
+          onClick={() => setAppealPhase('open')}
+          className="text-[13px] font-semibold text-[var(--sf-violet)] underline underline-offset-2"
+          data-testid="appeal-open"
+        >
+          This is not right — tell us why
+        </button>
+      ) : (
+        <div data-testid="appeal-form">
+          <p className="text-[13px] font-semibold text-[var(--sf-ink)]">
+            What did we get wrong?
+          </p>
+          <div className="mt-2.5 flex flex-col gap-1.5">
+            {APPEAL_REASONS.map(([value, label]) => (
+              <label
+                key={value}
+                className="flex cursor-pointer items-start gap-2.5 text-[13px] leading-relaxed text-[var(--sf-ink-soft)]"
+              >
+                <input
+                  type="radio"
+                  name="appeal-reason"
+                  value={value}
+                  checked={appealReason === value}
+                  onChange={() => {
+                    setAppealReason(value);
+                    setAppealError('');
+                  }}
+                  className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-[var(--sf-violet)]"
+                />
+                {label}
+              </label>
+            ))}
+          </div>
+
+          <textarea
+            value={appealNote}
+            onChange={(e) => setAppealNote(e.target.value)}
+            maxLength={1000}
+            rows={3}
+            placeholder="Anything else we should know (optional)"
+            className="mt-3 w-full rounded-xl border border-[var(--sf-border)] bg-white px-3 py-2 text-[13px] text-[var(--sf-ink)]"
+          />
+
+          {appealError && (
+            <p className="mt-2 text-[12.5px] text-[var(--sf-red)]">{appealError}</p>
+          )}
+
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void sendAppeal(result.id)}
+              disabled={appealPhase === 'sending'}
+              className="sf-primary rounded-xl px-4 py-2 text-sm font-bold disabled:opacity-60"
+              data-testid="appeal-send"
+            >
+              {appealPhase === 'sending' ? 'Sending…' : 'Send'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setAppealPhase('hidden')}
+              className="text-[13px] font-semibold text-[var(--sf-muted)]"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   const blocks = result.findings.filter((f) => f.level === 'block');
   const contradictions = result.findings.filter((f) => f.level === 'contradiction');
   const isBlocked = result.verdict === 'blocked';
@@ -250,6 +390,7 @@ export default function VerificationGate({
               >
                 <FiRefreshCw className="h-4 w-4" /> Check again
               </button>
+              {appealPanel}
             </>
           ) : needsReview ? (
             <>
@@ -296,6 +437,7 @@ export default function VerificationGate({
                   <FiRefreshCw className="h-4 w-4" /> Run it again
                 </button>
               </div>
+              {appealPanel}
             </>
           ) : (
             <p className="mt-1 text-sm text-[var(--sf-muted)]">
