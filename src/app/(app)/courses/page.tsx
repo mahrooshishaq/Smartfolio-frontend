@@ -87,6 +87,13 @@ interface CoursesResponse {
   data: Course[];
 }
 
+interface SkillGap {
+  skill: string;
+  /** How many separate roles asked for it — the reason to care. */
+  demandedBy: number;
+  roles: string[];
+}
+
 export default function CoursesPage() {
   const router = useRouter();
   const [courses, setCourses] = useState<Course[]>([]);
@@ -106,6 +113,14 @@ export default function CoursesPage() {
   const [category, setCategory] = useState('');
   const [price, setPrice] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+
+  /**
+   * Skills the roles this person applied to asked for and their CV did not
+   * show. Measured by the rubric at application time, not inferred here.
+   */
+  const [gaps, setGaps] = useState<SkillGap[]>([]);
+  const [gapApplications, setGapApplications] = useState(0);
+  const [activeGap, setActiveGap] = useState('');
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
 
@@ -239,10 +254,37 @@ export default function CoursesPage() {
     }
   };
 
+  const fetchGaps = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await apiFetch(`/api/campaigns/me/skill-gaps`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return; // No applications yet is the common case, not an error.
+      const data = await res.json();
+      setGaps(Array.isArray(data?.gaps) ? data.gaps : []);
+      setGapApplications(data?.applications ?? 0);
+    } catch {
+      // The panel is an extra. It must never be the reason the page breaks.
+    }
+  }, [token]);
+
+  /**
+   * Picking a gap drives the ordinary search filter rather than a parallel
+   * mechanism, so it composes with platform/level/price and clears the same way
+   * everything else does. Clicking the active one again turns it off.
+   */
+  const toggleGap = (skill: string) => {
+    const next = activeGap === skill ? '' : skill;
+    setActiveGap(next);
+    setSearch(next);
+  };
+
   useEffect(() => {
     if (!token) { router.push('/login'); return; }
     fetchCourses(1);
     fetchFilters();
+    fetchGaps();
   }, []);
 
   useEffect(() => {
@@ -252,7 +294,14 @@ export default function CoursesPage() {
 
   const clearFilters = () => {
     setSearch(''); setPlatform(''); setLevel(''); setCategory(''); setPrice('');
+    setActiveGap('');
   };
+
+  // Typing over the search box means they are no longer browsing that gap, so
+  // the chip must not keep claiming they are.
+  useEffect(() => {
+    if (activeGap && search !== activeGap) setActiveGap('');
+  }, [search, activeGap]);
 
   const hasActiveFilters = platform || level || category || price;
 
@@ -292,6 +341,73 @@ export default function CoursesPage() {
               {scraping ? <><FiLoader className="animate-spin" size={16} /> Finding Courses...</> : <><FiSearch size={16} /> Find New Courses</>}
             </button>
           </div>
+
+          {/*
+            What their applications proved they were missing.
+
+            Only rendered when there is something measured to say. An empty
+            panel explaining that we have nothing to suggest is worse than no
+            panel, and somebody who has not applied to anything yet should just
+            see their courses.
+          */}
+          {gaps.length > 0 && (
+            <div className="bg-white rounded-[2rem] shadow-sm border border-gray-50 p-4 md:p-6 mb-6">
+              <div className="flex items-start gap-3">
+                <div className="hidden sm:flex w-10 h-10 rounded-xl bg-[#f5f1f7] items-center justify-center shrink-0">
+                  <FiTarget className="text-[var(--sf-violet)]" size={18} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-century text-base md:text-lg font-black text-slate-800">
+                    Skills the roles you applied to asked for
+                  </h3>
+                  <p className="font-raleway text-sm text-gray-500 mt-1">
+                    Across {gapApplications} application{gapApplications === 1 ? '' : 's'}, your CV
+                    didn&rsquo;t show these. Pick one to find courses that teach it.
+                  </p>
+
+                  <div className="flex flex-wrap gap-2 mt-4">
+                    {gaps.map((gap) => {
+                      const active = activeGap === gap.skill;
+                      return (
+                        <button
+                          key={gap.skill}
+                          onClick={() => toggleGap(gap.skill)}
+                          aria-pressed={active}
+                          title={`Asked for by: ${gap.roles.join(', ')}`}
+                          className={`font-raleway flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+                            active ? 'sf-accent-violet' : 'sf-subtle-control'
+                          }`}
+                        >
+                          <span className="capitalize">{gap.skill}</span>
+                          {/* The count is the argument. One role wanting a skill
+                              is a preference; four is a pattern. */}
+                          {gap.demandedBy > 1 && (
+                            <span className="text-xs font-bold opacity-70">
+                              {gap.demandedBy} roles
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {activeGap && (
+                    <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-50">
+                      <p className="font-raleway text-sm text-gray-600 min-w-0 flex-1">
+                        Showing courses for <span className="font-bold capitalize">{activeGap}</span>
+                      </p>
+                      <button
+                        onClick={() => toggleGap(activeGap)}
+                        className="font-raleway flex items-center gap-1 text-xs text-gray-500 hover:text-gray-600 shrink-0"
+                      >
+                        <FiX size={14} /> Show all courses
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Search & Filter Bar */}
           <div className="bg-white rounded-[2rem] shadow-sm border border-gray-50 p-4 md:p-6 mb-8">

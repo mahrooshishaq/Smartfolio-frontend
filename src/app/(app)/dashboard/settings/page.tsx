@@ -11,6 +11,21 @@ import { Select } from '@/components/ui/Select';
 import AvailabilityCard from '@/components/AvailabilityCard';
 
 // --- Enums (matching backend) ---
+/**
+ * Same wording as onboarding, so the answer somebody gave there is the answer
+ * they see here rather than a differently-phrased near-match.
+ */
+const GOALS = [
+  { value: 'job_matching', label: 'Find Jobs', desc: 'Get personalized job recommendations' },
+  { value: 'course_recommendation', label: 'Find Courses', desc: 'Discover relevant learning paths' },
+  { value: 'resume_improvement', label: 'Improve Resume', desc: 'Get AI-powered resume feedback' },
+  { value: 'interview_preparation', label: 'Prepare for Interviews', desc: 'Practice with mock interviews' },
+  { value: 'skill_development', label: 'Develop Skills', desc: 'Bridge your skill gaps' },
+  { value: 'career_guidance', label: 'Career Guidance', desc: 'Get direction for your career' },
+  { value: 'career_transition', label: 'Switch Careers', desc: 'Transition to a new field' },
+  { value: 'university_search', label: 'Find Universities', desc: 'Explore higher education options' },
+];
+
 const CAREER_STAGES = [
   { value: 'exploring', label: 'Exploring' },
   { value: 'advancing', label: 'Advancing' },
@@ -143,6 +158,7 @@ export default function SettingsPage() {
   const [skills, setSkills] = useState<string[]>([]);
   const [interests, setInterests] = useState<string[]>([]);
   const [bio, setBio] = useState('');
+  const [goals, setGoals] = useState<string[]>([]);
 
   const fetchProfile = useCallback(async () => {
     const token = localStorage.getItem('accessToken');
@@ -176,6 +192,7 @@ export default function SettingsPage() {
         setWillingToRelocate(profile.willingToRelocate || false);
         setInterests(profile.interests || []);
         setBio(profile.bio || '');
+        setGoals(profile.primaryGoals || []);
       }
     } catch (err: any) {
       setError(err.message);
@@ -213,6 +230,9 @@ export default function SettingsPage() {
       if (skills.length > 0) body.skills = skills;
       if (interests.length > 0) body.interests = interests;
       if (bio) body.bio = bio;
+      // Only sent when there is a selection: the API requires 1-5, and an empty
+      // array would be rejected rather than read as "leave them alone".
+      if (goals.length > 0) body.goals = goals;
 
       const res = await apiFetch(`/onboarding/profile`, {
         method: 'PUT',
@@ -320,6 +340,65 @@ export default function SettingsPage() {
                 <ToggleField label="Open to Remote" description="Show remote job opportunities" value={openToRemote} onChange={setOpenToRemote} />
                 <ToggleField label="Willing to Relocate" description="Include jobs in other locations" value={willingToRelocate} onChange={setWillingToRelocate} />
               </div>
+            </div>
+
+            {/*
+              What you want from Smartfolio.
+
+              These drive the context every AI feature is given, and until now
+              they were write-once: set during onboarding and unreachable
+              afterwards. Anyone who arrived by applying to a campaign never saw
+              that questionnaire, so theirs were inferred from what they did and
+              this is the first place they can say otherwise.
+            */}
+            <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-50 p-8">
+              <h3 className="font-century text-lg font-bold text-slate-800 mb-2">Your Goals</h3>
+              <p className="font-raleway text-sm text-gray-500 mb-6">
+                What you want from Smartfolio. Pick 1&ndash;5 &mdash; they shape the jobs, courses and
+                advice you get.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {GOALS.map((g) => {
+                  const selected = goals.includes(g.value);
+                  return (
+                    <button
+                      key={g.value}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() =>
+                        setGoals((prev) =>
+                          prev.includes(g.value)
+                            ? prev.filter((v) => v !== g.value)
+                            // Capped at five, matching the API. Silently ignoring
+                            // a sixth click is kinder than an error explaining a
+                            // limit after the fact.
+                            : prev.length >= 5
+                              ? prev
+                              : [...prev, g.value],
+                        )
+                      }
+                      className={`text-left p-4 rounded-2xl border-2 transition-all ${
+                        selected
+                          ? 'border-indigo-500 bg-indigo-50'
+                          : 'border-gray-100 hover:border-gray-200 bg-white'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className={`font-raleway text-sm font-semibold ${selected ? 'text-indigo-700' : 'text-slate-700'}`}>
+                          {g.label}
+                        </span>
+                        {selected && <FiCheck className="text-indigo-500" size={16} />}
+                      </div>
+                      <span className="font-raleway text-xs text-gray-500 mt-1 block">{g.desc}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              {goals.length >= 5 && (
+                <p className="font-raleway text-xs text-gray-500 mt-4">
+                  That&rsquo;s five &mdash; deselect one to choose another.
+                </p>
+              )}
             </div>
 
             {/* Skills & Interests */}
