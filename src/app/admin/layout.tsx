@@ -14,7 +14,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { FiGrid, FiShield, FiArrowLeft } from 'react-icons/fi';
+import { FiGrid, FiShield, FiArrowLeft, FiUsers } from 'react-icons/fi';
 import { apiFetch } from '@/lib/api';
 import BrandMark from '@/components/BrandMark';
 
@@ -22,6 +22,7 @@ type Me = { id: string; name: string; email: string; role: string };
 
 const NAV = [
   { href: '/admin/campaigns', label: 'Campaigns', icon: FiGrid },
+  { href: '/admin/users', label: 'Users', icon: FiUsers },
   { href: '/admin/verification', label: 'Verification', icon: FiShield },
 ];
 

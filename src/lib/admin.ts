@@ -257,8 +257,76 @@ async function json<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+export interface AdminUser {
+  id: string;
+  name: string;
+  email: string;
+  role: 'candidate' | 'admin';
+  isVerified: boolean;
+  availability: 'looking' | 'suspended';
+  suspensionReason: string | null;
+  lastActiveAt: string | null;
+  /** Null for accounts created before signup dates were recorded. */
+  createdAt: string | null;
+  signedUpWith: 'google' | 'password';
+  /** Whether they arrived by applying to a campaign, or signed up directly. */
+  source: 'campaign' | 'direct';
+  sourceCampaignTitle: string | null;
+}
+
+export interface AdminUserPage {
+  users: AdminUser[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  activeWindowDays: number;
+}
+
+export interface AdminUserStats {
+  total: number;
+  active: number;
+  inactive: number;
+  never: number;
+  fromCampaign: number;
+  direct: number;
+  verified: number;
+  admins: number;
+  suspended: number;
+  newThisWeek: number;
+  newThisMonth: number;
+  /** Accounts with no signup date — they predate the column. */
+  undated: number;
+  activeWindowDays: number;
+}
+
+export interface AdminUserFilters {
+  page?: number;
+  limit?: number;
+  search?: string;
+  sort?: 'newest' | 'oldest' | 'active' | 'inactive' | 'name';
+  activity?: 'all' | 'active' | 'inactive' | 'never';
+  source?: 'all' | 'campaign' | 'direct';
+  verified?: 'all' | 'yes' | 'no';
+  availability?: 'all' | 'looking' | 'suspended';
+  role?: 'all' | 'admin' | 'candidate';
+}
+
 export const adminApi = {
   listCampaigns: () => json<Campaign[]>('/api/admin/campaigns'),
+
+  userStats: () => json<AdminUserStats>('/api/admin/users/stats'),
+
+  listUsers: (filters: AdminUserFilters = {}) => {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(filters)) {
+      // 'all' is the server default; sending it just makes the URL noisier.
+      if (value === undefined || value === '' || value === 'all') continue;
+      params.set(key, String(value));
+    }
+    const qs = params.toString();
+    return json<AdminUserPage>(`/api/admin/users${qs ? `?${qs}` : ''}`);
+  },
 
   getCampaign: (id: string) => json<Campaign>(`/api/admin/campaigns/${id}`),
 
