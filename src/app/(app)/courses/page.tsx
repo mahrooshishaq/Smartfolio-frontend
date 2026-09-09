@@ -112,7 +112,9 @@ export default function CoursesPage() {
    * Skills the roles this person applied to asked for and their CV did not
    * show. Measured by the rubric at application time, not inferred here.
    */
-  const [gaps, setGaps] = useState<SkillGap[]>([]);
+  const [appliedGaps, setAppliedGaps] = useState<SkillGap[]>([]);
+  const [marketGaps, setMarketGaps] = useState<SkillGap[]>([]);
+  const [jobsScanned, setJobsScanned] = useState(0);
   const [gapApplications, setGapApplications] = useState(0);
   const [activeGap, setActiveGap] = useState('');
   const [gapsLoading, setGapsLoading] = useState(true);
@@ -258,7 +260,9 @@ export default function CoursesPage() {
       });
       if (!res.ok) return; // No applications yet is the common case, not an error.
       const data = await res.json();
-      setGaps(Array.isArray(data?.gaps) ? data.gaps : []);
+      setAppliedGaps(Array.isArray(data?.applied) ? data.applied : []);
+      setMarketGaps(Array.isArray(data?.market) ? data.market : []);
+      setJobsScanned(data?.jobsScanned ?? 0);
       setGapApplications(data?.applications ?? 0);
       setCvReadable(data?.cvReadable !== false);
     } catch {
@@ -342,7 +346,9 @@ export default function CoursesPage() {
           </div>
 
           <SkillGaps
-            gaps={gaps}
+            applied={appliedGaps}
+            market={marketGaps}
+            jobsScanned={jobsScanned}
             applications={gapApplications}
             cvReadable={cvReadable}
             activeGap={activeGap}

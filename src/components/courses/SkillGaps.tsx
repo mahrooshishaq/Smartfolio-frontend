@@ -1,23 +1,22 @@
 'use client';
 
 /**
- * What the roles this person applied to asked for, and their CV did not show.
+ * Skills the roles around this person ask for, that their CV does not show.
  *
- * The first version of this was a row of chips that rendered only when there
- * were gaps to show. That is the failure mode a feature cannot recover from: a
- * candidate with applications but no computed gaps saw an ordinary courses page
- * and had no way to tell the difference between "nothing to report" and "this
- * does not exist". So this component always renders something, and each empty
- * case says which one it is and what to do about it.
+ * Two groups, deliberately never merged. Roles they APPLIED to are the
+ * strongest evidence about them — they chose those. Roles merely MATCHED to
+ * them are weaker, but they are the only thing available before anyone applies
+ * to anything, which is most people most of the time. One blended number would
+ * claim "6 roles wanted this" where five were never seen.
  *
- * Cards rather than chips because a gap is not one word. It is a skill, how
- * many roles wanted it, WHICH roles, and an action — and the count is the
- * persuasive part: one advert asking for Kubernetes is a preference, four is a
- * pattern worth a weekend.
+ * This section always renders. An earlier version showed only when it had gaps,
+ * which is the one failure a feature cannot recover from: a candidate saw an
+ * ordinary courses page and could not tell "nothing to report" from "this does
+ * not exist".
  */
 
 import { useState } from 'react';
-import { FiTarget, FiArrowRight, FiChevronDown, FiChevronUp, FiFileText } from 'react-icons/fi';
+import { FiTarget, FiArrowRight, FiChevronDown, FiChevronUp, FiFileText, FiGlobe } from 'react-icons/fi';
 
 export interface SkillGap {
   skill: string;
@@ -26,9 +25,10 @@ export interface SkillGap {
 }
 
 type Props = {
-  gaps: SkillGap[];
+  applied: SkillGap[];
+  market: SkillGap[];
   applications: number;
-  /** False when no uploaded CV has readable text — a different problem. */
+  jobsScanned: number;
   cvReadable?: boolean;
   activeGap: string;
   onSelect: (skill: string) => void;
@@ -55,90 +55,46 @@ const Header = ({ title, subtitle }: { title: string; subtitle: string }) => (
   </div>
 );
 
-export default function SkillGaps({
+/**
+ * One group of gaps.
+ *
+ * `denominator` is what the count is out of, and it differs per group — "3 of 5
+ * applications" against "in 6 matched jobs". Saying it on every card is what
+ * keeps the two from being read as the same measurement.
+ */
+function Group({
+  icon: Icon,
+  label,
+  hint,
   gaps,
-  applications,
-  cvReadable = true,
+  denominator,
   activeGap,
   onSelect,
-  loading,
-}: Props) {
+}: {
+  icon: typeof FiTarget;
+  label: string;
+  hint: string;
+  gaps: SkillGap[];
+  denominator: (g: SkillGap) => string;
+  activeGap: string;
+  onSelect: (skill: string) => void;
+}) {
   const [expanded, setExpanded] = useState(false);
-
-  if (loading) {
-    return (
-      <Frame>
-        <Header title="Skills your applications asked for" subtitle="Reading your applications…" />
-      </Frame>
-    );
-  }
-
-  // Never applied to anything. Say what this becomes rather than hiding — the
-  // feature is a reason to apply, and nobody discovers a panel that is absent.
-  if (applications === 0) {
-    return (
-      <Frame>
-        <Header
-          title="Skills your applications asked for"
-          subtitle="Apply to a role through Smartfolio and we will list exactly which skills its advert asked for that your CV does not show — then find courses for them."
-        />
-      </Frame>
-    );
-  }
-
-  /*
-   * Applied, but we cannot read their CV — so there is nothing to subtract the
-   * role's requirements FROM. Distinct from "no gaps", which would read as
-   * "your CV covers everything" when the truth is we could not look at it.
-   */
-  if (!cvReadable) {
-    return (
-      <Frame>
-        <Header
-          title="Skills your applications asked for"
-          subtitle={`You have applied to ${applications} role${applications === 1 ? '' : 's'}, but none of your uploaded CVs can be read.`}
-        />
-        <div className="mt-5 flex items-start gap-3 rounded-2xl bg-[#fdf8ee] px-4 py-3.5">
-          <FiFileText className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-          <p className="font-raleway text-sm leading-relaxed text-amber-900">
-            We compare what each role asked for against your CV, so we need one we can read
-            — a scanned photograph or an unusual PDF will not do. Upload it again on{' '}
-            <span className="font-semibold">Resume Analysis</span> and this fills in
-            straight away.
-          </p>
-        </div>
-      </Frame>
-    );
-  }
-
-  /*
-   * Applied, CV readable, nothing missing. Almost always one thing: the CV could not be
-   * read for those applications, so there was no text to compare against the
-   * advert. Saying "no gaps found" here would be a lie by omission — it reads
-   * as "your CV covers everything", which is the opposite of what happened.
-   */
-  if (gaps.length === 0) {
-    return (
-      <Frame>
-        <Header
-          title="Skills your applications asked for"
-          subtitle={`Nothing missing. Your CV shows everything the ${applications === 1 ? 'role you applied to' : `${applications} roles you applied to`} asked for.`}
-        />
-      </Frame>
-    );
-  }
-
+  if (!gaps.length) return null;
   const shown = expanded ? gaps : gaps.slice(0, VISIBLE);
-  const top = gaps[0].demandedBy;
+  const top = gaps[0].demandedBy || 1;
 
   return (
-    <Frame>
-      <Header
-        title="Skills your applications asked for"
-        subtitle={`Taken from ${applications} role${applications === 1 ? '' : 's'} you applied to and checked against your CV. Pick one to find courses for it.`}
-      />
+    <div className="mt-6">
+      <div className="flex items-center gap-2">
+        <Icon className="text-gray-500" size={14} />
+        <p className="font-raleway text-xs font-bold uppercase tracking-wider text-gray-500">
+          {label}
+        </p>
+      </div>
+      <p className="font-raleway text-xs text-gray-500 mt-1">{hint}</p>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 mt-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 mt-3">
         {shown.map((gap) => {
           const active = activeGap === gap.skill;
           return (
@@ -152,11 +108,8 @@ export default function SkillGaps({
                   : 'border-gray-100 hover:border-gray-200 bg-white'
               }`}
             >
-              {/*
-                A bar, not just a number: three cards of "2 of 5" read the same
-                at a glance, while three bars of different lengths do not.
-                Scaled against the top gap so the strongest always fills it.
-              */}
+              {/* A bar, not just a number: three cards reading "2 of 5" look
+                  identical at a glance, three bars of different lengths do not. */}
               <div className="flex items-center gap-2.5">
                 <div className="h-1.5 flex-1 rounded-full bg-gray-100 overflow-hidden">
                   <div
@@ -165,7 +118,7 @@ export default function SkillGaps({
                   />
                 </div>
                 <span className="font-raleway text-xs font-bold text-gray-500 shrink-0">
-                  {gap.demandedBy} of {applications}
+                  {denominator(gap)}
                 </span>
               </div>
 
@@ -173,7 +126,7 @@ export default function SkillGaps({
                 {gap.skill}
               </p>
 
-              {/* Which roles wanted it — the evidence behind the number. */}
+              {/* The roles that asked — the evidence behind the number. */}
               <p className="font-raleway text-xs text-gray-500 mt-1.5 leading-relaxed line-clamp-2">
                 {gap.roles.join(' · ')}
               </p>
@@ -191,35 +144,118 @@ export default function SkillGaps({
         })}
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 mt-5">
-        {gaps.length > VISIBLE ? (
-          <button
-            onClick={() => setExpanded((e) => !e)}
-            className="font-raleway inline-flex items-center gap-1.5 text-sm font-semibold text-gray-600 hover:text-slate-800"
-          >
-            {expanded ? (
-              <>
-                Show fewer <FiChevronUp size={15} />
-              </>
-            ) : (
-              <>
-                Show {gaps.length - VISIBLE} more <FiChevronDown size={15} />
-              </>
-            )}
-          </button>
-        ) : (
-          <span />
-        )}
+      {gaps.length > VISIBLE && (
+        <button
+          onClick={() => setExpanded((e) => !e)}
+          className="font-raleway inline-flex items-center gap-1.5 text-sm font-semibold text-gray-600 hover:text-slate-800 mt-3"
+        >
+          {expanded ? (
+            <>
+              Show fewer <FiChevronUp size={15} />
+            </>
+          ) : (
+            <>
+              Show {gaps.length - VISIBLE} more <FiChevronDown size={15} />
+            </>
+          )}
+        </button>
+      )}
+    </div>
+  );
+}
 
-        {activeGap && (
-          <button
-            onClick={() => onSelect(activeGap)}
-            className="font-raleway text-sm font-semibold text-gray-500 hover:text-gray-600"
-          >
-            Show all courses
-          </button>
-        )}
-      </div>
+export default function SkillGaps({
+  applied,
+  market,
+  applications,
+  jobsScanned,
+  cvReadable = true,
+  activeGap,
+  onSelect,
+  loading,
+}: Props) {
+  if (loading) {
+    return (
+      <Frame>
+        <Header title="Skills worth learning next" subtitle="Reading the roles around you…" />
+      </Frame>
+    );
+  }
+
+  // No readable CV: there is nothing to subtract the requirements FROM. Not the
+  // same as "no gaps", which would read as "your CV covers everything".
+  if (!cvReadable) {
+    return (
+      <Frame>
+        <Header
+          title="Skills worth learning next"
+          subtitle="We compare what roles ask for against your CV — and none of your uploaded CVs can be read yet."
+        />
+        <div className="mt-5 flex items-start gap-3 rounded-2xl bg-[#fdf8ee] px-4 py-3.5">
+          <FiFileText className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+          <p className="font-raleway text-sm leading-relaxed text-amber-900">
+            A scanned photograph or an unusual PDF will not do. Upload it again on{' '}
+            <span className="font-semibold">Resume Analysis</span> and this fills in straight away.
+          </p>
+        </div>
+      </Frame>
+    );
+  }
+
+  const nothing = applied.length === 0 && market.length === 0;
+
+  if (nothing) {
+    return (
+      <Frame>
+        <Header
+          title="Skills worth learning next"
+          subtitle={
+            applications > 0
+              ? `Nothing missing. Your CV shows everything the ${applications === 1 ? 'role you applied to' : `${applications} roles you applied to`} asked for.`
+              : jobsScanned > 0
+                ? `Nothing missing — your CV covers what the ${jobsScanned} roles matched to you are asking for.`
+                : 'Once jobs are matched to you, or you apply to a role, we will list the skills those adverts ask for that your CV does not show.'
+          }
+        />
+      </Frame>
+    );
+  }
+
+  return (
+    <Frame>
+      <Header
+        title="Skills worth learning next"
+        subtitle="Taken from what real adverts ask for and checked against your CV. Pick one to find courses for it."
+      />
+
+      <Group
+        icon={FiTarget}
+        label="From roles you applied to"
+        hint={`Across ${applications} application${applications === 1 ? '' : 's'} you chose.`}
+        gaps={applied}
+        denominator={(g) => `${g.demandedBy} of ${applications}`}
+        activeGap={activeGap}
+        onSelect={onSelect}
+      />
+
+      <Group
+        icon={FiGlobe}
+        label="What the market is asking for"
+        hint={`Across ${jobsScanned} job${jobsScanned === 1 ? '' : 's'} matched to you. You have not applied to these.`}
+        gaps={market}
+        denominator={(g) => `in ${g.demandedBy}`}
+        activeGap={activeGap}
+        onSelect={onSelect}
+      />
+
+      {activeGap && (
+        <button
+          onClick={() => onSelect(activeGap)}
+          className="font-raleway text-sm font-semibold text-gray-500 hover:text-gray-600 mt-5"
+        >
+          Show all courses
+        </button>
+      )}
     </Frame>
   );
 }
