@@ -28,6 +28,8 @@ export interface SkillGap {
 type Props = {
   gaps: SkillGap[];
   applications: number;
+  /** False when no uploaded CV has readable text — a different problem. */
+  cvReadable?: boolean;
   activeGap: string;
   onSelect: (skill: string) => void;
   loading?: boolean;
@@ -56,6 +58,7 @@ const Header = ({ title, subtitle }: { title: string; subtitle: string }) => (
 export default function SkillGaps({
   gaps,
   applications,
+  cvReadable = true,
   activeGap,
   onSelect,
   loading,
@@ -84,7 +87,32 @@ export default function SkillGaps({
   }
 
   /*
-   * Applied, but nothing measured. Almost always one thing: the CV could not be
+   * Applied, but we cannot read their CV — so there is nothing to subtract the
+   * role's requirements FROM. Distinct from "no gaps", which would read as
+   * "your CV covers everything" when the truth is we could not look at it.
+   */
+  if (!cvReadable) {
+    return (
+      <Frame>
+        <Header
+          title="Skills your applications asked for"
+          subtitle={`You have applied to ${applications} role${applications === 1 ? '' : 's'}, but none of your uploaded CVs can be read.`}
+        />
+        <div className="mt-5 flex items-start gap-3 rounded-2xl bg-[#fdf8ee] px-4 py-3.5">
+          <FiFileText className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+          <p className="font-raleway text-sm leading-relaxed text-amber-900">
+            We compare what each role asked for against your CV, so we need one we can read
+            — a scanned photograph or an unusual PDF will not do. Upload it again on{' '}
+            <span className="font-semibold">Resume Analysis</span> and this fills in
+            straight away.
+          </p>
+        </div>
+      </Frame>
+    );
+  }
+
+  /*
+   * Applied, CV readable, nothing missing. Almost always one thing: the CV could not be
    * read for those applications, so there was no text to compare against the
    * advert. Saying "no gaps found" here would be a lie by omission — it reads
    * as "your CV covers everything", which is the opposite of what happened.
@@ -94,17 +122,8 @@ export default function SkillGaps({
       <Frame>
         <Header
           title="Skills your applications asked for"
-          subtitle={`You have applied to ${applications} role${applications === 1 ? '' : 's'}, but we have not been able to compare your CV against ${applications === 1 ? 'it' : 'them'} yet.`}
+          subtitle={`Nothing missing. Your CV shows everything the ${applications === 1 ? 'role you applied to' : `${applications} roles you applied to`} asked for.`}
         />
-        <div className="mt-5 flex items-start gap-3 rounded-2xl bg-[#fdf8ee] px-4 py-3.5">
-          <FiFileText className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-          <p className="font-raleway text-sm leading-relaxed text-amber-900">
-            This usually means the CV on those applications could not be read — a scanned
-            photograph, or an unusual PDF. Uploading it again on{' '}
-            <span className="font-semibold">Resume Analysis</span> is enough to fix it, and your
-            next application will fill this in automatically.
-          </p>
-        </div>
       </Frame>
     );
   }

@@ -116,6 +116,7 @@ export default function CoursesPage() {
   const [gapApplications, setGapApplications] = useState(0);
   const [activeGap, setActiveGap] = useState('');
   const [gapsLoading, setGapsLoading] = useState(true);
+  const [cvReadable, setCvReadable] = useState(true);
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
 
@@ -259,6 +260,7 @@ export default function CoursesPage() {
       const data = await res.json();
       setGaps(Array.isArray(data?.gaps) ? data.gaps : []);
       setGapApplications(data?.applications ?? 0);
+      setCvReadable(data?.cvReadable !== false);
     } catch {
       // The panel is an extra. It must never be the reason the page breaks.
     } finally {
@@ -342,6 +344,7 @@ export default function CoursesPage() {
           <SkillGaps
             gaps={gaps}
             applications={gapApplications}
+            cvReadable={cvReadable}
             activeGap={activeGap}
             onSelect={toggleGap}
             loading={gapsLoading}
