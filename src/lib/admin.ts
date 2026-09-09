@@ -335,6 +335,12 @@ export interface AdminUserFilters {
 export const adminApi = {
   listCampaigns: () => json<Campaign[]>('/api/admin/campaigns'),
 
+  backfillTrackers: () =>
+    json<{ candidates: number; synced: number; failed: number }>(
+      '/api/admin/campaigns/backfill-trackers',
+      { method: 'POST' },
+    ),
+
   listAppeals: (status: 'open' | 'accepted' | 'declined' | 'all' = 'open') =>
     json<{ count: number; appeals: AdminAppeal[] }>(
       `/api/admin/verification/appeals?status=${status}`,

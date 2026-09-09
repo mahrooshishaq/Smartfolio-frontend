@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { FiPlus, FiExternalLink } from 'react-icons/fi';
+import { FiPlus, FiExternalLink, FiRefreshCw } from 'react-icons/fi';
 import { adminApi, type Campaign } from '@/lib/admin';
 import { useFeedback } from '@/components/ui/feedback';
 import StatusBadge from '@/components/admin/StatusBadge';
@@ -16,8 +16,33 @@ const FUNNEL: Array<[string, string]> = [
 ];
 
 export default function AdminCampaignsPage() {
-  const { error } = useFeedback();
+  const { error, success } = useFeedback();
   const [campaigns, setCampaigns] = useState<Campaign[] | null>(null);
+  const [syncing, setSyncing] = useState(false);
+
+  /**
+   * Give candidates the tracker rows they never got.
+   *
+   * Tracker sync only fires at live moments, so anyone whose application and
+   * interview both predate the feature has no row and never will — the moment
+   * that would have made one has gone. Run from here because the server holds
+   * the production connection; the alternative was putting Neon credentials on
+   * a laptop to run a script. Idempotent, so a second press is harmless.
+   */
+  const syncTrackers = async () => {
+    setSyncing(true);
+    try {
+      const r = await adminApi.backfillTrackers();
+      success(
+        `Synced ${r.synced.toLocaleString()} of ${r.candidates.toLocaleString()} candidates to their job trackers.` +
+          (r.failed ? ` ${r.failed} could not be matched to a campaign.` : ''),
+      );
+    } catch (e) {
+      error(e instanceof Error ? e.message : 'Could not sync trackers.');
+    } finally {
+      setSyncing(false);
+    }
+  };
   const load = useCallback(async () => {
     try {
       setCampaigns(await adminApi.listCampaigns());
@@ -46,6 +71,17 @@ export default function AdminCampaignsPage() {
               : `${campaigns.length} campaign${campaigns.length === 1 ? '' : 's'}.`}
           </p>
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={syncTrackers}
+          disabled={syncing}
+          title="Give candidates who applied before automatic tracking the tracker rows they never got"
+          className="sf-subtle-control inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold disabled:opacity-60"
+        >
+          <FiRefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
+          {syncing ? 'Syncing…' : 'Sync job trackers'}
+        </button>
         <Link
           href="/admin/campaigns/new"
           className="sf-primary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold"
@@ -53,6 +89,7 @@ export default function AdminCampaignsPage() {
         >
           <FiPlus className="h-4 w-4" /> New campaign
         </Link>
+        </div>
       </div>
 
       {campaigns && campaigns.length > 0 && (
