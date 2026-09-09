@@ -317,6 +317,12 @@ export const adminApi = {
 
   userStats: () => json<AdminUserStats>('/api/admin/users/stats'),
 
+  backfillSignupDates: () =>
+    json<{ filled: number; remaining: number; total: number }>(
+      '/api/admin/users/backfill-signup-dates',
+      { method: 'POST' },
+    ),
+
   listUsers: (filters: AdminUserFilters = {}) => {
     const params = new URLSearchParams();
     for (const [key, value] of Object.entries(filters)) {

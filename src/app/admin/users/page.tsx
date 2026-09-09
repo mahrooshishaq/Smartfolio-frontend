@@ -51,10 +51,11 @@ function fmtAgo(iso: string | null): string {
 }
 
 export default function AdminUsersPage() {
-  const { error } = useFeedback();
+  const { error, success } = useFeedback();
   const [stats, setStats] = useState<AdminUserStats | null>(null);
   const [data, setData] = useState<AdminUserPage | null>(null);
   const [loading, setLoading] = useState(true);
+  const [backfilling, setBackfilling] = useState(false);
 
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState<AdminUserFilters>({
@@ -66,6 +67,35 @@ export default function AdminUsersPage() {
     // Any change to the question resets to page 1: staying on page 7 of a
     // filter that now has two pages shows an empty table and looks broken.
     setFilters((f) => ({ ...f, ...patch, page: patch.page ?? 1 }));
+
+  /**
+   * Recover the missing signup dates.
+   *
+   * Run on the server rather than by the operator: the production database is
+   * reached through credentials the server already holds, and the alternative
+   * was asking somebody to put those on a laptop to run a script. Idempotent,
+   * so the worst a second press does is report zero.
+   */
+  const runBackfill = async () => {
+    setBackfilling(true);
+    try {
+      const r = await adminApi.backfillSignupDates();
+      success(
+        r.filled > 0
+          ? `Dated ${r.filled.toLocaleString()} account${r.filled === 1 ? '' : 's'}.` +
+              (r.remaining > 0
+                ? ` ${r.remaining.toLocaleString()} left undated — nothing on record to date them by.`
+                : '')
+          : 'Nothing to fill: no account has evidence we can date it from.',
+      );
+      setStats(await adminApi.userStats());
+      await load();
+    } catch (e) {
+      error(e instanceof Error ? e.message : 'Could not recover signup dates.');
+    } finally {
+      setBackfilling(false);
+    }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -140,12 +170,20 @@ export default function AdminUsersPage() {
       {stats && stats.undated > 0 && (
         <div className="mb-4 flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 p-3">
           <FiAlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-          <p className="text-sm text-amber-900">
-            {stats.undated.toLocaleString()} account{stats.undated === 1 ? '' : 's'} have no signup
-            date — they were created before it was recorded, and sort last under
-            &ldquo;newest&rdquo;. Running <code className="font-mono text-xs">npm run backfill:signup-dates</code>{' '}
-            recovers a date for most of them.
-          </p>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm text-amber-900">
+              {stats.undated.toLocaleString()} account{stats.undated === 1 ? '' : 's'} have no signup
+              date — they were created before it was recorded, and sort last under
+              &ldquo;newest&rdquo;. Most can be dated from the earliest thing they did.
+            </p>
+            <button
+              onClick={runBackfill}
+              disabled={backfilling}
+              className="mt-2 rounded-xl bg-amber-600 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-60"
+            >
+              {backfilling ? 'Recovering…' : 'Recover signup dates'}
+            </button>
+          </div>
         </div>
       )}
 
@@ -194,7 +232,9 @@ export default function AdminUsersPage() {
             value={filters.verified ?? 'all'} onChange={(v) => set({ verified: v as AdminUserFilters['verified'] })}
             ariaLabel="Verified" className={TRIGGER}
             options={[
-              { value: 'all', label: 'Any status' },
+              // Named for the column it filters. "Any status" was ambiguous
+              // the moment availability became a column of its own.
+              { value: 'all', label: 'Any verification' },
               { value: 'yes', label: 'Verified' },
               { value: 'no', label: 'Unverified' },
             ]}
@@ -212,29 +252,38 @@ export default function AdminUsersPage() {
       </div>
 
       <div className="overflow-x-auto rounded-2xl border border-[var(--sf-line,#eee)] bg-white">
-        <table className="w-full min-w-[860px] text-sm">
+        <table className="w-full min-w-[980px] text-sm">
           <thead>
             <tr className="border-b border-[var(--sf-line,#eee)] text-left text-xs uppercase tracking-wider text-[var(--sf-muted)]">
               <th className="px-4 py-3 font-bold">User</th>
               <th className="px-4 py-3 font-bold">Joined</th>
               <th className="px-4 py-3 font-bold">Last active</th>
               <th className="px-4 py-3 font-bold">Came from</th>
-              <th className="px-4 py-3 font-bold">Status</th>
+              <th className="px-4 py-3 font-bold">Availability</th>
+              <th className="px-4 py-3 font-bold">Verified</th>
             </tr>
           </thead>
           <tbody>
             {loading && (
-              <tr><td colSpan={5} className="px-4 py-10 text-center text-[var(--sf-muted)]">Loading…</td></tr>
+              <tr><td colSpan={6} className="px-4 py-10 text-center text-[var(--sf-muted)]">Loading…</td></tr>
             )}
             {!loading && data?.users.length === 0 && (
-              <tr><td colSpan={5} className="px-4 py-10 text-center text-[var(--sf-muted)]">
+              <tr><td colSpan={6} className="px-4 py-10 text-center text-[var(--sf-muted)]">
                 No users match those filters.
               </td></tr>
             )}
             {!loading && data?.users.map((u: AdminUser) => (
               <tr key={u.id} className="border-b border-[var(--sf-line,#f5f5f5)] last:border-0">
                 <td className="px-4 py-3">
-                  <p className="font-semibold text-[var(--sf-ink)]">{u.name}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold text-[var(--sf-ink)]">{u.name}</p>
+                    {/* Role is what someone IS, not a status they are in. */}
+                    {u.role === 'admin' && (
+                      <span className="rounded-lg bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-700">
+                        Admin
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-[var(--sf-muted)]">{u.email}</p>
                 </td>
                 <td className="px-4 py-3 text-[var(--sf-muted)]">{fmtDate(u.createdAt)}</td>
@@ -260,26 +309,41 @@ export default function AdminUsersPage() {
                   )}
                   <p className="mt-1 text-xs text-[var(--sf-muted)]">via {u.signedUpWith}</p>
                 </td>
+                {/*
+                  Availability and verification are separate columns because
+                  they are separate questions. Crammed into one "Status" cell
+                  they could not be scanned down: a column of mixed badges tells
+                  you nothing at a glance, and every row had to be read.
+                */}
                 <td className="px-4 py-3">
-                  <div className="flex flex-wrap gap-1">
-                    {u.role === 'admin' && (
-                      <span className="rounded-lg bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-700">Admin</span>
-                    )}
-                    {!u.isVerified && (
-                      <span className="rounded-lg bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700">Unverified</span>
-                    )}
-                    {u.availability === 'suspended' && (
-                      <span
-                        title={u.suspensionReason ?? undefined}
-                        className="rounded-lg bg-red-50 px-2 py-1 text-xs font-semibold text-red-700"
-                      >
-                        Suspended
-                      </span>
-                    )}
-                    {u.isVerified && u.availability === 'looking' && u.role !== 'admin' && (
-                      <span className="text-xs text-[var(--sf-muted)]">Looking</span>
-                    )}
-                  </div>
+                  {u.availability === 'suspended' ? (
+                    <span
+                      title={u.suspensionReason ?? undefined}
+                      className="rounded-lg bg-red-50 px-2 py-1 text-xs font-semibold text-red-700"
+                    >
+                      Suspended
+                    </span>
+                  ) : (
+                    <span className="rounded-lg bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">
+                      Looking
+                    </span>
+                  )}
+                  {u.availability === 'suspended' && u.suspensionReason && (
+                    <p className="mt-1 max-w-[220px] truncate text-xs text-[var(--sf-muted)]">
+                      {u.suspensionReason}
+                    </p>
+                  )}
+                </td>
+                <td className="px-4 py-3">
+                  {u.isVerified ? (
+                    <span className="rounded-lg bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">
+                      Verified
+                    </span>
+                  ) : (
+                    <span className="rounded-lg bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700">
+                      Unverified
+                    </span>
+                  )}
                 </td>
               </tr>
             ))}
