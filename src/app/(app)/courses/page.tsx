@@ -428,13 +428,54 @@ export default function CoursesPage() {
           {loading ? (
             <CoursesSkeleton />
           ) : courses.length === 0 ? (
+            /*
+              "No Courses Found" was a verdict delivered before anything had
+              been looked for. Nothing had failed: we had checked this user's
+              own courses, and the search that would actually go and find some
+              was sitting behind a separate button phrased as a consolation.
+
+              Searching a term reads as an instruction, so the empty state now
+              offers to carry it out — and names the term, so it is obvious what
+              is about to be searched for.
+            */
             <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-50 p-16 text-center">
               <FiBookOpen className="mx-auto text-gray-200 mb-4" size={48} />
-              <h3 className="font-century text-xl font-bold text-slate-700 mb-2">No Courses Found</h3>
-              <p className="font-raleway text-sm text-gray-500 mb-6">Click &quot;Find New Courses&quot; to discover personalized courses based on your profile.</p>
-              <button onClick={runScraper} disabled={scraping} className="sf-primary font-raleway px-8 py-3 rounded-2xl font-semibold text-sm transition-all disabled:opacity-60">
-                {scraping ? 'Finding Courses...' : 'Find Courses Now'}
-              </button>
+              {search.trim() ? (
+                <>
+                  <h3 className="font-century text-xl font-bold text-slate-700 mb-2">
+                    {scraping ? (
+                      <>Searching for &ldquo;{search.trim()}&rdquo; courses&hellip;</>
+                    ) : (
+                      <>Nothing here on &ldquo;{search.trim()}&rdquo; yet</>
+                    )}
+                  </h3>
+                  <p className="font-raleway text-sm text-gray-500 mb-6">
+                    {scraping
+                      ? 'This takes a minute or two. The results appear here as soon as they land.'
+                      : 'We can go and look for courses on this now.'}
+                  </p>
+                  <button
+                    onClick={runScraper}
+                    disabled={scraping}
+                    className="sf-primary font-raleway px-8 py-3 rounded-2xl font-semibold text-sm transition-all disabled:opacity-60"
+                    data-testid="find-courses-for-term"
+                  >
+                    {scraping ? 'Searching…' : `Find ${search.trim()} courses`}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <h3 className="font-century text-xl font-bold text-slate-700 mb-2">
+                    {scraping ? 'Finding your courses…' : 'No courses yet'}
+                  </h3>
+                  <p className="font-raleway text-sm text-gray-500 mb-6">
+                    We will find courses based on your profile and the roles you are aiming at.
+                  </p>
+                  <button onClick={runScraper} disabled={scraping} className="sf-primary font-raleway px-8 py-3 rounded-2xl font-semibold text-sm transition-all disabled:opacity-60">
+                    {scraping ? 'Finding Courses...' : 'Find Courses Now'}
+                  </button>
+                </>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
