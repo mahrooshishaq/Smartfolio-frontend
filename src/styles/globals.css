@@ -105,7 +105,19 @@ select {
    Foli — the SmartFolio mascot. Drives auth reactions, loading screens and the
    post-login takeover. State is set via a class on the <svg class="foli …">.
 =========================================================================== */
-.foli { overflow: visible; display: block; }
+/*
+ * `will-change: contents` is the fix for the blocky fragments that used to
+ * appear around Foli. Every animated part inside this SVG - the pupils, the
+ * blink, the spark's twinkle, the float group - is a CSS transform animation,
+ * and Blink promoted each one to its own compositor layer: eleven layers for
+ * one small mascot, per the LayerTree compositing reasons. Compositing
+ * individual children inside an SVG is where their bounds go wrong, and the
+ * stale tiles were those layers' edges. Declaring the contents as changing
+ * stops the per-child promotion and Foli paints as a single layer (eleven
+ * layers down to three, measured). Do not swap this for will-change:transform
+ * or contain:paint - both were measured and both leave all eleven.
+ */
+.foli { overflow: visible; display: block; will-change: contents; }
 .foli .foli-float { animation: foli-floaty 4s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 50%; }
 @keyframes foli-floaty { 0%,100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(-7px) rotate(1deg); } }
 
@@ -741,38 +753,78 @@ html[data-pwa-standalone] .sf-splash {
   transform: none;
 }
 
+/*
+ * Two things are deliberately absent here. `will-change: transform` pinned this
+ * subtree to a composited layer for the whole life of the page, and a layer
+ * with content animating inside it is what leaves blocky stale tiles around
+ * Foli. `transform-style: preserve-3d` only ever existed to give the mascot
+ * below a Z position of its own - see the note on .auth-foli-character. The
+ * tilt still reads as 3D either way: .auth-foli-stage's perspective applies to
+ * this element, its direct child, and a 220ms hover transition does not need a
+ * permanent layer to stay smooth.
+ */
 .auth-foli-model {
   --auth-tilt-x: 0deg;
   --auth-tilt-y: 0deg;
-  transform-style: preserve-3d;
+  position: relative;
   transform: rotateX(var(--auth-tilt-x)) rotateY(var(--auth-tilt-y));
   transition: transform 220ms ease-out;
-  will-change: transform;
 }
 
+/*
+ * No filter and no 3D transform here, on purpose - both bought this element a
+ * render surface of its own to animate inside, which is what shed stale tiles.
+ * The shadow and halo are drawn as gradients instead; see .auth-foli-glow.
+ *
+ * The lift the Z gave us is reproduced with a plain 2D scale. Under the stage's
+ * 1100px perspective, translateZ(42px) worked out to 1100/(1100-42) = 1.04, and
+ * the drift's 52px to 1.05 - same size, same centre, no render surface.
+ */
 .auth-foli-character {
   width: min(380px, 32vw);
   height: min(380px, 32vw);
-  transform: translateZ(42px);
-  filter:
-    drop-shadow(0 48px 38px rgba(166, 113, 183, 0.16))
-    drop-shadow(18px 24px 34px rgba(207, 159, 255, 0.18))
-    drop-shadow(0 13px 9px rgba(69, 64, 91, 0.12))
-    drop-shadow(-5px 5px 1px rgba(231, 214, 241, 0.52));
+  transform: scale(1.04);
   animation: auth-foli-drift 5.8s ease-in-out infinite;
 }
 
-.auth-foli-shadow {
-  width: min(285px, 24vw);
-  height: 32px;
-  margin-top: -38px;
+/*
+ * Foli's lift is drawn with gradients, not filters. drop-shadow() chains - each
+ * one blurs the last one's output - so the four stacked shadows this used to
+ * carry grew the mascot's compositor layer from 380x380 to 918x918, six times
+ * the area, re-rasterised on every animation frame. That oversized, constantly
+ * repainting layer is what shed blocky stale tiles around Foli, and it is why
+ * only the auth stage showed them: no other Foli instance carries a filter.
+ * A radial gradient costs no render surface, so the layer stays the mascot's
+ * own size. Do not reintroduce a filter here.
+ */
+.auth-foli-glow {
+  position: absolute;
+  left: 50%;
+  top: 53%;
+  width: 122%;
+  height: 112%;
+  transform: translate(-50%, -50%);
   border-radius: 50%;
-  background: linear-gradient(
-    90deg,
-    rgba(209, 138, 215, 0.10),
-    rgba(207, 159, 255, 0.16)
+  background: radial-gradient(
+    closest-side,
+    rgba(196, 150, 236, 0.30),
+    rgba(207, 159, 255, 0.16) 56%,
+    rgba(207, 159, 255, 0) 100%
   );
-  filter: blur(21px);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.auth-foli-shadow {
+  width: min(327px, 27.5vw);
+  height: 74px;
+  margin-top: -59px;
+  background: radial-gradient(
+    closest-side,
+    rgba(150, 110, 175, 0.30),
+    rgba(180, 130, 205, 0.15) 52%,
+    rgba(207, 159, 255, 0) 100%
+  );
 }
 
 /*
@@ -809,8 +861,8 @@ html[data-pwa-standalone] .sf-splash {
 }
 
 @keyframes auth-foli-drift {
-  0%, 100% { transform: translate3d(0, 0, 42px) rotateZ(-0.5deg); }
-  50% { transform: translate3d(0, -10px, 52px) rotateZ(0.5deg); }
+  0%, 100% { transform: translateY(0) scale(1.04) rotate(-0.5deg); }
+  50% { transform: translateY(-10px) scale(1.05) rotate(0.5deg); }
 }
 
 @media (prefers-reduced-motion: reduce) {

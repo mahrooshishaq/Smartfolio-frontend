@@ -86,6 +86,7 @@ export default function AuthShell({
           <div className="auth-stage-arc auth-stage-arc-two" aria-hidden="true" />
           <div className="auth-foli-stage flex flex-col items-center">
             <div ref={modelRef} className="auth-foli-model">
+              <div className="auth-foli-glow" aria-hidden="true" />
               <Foli state={foli} className="auth-foli-character" />
             </div>
             <div className="auth-foli-shadow" />
