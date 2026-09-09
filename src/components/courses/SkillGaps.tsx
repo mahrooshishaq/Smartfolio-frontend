@@ -23,6 +23,8 @@ export interface SkillGap {
   skill: string;
   demandedBy: number;
   roles: string[];
+  /** The skill plus the role that demanded it — what to search with. */
+  searchQuery?: string;
 }
 
 type Props = {
@@ -32,7 +34,7 @@ type Props = {
   jobsScanned: number;
   cvReadable?: boolean;
   activeGap: string;
-  onSelect: (skill: string) => void;
+  onSelect: (skill: string, searchQuery?: string) => void;
   loading?: boolean;
 };
 
@@ -78,7 +80,7 @@ function Group({
   gaps: SkillGap[];
   denominator: (g: SkillGap) => string;
   activeGap: string;
-  onSelect: (skill: string) => void;
+  onSelect: (skill: string, searchQuery?: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   if (!gaps.length) return null;
@@ -101,7 +103,7 @@ function Group({
           return (
             <button
               key={gap.skill}
-              onClick={() => onSelect(gap.skill)}
+              onClick={() => onSelect(gap.skill, gap.searchQuery)}
               aria-pressed={active}
               className={`text-left rounded-2xl border-2 p-4 transition-all ${
                 active

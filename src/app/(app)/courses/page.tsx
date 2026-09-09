@@ -117,6 +117,8 @@ export default function CoursesPage() {
   const [jobsScanned, setJobsScanned] = useState(0);
   const [gapApplications, setGapApplications] = useState(0);
   const [activeGap, setActiveGap] = useState('');
+  /** What to scrape for when the local list comes up empty. */
+  const [gapQuery, setGapQuery] = useState('');
   const [gapsLoading, setGapsLoading] = useState(true);
   const [cvReadable, setCvReadable] = useState(true);
 
@@ -216,7 +218,9 @@ export default function CoursesPage() {
           const res = await apiFetch(`/scraper/search`, {
             method: 'POST',
             headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query: search.trim(), type: 'both' }),
+            // The gap's own contextualised query when one is active, so an
+            // ambiguous skill name is never sent to a job board on its own.
+            body: JSON.stringify({ query: (gapQuery || search).trim(), type: 'both' }),
           });
           if (res.status === 401) { router.push('/login'); return; }
           if (res.ok) jobId = (await res.json()).jobId;
@@ -277,10 +281,17 @@ export default function CoursesPage() {
    * mechanism, so it composes with platform/level/price and clears the same way
    * everything else does. Clicking the active one again turns it off.
    */
-  const toggleGap = (skill: string) => {
+  const toggleGap = (skill: string, searchQuery?: string) => {
     const next = activeGap === skill ? '' : skill;
     setActiveGap(next);
     setSearch(next);
+    /*
+     * The skill filters the courses already here; the CONTEXTUALISED query is
+     * what gets scraped if none are. "dax" alone returns the rapper in six of
+     * eight results, "dax power bi data analyst" in none of them — so the
+     * search that goes out to a job board is not the word on the card.
+     */
+    setGapQuery(next ? (searchQuery || next) : '');
   };
 
   useEffect(() => {
@@ -297,7 +308,7 @@ export default function CoursesPage() {
 
   const clearFilters = () => {
     setSearch(''); setPlatform(''); setLevel(''); setCategory(''); setPrice('');
-    setActiveGap('');
+    setActiveGap(''); setGapQuery('');
   };
 
   // Typing over the search box means they are no longer browsing that gap, so
