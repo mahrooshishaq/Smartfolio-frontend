@@ -81,6 +81,8 @@ export default function ApplyPage() {
   const [country, setCountry] = useState('');
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [verification, setVerification] = useState<VerificationResult | null>(null);
+  /** Whether they have confirmed the country, which is what starts the check. */
+  const [locationConfirmed, setLocationConfirmed] = useState(false);
   const [result, setResult] = useState<{
     candidateId: string;
     resumeId: string | null;
@@ -221,24 +223,44 @@ export default function ApplyPage() {
 
   function missingRequired(): string | null {
     if (!file) return 'Please attach your CV.';
-    if (!country) return 'Please tell us which country you are in.';
     for (const q of campaign?.questions ?? []) {
       if (q.required && !answers[q.id]?.trim()) return `Please answer: ${q.label}`;
     }
     return null;
   }
 
-  async function continueToCheck() {
+  /**
+   * Leave the details step.
+   *
+   * Signing up now comes BEFORE the connection check, which is the whole point
+   * of this ordering: a `blocked` verdict used to return before the account
+   * step ever rendered, so the people most worth identifying were the ones
+   * guaranteed never to have an account. Every check now belongs to somebody.
+   */
+  async function continueFromDetails() {
     const missing = missingRequired();
     if (missing) return error(missing);
     try {
-      await saveDraft({ answers, declaredCountry: country });
+      await saveDraft({ answers });
       track('details_completed', slug);
-      track('check_started', slug);
-      setStage('checking');
+      if (!signedIn) track('signup_shown', slug);
+      setStage(signedIn ? 'checking' : 'account');
     } catch (e) {
       error(e instanceof Error ? e.message : 'Could not save your application.');
     }
+  }
+
+  /** Country confirmed — this is what starts the connection check. */
+  async function confirmLocation() {
+    if (!country) return error('Please tell us which country you are in.');
+    try {
+      await saveDraft({ declaredCountry: country, answers });
+    } catch {
+      // The check itself records the declared country, so a failed autosave
+      // must not stand between them and finishing.
+    }
+    track('check_started', slug);
+    setLocationConfirmed(true);
   }
 
   async function onVerified(outcome: VerificationResult) {
@@ -261,9 +283,11 @@ export default function ApplyPage() {
     // stops here — not to refuse anyone, but because being advanced past a
     // finding they never saw is how a candidate later discovers they were
     // "flagged" and was never told. The gate shows a Continue button.
+    //
+    // Blocked still refuses the application, exactly as before. The only thing
+    // that changed is that we now know whose application was refused.
     if (outcome.verdict !== 'clean') return;
-    if (!signedIn) track('signup_shown', slug);
-    setStage(signedIn ? 'submitting' : 'account');
+    setStage('submitting');
   }
 
   /* -------------------------------------------------------------- claim -- */
@@ -314,7 +338,9 @@ export default function ApplyPage() {
   useEffect(() => {
     if (!campaign || stage !== 'form' || !signedIn) return;
     if (takePendingApplication() !== slug) return;
-    setStage('submitting');
+    // Straight to the check rather than to submit: it has not run yet, because
+    // it now runs after the account exists.
+    setStage('checking');
   }, [campaign, stage, signedIn, slug]);
 
   function goToAuth(path: '/signup' | '/login') {
@@ -500,22 +526,6 @@ export default function ApplyPage() {
                   </p>
                 </div>
 
-                <div className="mt-5">
-                  <FieldLabel>Which country are you in?</FieldLabel>
-                  <Select
-                    value={country}
-                    onChange={(value) => {
-                      setCountry(value);
-                      void saveDraft({ declaredCountry: value, answers }).catch(() => {});
-                    }}
-                    searchable
-                    options={APPLY_COUNTRIES.map(([value, label]) => ({ value, label }))}
-                    placeholder="Select a country"
-                    ariaLabel="Country you are in"
-                    className="w-full rounded-xl border border-[var(--sf-border)] bg-white px-3.5 py-2.5 text-sm text-[var(--sf-ink)]"
-                  />
-                </div>
-
                 {campaign.questions.map((q) => (
                   <div className="mt-5" key={q.id}>
                     <FieldLabel>
@@ -560,7 +570,7 @@ export default function ApplyPage() {
 
                 <button
                   type="button"
-                  onClick={continueToCheck}
+                  onClick={continueFromDetails}
                   className="sf-primary mt-6 w-full rounded-2xl py-3.5 text-[15px] font-bold"
                   data-testid="apply-continue"
                 >
@@ -570,8 +580,9 @@ export default function ApplyPage() {
                 <div className="mt-4 flex items-start gap-2.5">
                   <FiShield className="mt-0.5 h-4 w-4 shrink-0 text-[var(--sf-muted-soft)]" />
                   <p className="text-xs leading-relaxed text-[var(--sf-muted-soft)]">
-                    A short connection check runs next. It confirms where you are applying from. It
-                    does not read your files, your screen, or your browsing.
+                    {signedIn
+                      ? 'Next you will confirm which country you are applying from, and a short connection check runs. It does not read your files, your screen, or your browsing.'
+                      : 'Next you will create an account, then confirm where you are applying from.'}
                   </p>
                 </div>
               </div>
@@ -580,19 +591,59 @@ export default function ApplyPage() {
             {stage === 'checking' && (
               <div data-testid="apply-checking">
                 <p className="mb-2 text-xs font-bold uppercase tracking-wider text-[var(--sf-muted-soft)]">
-                  Step 2 of 3
+                  Step 3 of 3
                 </p>
-                <VerificationGate
-                  context="apply"
-                  declaredCountry={country}
-                  campaignId={campaign.id}
-                  autoStart
-                  onComplete={onVerified}
-                  onContinue={() => {
-                    if (!signedIn) track('signup_shown', slug);
-                    setStage(signedIn ? 'submitting' : 'account');
-                  }}
-                />
+
+                {/*
+                  The country is asked here, after the account exists, rather
+                  than on the first step. The check is what the declared country
+                  is compared against, and a check that belongs to nobody cannot
+                  be followed up — which was true of 89% of them.
+                */}
+                {!locationConfirmed ? (
+                  <div className="sf-panel rounded-2xl p-6" data-testid="apply-location">
+                    <h2 className="text-[18px] font-bold text-[var(--sf-ink)]">
+                      Where are you applying from?
+                    </h2>
+                    <p className="mt-1.5 text-[13.5px] leading-relaxed text-[var(--sf-muted)]">
+                      A short connection check runs next and confirms this. It does not read your
+                      files, your screen, or your browsing.
+                    </p>
+
+                    <div className="mt-4">
+                      <FieldLabel>Which country are you in?</FieldLabel>
+                      <Select
+                        value={country}
+                        onChange={setCountry}
+                        searchable
+                        options={APPLY_COUNTRIES.map(([value, label]) => ({ value, label }))}
+                        placeholder="Select a country"
+                        ariaLabel="Country you are in"
+                        className="w-full rounded-xl border border-[var(--sf-border)] bg-white px-3.5 py-2.5 text-sm text-[var(--sf-ink)]"
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={confirmLocation}
+                      disabled={!country}
+                      className="sf-primary mt-5 w-full rounded-2xl py-3.5 text-[15px] font-bold disabled:opacity-60"
+                      data-testid="apply-confirm-location"
+                    >
+                      Continue
+                    </button>
+                  </div>
+                ) : (
+                  <VerificationGate
+                    context="apply"
+                    declaredCountry={country}
+                    campaignId={campaign.id}
+                    autoStart
+                    onComplete={onVerified}
+                    onContinue={() => setStage('submitting')}
+                  />
+                )}
+
                 <p className="mt-3 text-xs text-[var(--sf-muted-soft)]">
                   Your CV and answers are already saved.
                 </p>
@@ -602,16 +653,21 @@ export default function ApplyPage() {
             {stage === 'account' && (
               <div className="sf-panel rounded-2xl p-6" data-testid="apply-account">
                 <p className="mb-2 text-xs font-bold uppercase tracking-wider text-[var(--sf-muted-soft)]">
-                  Step 3 of 3
+                  Step 2 of 3
                 </p>
                 <h2 className="text-[18px] font-bold text-[var(--sf-ink)]">
-                  Last thing: who is this from?
+                  Who is this from?
                 </h2>
                 <p className="mt-1.5 text-[13.5px] leading-relaxed text-[var(--sf-muted)]">
-                  Your application is already saved. An account is what lets you track it, and gives
-                  you the rest of Smartfolio while you wait.
+                  Your CV and answers are already saved. An account is what lets you track this
+                  application, and gives you the rest of Smartfolio while you wait.
                 </p>
 
+                {/*
+                  The connection check is NOT listed here any more: it has not
+                  run yet. Claiming a step that has not happened is how a
+                  progress summary stops being worth reading.
+                */}
                 <div className="mt-4 flex flex-col gap-2.5 rounded-2xl bg-[#f8fbff] p-4">
                   <Saved label="CV uploaded" detail={file?.name} />
                   {campaign.questions.length > 0 && (
@@ -619,14 +675,6 @@ export default function ApplyPage() {
                       label={`${campaign.questions.length} question${campaign.questions.length === 1 ? '' : 's'} answered`}
                     />
                   )}
-                  <Saved
-                    label={
-                      verification?.verdict === 'review'
-                        ? 'Connection check complete. One detail flagged'
-                        : 'Connection check passed'
-                    }
-                    tone={verification?.verdict === 'review' ? 'warn' : undefined}
-                  />
                 </div>
 
                 <button
@@ -635,7 +683,7 @@ export default function ApplyPage() {
                   className="sf-primary mt-5 w-full rounded-2xl py-3.5 text-[15px] font-bold"
                   data-testid="apply-create-account"
                 >
-                  Create an account and submit
+                  Create an account and continue
                 </button>
                 <button
                   type="button"
@@ -646,7 +694,7 @@ export default function ApplyPage() {
                   I already have an account
                 </button>
                 <p className="mt-3 text-center text-xs text-[var(--sf-muted-soft)]">
-                  You will come straight back here.
+                  You will come straight back here to finish.
                 </p>
               </div>
             )}
