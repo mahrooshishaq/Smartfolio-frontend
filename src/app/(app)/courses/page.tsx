@@ -115,7 +115,6 @@ export default function CoursesPage() {
   const [appliedGaps, setAppliedGaps] = useState<SkillGap[]>([]);
   const [marketGaps, setMarketGaps] = useState<SkillGap[]>([]);
   const [jobsScanned, setJobsScanned] = useState(0);
-  const [jobsInFeed, setJobsInFeed] = useState(0);
   const [gapApplications, setGapApplications] = useState(0);
   const [activeGap, setActiveGap] = useState('');
   const [gapsLoading, setGapsLoading] = useState(true);
@@ -264,7 +263,6 @@ export default function CoursesPage() {
       setAppliedGaps(Array.isArray(data?.applied) ? data.applied : []);
       setMarketGaps(Array.isArray(data?.market) ? data.market : []);
       setJobsScanned(data?.jobsScanned ?? 0);
-      setJobsInFeed(data?.jobsInFeed ?? 0);
       setGapApplications(data?.applications ?? 0);
       setCvReadable(data?.cvReadable !== false);
     } catch {
@@ -351,7 +349,6 @@ export default function CoursesPage() {
             applied={appliedGaps}
             market={marketGaps}
             jobsScanned={jobsScanned}
-            jobsInFeed={jobsInFeed}
             applications={gapApplications}
             cvReadable={cvReadable}
             activeGap={activeGap}
