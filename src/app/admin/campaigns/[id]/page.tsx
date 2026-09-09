@@ -874,7 +874,9 @@ export default function AdminCampaignDetailPage() {
           <span>Match</span>
           <span>CV</span>
           <span>Elsewhere</span>
-          <span>Verification</span>
+          {/* The connection check's verdict, named the same as the section that
+              owns it — "Verification" collided with the email flag on Users. */}
+          <span>Connection</span>
           <span>Status</span>
         </div>
 

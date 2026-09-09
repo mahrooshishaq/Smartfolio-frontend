@@ -24,7 +24,7 @@ const NAV = [
   { href: '/admin', label: 'Home', icon: FiHome },
   { href: '/admin/campaigns', label: 'Campaigns', icon: FiGrid },
   { href: '/admin/users', label: 'Users', icon: FiUsers },
-  { href: '/admin/verification', label: 'Verification', icon: FiShield },
+  { href: '/admin/verification', label: 'Connection checks', icon: FiShield },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

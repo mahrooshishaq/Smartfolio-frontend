@@ -38,8 +38,8 @@ const SECTIONS = [
     desc: 'Create roles, review applicants and move people through the funnel.' },
   { href: '/admin/users', label: 'Users', icon: FiUsers,
     desc: 'Everyone on the platform, and whether they arrived by applying or signed up directly.' },
-  { href: '/admin/verification', label: 'Verification', icon: FiShield,
-    desc: 'Connection checks run against applicants.' },
+  { href: '/admin/verification', label: 'Connection checks', icon: FiShield,
+    desc: 'Where applicants connected from: location, latency and shared devices.' },
 ];
 
 export default function AdminHomePage() {

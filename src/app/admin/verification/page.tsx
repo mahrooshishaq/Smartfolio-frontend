@@ -37,7 +37,7 @@ export default function AdminVerificationPage() {
 
   return (
     <main className="px-5 py-7 sm:px-8">
-      <h1 className="font-century text-2xl font-bold text-[var(--sf-ink)]">Verification</h1>
+      <h1 className="font-century text-2xl font-bold text-[var(--sf-ink)]">Connection checks</h1>
       <p className="mt-1.5 max-w-[660px] text-sm leading-relaxed text-[var(--sf-muted)]">
         Everything is recorded, nothing is acted on automatically. A cluster is a lead for a person
         to look at: internet cafés, family computers and shared office machines all produce genuine

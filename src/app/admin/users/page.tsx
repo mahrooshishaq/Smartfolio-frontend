@@ -121,7 +121,7 @@ export default function AdminUsersPage() {
   const cards: Array<{ label: string; value: number; hint: string; icon: typeof FiUsers; onClick: () => void }> =
     stats
       ? [
-          { label: 'Total users', value: stats.total, hint: `${stats.verified} verified`, icon: FiUsers,
+          { label: 'Total users', value: stats.total, hint: `${stats.verified} confirmed email`, icon: FiUsers,
             onClick: () => set({ activity: 'all', source: 'all' }) },
           { label: `Active (${stats.activeWindowDays}d)`, value: stats.active, hint: `${stats.newThisWeek} joined this week`, icon: FiUserCheck,
             onClick: () => set({ activity: 'active' }) },
@@ -230,13 +230,14 @@ export default function AdminUsersPage() {
           />
           <Select
             value={filters.verified ?? 'all'} onChange={(v) => set({ verified: v as AdminUserFilters['verified'] })}
-            ariaLabel="Verified" className={TRIGGER}
+            ariaLabel="Email status" className={TRIGGER}
             options={[
-              // Named for the column it filters. "Any status" was ambiguous
-              // the moment availability became a column of its own.
-              { value: 'all', label: 'Any verification' },
-              { value: 'yes', label: 'Verified' },
-              { value: 'no', label: 'Unverified' },
+              // Named for the column it filters, and deliberately not using
+              // the word "verification" — that belongs to the connection
+              // checks in the next section along.
+              { value: 'all', label: 'Any email status' },
+              { value: 'yes', label: 'Email confirmed' },
+              { value: 'no', label: 'Email not confirmed' },
             ]}
           />
           <Select
@@ -260,7 +261,7 @@ export default function AdminUsersPage() {
               <th className="px-4 py-3 font-bold">Last active</th>
               <th className="px-4 py-3 font-bold">Came from</th>
               <th className="px-4 py-3 font-bold">Availability</th>
-              <th className="px-4 py-3 font-bold">Verified</th>
+              <th className="px-4 py-3 font-bold">Email</th>
             </tr>
           </thead>
           <tbody>
@@ -334,14 +335,28 @@ export default function AdminUsersPage() {
                     </p>
                   )}
                 </td>
+                {/*
+                  "Email", not "Verified".
+                  
+                  This is user.isVerified — whether they proved they own the
+                  address, by OTP or by signing in with Google. The admin
+                  sidebar also carries a Connection checks section, which is a
+                  different table answering a different question (where an
+                  applicant connected from), and two things called "verified"
+                  one click apart is how somebody reads a clean connection check
+                  as a confirmed email, or the reverse.
+                */}
                 <td className="px-4 py-3">
                   {u.isVerified ? (
                     <span className="rounded-lg bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">
-                      Verified
+                      Confirmed
                     </span>
                   ) : (
-                    <span className="rounded-lg bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700">
-                      Unverified
+                    <span
+                      title="Signed up but never entered the emailed code — they cannot log in yet."
+                      className="rounded-lg bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700"
+                    >
+                      Not confirmed
                     </span>
                   )}
                 </td>
