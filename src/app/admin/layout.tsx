@@ -14,7 +14,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { FiGrid, FiShield, FiArrowLeft, FiUsers, FiHome } from 'react-icons/fi';
+import { FiGrid, FiShield, FiArrowLeft, FiUsers, FiHome, FiCpu } from 'react-icons/fi';
 import { apiFetch } from '@/lib/api';
 import BrandMark from '@/components/BrandMark';
 
@@ -25,6 +25,7 @@ const NAV = [
   { href: '/admin/campaigns', label: 'Campaigns', icon: FiGrid },
   { href: '/admin/users', label: 'Users', icon: FiUsers },
   { href: '/admin/verification', label: 'Connection checks', icon: FiShield },
+  { href: '/admin/ai', label: 'AI keys', icon: FiCpu },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -126,14 +127,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* Mobile: the sidebar collapses to a row of tabs rather than disappearing. */}
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2 border-b border-[var(--sf-border)] bg-white px-4 py-3 lg:hidden">
-          <BrandMark className="h-5 w-5" />
+        {/*
+          Scrollable, because a fixed row silently hides whatever does not fit.
+          At five items the last tab sat past the right edge on a phone with no
+          way to reach it — and no horizontal page scroll to hint that anything
+          was missing, because an ancestor clips it. Any tab added later would
+          have disappeared the same way.
+        */}
+        <div className="flex items-center gap-2 overflow-x-auto border-b border-[var(--sf-border)] bg-white px-4 py-3 lg:hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <BrandMark className="h-5 w-5 shrink-0" />
           {NAV.map(({ href, label }) => (
             <Link
               key={href}
               href={href}
               className={
-                'rounded-lg px-3 py-1.5 text-sm ' +
+                'shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm ' +
                 (pathname.startsWith(href)
                   ? 'bg-[var(--sf-primary-soft)] font-bold text-[var(--sf-primary-dark)]'
                   : 'font-semibold text-[var(--sf-muted)]')

@@ -62,6 +62,7 @@ export const ROUTES: RouteSpec[] = [
   { path: '/admin/campaigns', auth: true },
   { path: '/admin/campaigns/new', auth: true },
   { path: '/admin/verification', auth: true },
+  { path: '/admin/ai', auth: true },
 ];
 
 /**

@@ -21,7 +21,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
-  FiUsers, FiGrid, FiShield, FiArrowRight, FiUserCheck, FiBriefcase,
+  FiUsers, FiGrid, FiShield, FiArrowRight, FiUserCheck, FiBriefcase, FiCpu,
 } from 'react-icons/fi';
 import { adminApi, type AdminUserStats, type Campaign } from '@/lib/admin';
 
@@ -40,6 +40,8 @@ const SECTIONS = [
     desc: 'Everyone on the platform, and whether they arrived by applying or signed up directly.' },
   { href: '/admin/verification', label: 'Connection checks', icon: FiShield,
     desc: 'Where applicants connected from: location, latency and shared devices.' },
+  { href: '/admin/ai', label: 'AI keys', icon: FiCpu,
+    desc: 'How much of each Groq key is left today, and when you get emailed about it.' },
 ];
 
 export default function AdminHomePage() {

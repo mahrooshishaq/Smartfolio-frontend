@@ -380,8 +380,37 @@ export interface AdminUserFilters {
   role?: 'all' | 'admin' | 'candidate';
 }
 
+/** One Groq key, and how much of today's budget it has left. */
+export interface AiKeyUsage {
+  name: string;
+  /**
+   * Null when this key has not served a request yet — unmeasured, rather than
+   * falsely reported as full. Normal while load is spread across several keys.
+   */
+  usedPercent: number | null;
+  remainingRequests: number | null;
+  limitRequests: number | null;
+  resetsAt: string | null;
+  available: boolean;
+}
+
+export interface AiKeyReport {
+  /**
+   * The number to check after adding a secret. Three secrets on the Space
+   * settings page but `configured: 2` here means the names do not match what
+   * the pool reads, or the Space has not restarted since.
+   */
+  configured: number;
+  available: number;
+  /** The percentages that email the admins, in order. */
+  alertsAt: string[];
+  keys: AiKeyUsage[];
+}
+
 export const adminApi = {
   listCampaigns: () => json<Campaign[]>('/api/admin/campaigns'),
+
+  aiKeys: () => json<AiKeyReport>('/api/admin/ai/keys'),
 
   backfillTrackers: () =>
     json<{ candidates: number; synced: number; failed: number }>(
