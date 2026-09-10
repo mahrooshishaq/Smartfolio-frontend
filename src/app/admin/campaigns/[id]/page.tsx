@@ -92,6 +92,41 @@ function formatDuration(seconds: number): string {
   return `${hours} hour${hours === 1 ? '' : 's'}`;
 }
 
+/**
+ * One decimal, not a whole number.
+ *
+ * The score is stored and sorted to two decimals because the rubric's own
+ * components are coarse enough that rounding invents ties, and a tie here used
+ * to be broken by whoever submitted first. Printing it rounded would hand that
+ * confusion straight back to the reviewer — two rows reading "75" in a list
+ * that has deliberately put one above the other. One decimal is what a person
+ * can actually read; the rank beside it settles anything still too close to
+ * call.
+ */
+const formatScore = (score: string): string => (Math.round(Number(score) * 10) / 10).toFixed(1);
+
+/**
+ * What kind of no this is.
+ *
+ * `absolute` cannot be overruled by anybody — the employer is not permitted to
+ * hire them. `fixable` is a qualification the candidate could obtain and the
+ * employer may choose to waive. `soft` is a shortfall against a number on a
+ * form. Showing one word for all three hid the only part a reviewer needed.
+ */
+function gateLabel(gates: Array<{ gate: string; kind?: string }>): string {
+  if (gates.some((g) => g.kind === 'absolute')) return 'Cannot hire';
+  if (gates.some((g) => g.kind === 'fixable')) return 'Missing requirement';
+  if (gates.some((g) => g.kind === 'soft')) return 'Under minimum';
+  return 'Ineligible';
+}
+
+/** "3rd of 47" — a place reads as a place. */
+function ordinal(n: number): string {
+  const mod100 = n % 100;
+  if (mod100 >= 11 && mod100 <= 13) return `${n}th`;
+  return `${n}${['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;
+}
+
 export default function AdminCampaignDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params.id;
@@ -951,10 +986,68 @@ export default function AdminCampaignDetailPage() {
                     }
                     data-stale={c.scoreStale ? 'true' : 'false'}
                   >
-                    {Math.round(Number(c.matchScore))}
+                    {formatScore(c.matchScore)}
+                  </span>
+                ) : c.fit?.rankable === false ? (
+                  /* Not a low score and not a failure to read the file: a CV
+                     with no dates cannot be measured on the same basis as the
+                     others, so it leaves the ranking and asks for a person. */
+                  <span
+                    className="text-[var(--sf-amber,var(--sf-muted))]"
+                    title={c.fit.notRankableReason ?? undefined}
+                    data-testid="not-ranked"
+                  >
+                    Not ranked
                   </span>
                 ) : (
                   'Not scored'
+                )}
+                {/* Place and evidence: the score says how much, these say
+                    against whom and on what. A reviewer choosing five people
+                    out of forty needs the standing; a reviewer deciding between
+                    two people a point apart needs to know which of them was
+                    quoting a dated role and which was quoting a skills list. */}
+                {/* A profile-derived score keeps its number but holds no place:
+                    it was computed by a different formula against different
+                    inputs, so a rank beside it would assert a comparison nobody
+                    can defend. */}
+                {c.matchScore !== null && c.rank === null && c.fit?.basis === 'profile' && (
+                  <span
+                    className="mt-0.5 block text-[11px] font-semibold text-[var(--sf-muted-soft)]"
+                    title={c.fit.notRankableReason ?? 'Inferred from their profile, not read from the CV.'}
+                    data-testid="profile-basis"
+                  >
+                    from profile · not ranked
+                  </span>
+                )}
+                {c.matchScore !== null && c.rank !== null && (
+                  <span
+                    className="mt-0.5 block text-[11px] font-semibold text-[var(--sf-muted-soft)]"
+                    title="Recalculated on every load — it moves as more people apply, so it is never sent to a candidate."
+                    data-testid="candidate-rank"
+                  >
+                    {ordinal(c.rank)} of {c.rankedOf}
+                  </span>
+                )}
+                {typeof c.fit?.evidencedSkills === 'number' && c.fit.matched.length > 0 && (
+                  <span
+                    className="block text-[11px] font-medium text-[var(--sf-muted-soft)]"
+                    title="Required skills shown inside a dated role, rather than only named in a list. A skills-list mention is worth a fraction of real, dated use."
+                    data-testid="candidate-evidence"
+                  >
+                    {c.fit.evidencedSkills}/{c.fit.matched.length} evidenced
+                  </span>
+                )}
+                {/* Reported, never acted on. The score already ignores whatever
+                    was hidden; this says a person should look at the file. */}
+                {(c.fit?.integrity ?? []).length > 0 && (
+                  <span
+                    className="mt-1 inline-block rounded bg-[var(--sf-red-soft)] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--sf-red)]"
+                    title={c.fit!.integrity!.map((f) => `${f.detail}: ${f.evidence}`).join('\n')}
+                    data-testid="integrity-flag"
+                  >
+                    Check CV
+                  </span>
                 )}
                 {/* A number a reviewer cannot interrogate is the thing this
                     whole rubric exists to stop. */}
@@ -968,13 +1061,27 @@ export default function AdminCampaignDetailPage() {
                     Why?
                   </button>
                 )}
+                {/* Near misses the employer can overrule, shown so they can. */}
+                {(c.fit?.warnings ?? []).length > 0 && c.eligible !== false && (
+                  <span
+                    className="mt-1 inline-block rounded bg-[var(--sf-amber-soft,var(--sf-line))] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--sf-ink-soft)]"
+                    title={c.fit!.warnings!.map((w) => w.reason).join(' ')}
+                    data-testid="soft-warning"
+                  >
+                    {c.fit!.warnings![0].gate === 'experience' ? 'Just under' : 'Check'}
+                  </span>
+                )}
                 {c.eligible === false && (
                   <span
                     className="mt-1 inline-block rounded bg-[var(--sf-red-soft)] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--sf-red)]"
                     title={(c.fit?.gateFailures ?? []).map((g) => g.reason).join(' ')}
                     data-testid="ineligible-badge"
                   >
-                    Ineligible
+                    {/* The badge says WHICH kind of no it is. "Ineligible" read
+                        the same for a nurse without a licence and an engineer a
+                        year short of a round number somebody typed into a form,
+                        and those are not the same decision to be shown. */}
+                    {gateLabel(c.fit?.gateFailures ?? [])}
                   </span>
                 )}
               </div>
@@ -1338,10 +1445,22 @@ export default function AdminCampaignDetailPage() {
                         <span className="block text-sm font-bold text-[var(--sf-ink)]">
                           {c.name ?? c.email}
                         </span>
+                        {/* The one place two candidates are read against each
+                            other directly, so the rounded number did the most
+                            damage here: two people a point apart both showed
+                            "75" in a comparison built to tell them apart. */}
                         <span className="block text-[12px] font-semibold text-[var(--sf-muted)]">
-                          {c.matchScore === null ? 'Not scored' : `${Math.round(Number(c.matchScore))}`}
+                          {c.matchScore === null ? 'Not scored' : formatScore(c.matchScore)}
+                          {c.matchScore !== null && c.rank !== null
+                            ? ` · ${ordinal(c.rank)} of ${c.rankedOf}`
+                            : ''}
                           {c.eligible === false ? ' · ineligible' : ''}
                         </span>
+                        {typeof c.fit?.evidencedSkills === 'number' && c.fit.matched.length > 0 && (
+                          <span className="block text-[11px] font-medium text-[var(--sf-muted-soft)]">
+                            {c.fit.evidencedSkills}/{c.fit.matched.length} evidenced
+                          </span>
+                        )}
                       </th>
                     ))}
                   </tr>
@@ -1485,10 +1604,25 @@ export default function AdminCampaignDetailPage() {
 
             {(fit.data.matched.length > 0 || fit.data.missing.length > 0) && (
               <div className="mt-5 border-t border-[var(--sf-line)] pt-4">
+                {/* "Evidenced" was the wrong word for this list and had been
+                    since the discount existed: `matched` counts a skill sitting
+                    in a Skills list exactly the same as one inside a dated role,
+                    and the two are scored very differently. The count says which
+                    kind this reviewer is actually looking at. */}
                 {fit.data.matched.length > 0 && (
                   <p className="text-[13px] leading-relaxed text-[var(--sf-ink-soft)]">
-                    <strong className="text-[var(--sf-green)]">Evidenced:</strong>{' '}
+                    <strong className="text-[var(--sf-green)]">Found:</strong>{' '}
                     {fit.data.matched.join(', ')}
+                    {typeof fit.data.evidencedSkills === 'number' && (
+                      <span className="text-[var(--sf-muted)]">
+                        {' '}
+                        — {fit.data.evidencedSkills} of {fit.data.matched.length} inside a dated
+                        role
+                        {fit.data.evidencedSkills < fit.data.matched.length
+                          ? `, ${fit.data.matched.length - fit.data.evidencedSkills} named in a list only`
+                          : ''}
+                      </span>
+                    )}
                   </p>
                 )}
                 {fit.data.missing.length > 0 && (

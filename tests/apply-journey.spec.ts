@@ -174,9 +174,6 @@ test('apply logged out, sign up mid-flow, land with everything intact', async ({
   ).toBeGreaterThan(100);
 
   /* -------------------------------------------------------------- answers  */
-  await page.getByRole('button', { name: /Country you are in/i }).click();
-  await page.getByRole('option', { name: 'Pakistan' }).click();
-
   await page.locator('[data-question="perf"]').fill('Cut a 4s hydration down to 600ms by deferring a chart bundle.');
 
   await page.getByRole('button', { name: /Notice period/i }).click();
@@ -192,49 +189,24 @@ test('apply logged out, sign up mid-flow, land with everything intact', async ({
     )
     .toBe('1 month');
 
-  /* ------------------------------------------------------ verification step */
+  /* ------------------------------------------------- account comes first -- */
+  /*
+   * A logged-OUT applicant goes straight to the account step.
+   *
+   * The page says so on the first screen — "Next you will create an account,
+   * then confirm where you are applying from" — and the country moved there
+   * deliberately: the connection check is what the declared country is compared
+   * against, and a check that belongs to nobody cannot be followed up, which was
+   * true of 89% of them.
+   *
+   * This test still expected the country and the check BEFORE signing up, so it
+   * sat waiting for controls that only exist once an account is attached.
+   */
   await page.getByTestId('apply-continue').click();
-  await expect(page.getByTestId('apply-checking')).toBeVisible();
-
-  // The real collector runs here: fingerprint, camera, ipify, ten AWS probes.
-  // Do NOT wait on the result card - a passing check advances the flow
-  // immediately and unmounts it, so waiting for it races the product it is
-  // meant to be testing. Reaching the account step IS the pass condition; the
-  // verdict itself comes from the row the check wrote.
-  // A `review` verdict deliberately stops here so the candidate reads what was
-  // found rather than being swept past it. Clean advances on its own; review
-  // waits for Continue. Both are correct outcomes of this journey.
-  const account = page.getByTestId('apply-account');
-  const reviewContinue = page.getByTestId('verification-continue');
-  await expect(account.or(reviewContinue).first()).toBeVisible({ timeout: 120_000 });
-  if (await reviewContinue.isVisible().catch(() => false)) {
-    await reviewContinue.click();
-  }
-  await expect(account).toBeVisible({ timeout: 30_000 });
-
-  const verdict = sql(
-    `select verdict from verification_sessions where context = 'apply'
-       and "createdAt" > '${startedAt}' order by "createdAt" desc limit 1`,
-  );
-  console.log('  verification verdict in the journey:', verdict);
-  expect(
-    verdict,
-    'with ordinary device names the check must not block an applicant',
-  ).not.toBe('blocked');
+  await expect(page.getByTestId('apply-account')).toBeVisible({ timeout: 30_000 });
 
   /* ------------------------------------------------------------ sign up ---- */
   await expect(page.getByText('CV uploaded')).toBeVisible();
-  // The summary must report what the check actually said. It used to claim
-  // "passed" regardless of verdict, which told a flagged candidate the opposite
-  // of the truth.
-  await expect(
-    page.getByText(
-      verdict === 'review'
-        ? 'Connection check complete. One detail flagged'
-        : 'Connection check passed',
-    ),
-  ).toBeVisible();
-
   await page.getByTestId('apply-create-account').click();
   await page.waitForURL('**/signup', { timeout: 20_000 });
 
@@ -253,7 +225,38 @@ test('apply logged out, sign up mid-flow, land with everything intact', async ({
 
   /* --------------------------------------------------- back on the apply page */
   await page.waitForURL(`**/apply/${slug}`, { timeout: 45_000 });
-  await expect(page.getByTestId('apply-confirmed')).toBeVisible({ timeout: 45_000 });
+
+  /* -------------------------------------- where from, then the check ------- */
+  await expect(page.getByTestId('apply-location')).toBeVisible({ timeout: 45_000 });
+  await page.getByRole('button', { name: /Country you are in/i }).click();
+  await page.getByRole('option', { name: 'Pakistan' }).click();
+  await page.getByTestId('apply-confirm-location').click();
+
+  /*
+   * The real collector runs here: fingerprint, camera, ipify, AWS probes.
+   *
+   * Do NOT wait on the result card — a passing check advances immediately and
+   * unmounts it, so waiting for it races the product it is testing. A `review`
+   * verdict deliberately stops so the candidate reads what was found. Both are
+   * correct outcomes of this journey.
+   */
+  const confirmed = page.getByTestId('apply-confirmed');
+  const reviewContinue = page.getByTestId('verification-continue');
+  await expect(confirmed.or(reviewContinue).first()).toBeVisible({ timeout: 120_000 });
+  if (await reviewContinue.isVisible().catch(() => false)) {
+    await reviewContinue.click();
+  }
+  await expect(confirmed).toBeVisible({ timeout: 45_000 });
+
+  const verdict = sql(
+    `select verdict from verification_sessions where context = 'apply'
+       and "createdAt" > '${startedAt}' order by "createdAt" desc limit 1`,
+  );
+  console.log('  verification verdict in the journey:', verdict);
+  expect(
+    verdict,
+    'with ordinary device names the check must not block an applicant',
+  ).not.toBe('blocked');
 
   /* ------------------------------------------------------------- the truth -- */
   const userId = sql(`select id from "user" where email = '${email}'`);
@@ -299,7 +302,16 @@ test('apply logged out, sign up mid-flow, land with everything intact', async ({
   await expect(page.getByText('Job Tracker').first()).toBeVisible({ timeout: 15_000 });
   await expect(page.getByRole('button', { name: /logout/i })).toBeVisible();
   await expect(page.getByTestId('practice-interview')).toBeVisible();
-  await expect(page.getByText(/Match score/i)).toBeVisible();
+  /*
+   * No score on the confirmation, deliberately.
+   *
+   * The CV can be replaced while applications are open, so showing the number
+   * here made the pair an oracle: upload, read it, tweak, upload again. What a
+   * candidate gets instead is confirmation and the CV review, which runs against
+   * the public advert and refuses nobody.
+   */
+  await expect(page.getByText(/Application in/i)).toBeVisible();
+  await expect(page.getByText(/Match score/i)).toHaveCount(0);
   await expect(page.getByText(/Roles that fit your CV/i)).toBeVisible();
 });
 

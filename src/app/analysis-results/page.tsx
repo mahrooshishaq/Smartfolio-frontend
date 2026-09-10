@@ -53,8 +53,29 @@ interface AnalysisResult {
     positiveHighlights: { text: string; reason: string }[];
   };
   requirementCoverage?: RequirementCoverage[] | null;
+  /** Mechanical problems with the file, found deterministically rather than by the model. */
+  cvHealth?: CvHealthItem[];
+  /** Anything in the CV aimed at the software reading it rather than at a person. */
+  integrity?: { kind: string; severity: 'high' | 'medium' | 'low'; detail: string; evidence: string }[];
   processingTimeMs: number;
   createdAt: string;
+}
+
+/**
+ * A mechanical problem with the document, and what to do about it.
+ *
+ * Kept apart from `remarks`, which the model writes about content. These are
+ * facts about the file, and they are the things measurably costing people the
+ * most marks — two engineers with identical careers scored 20.89 points apart
+ * purely on where in the document they had written their tools down.
+ */
+interface CvHealthItem {
+  code: string;
+  severity: 'critical' | 'important' | 'polish';
+  title: string;
+  detail: string;
+  fix: string;
+  items: string[];
 }
 
 /** One thing the target asks for, and whether the resume evidences it. */
@@ -341,6 +362,17 @@ function ResultsContent() {
               />
             )}
 
+            {/* Above the prose, deliberately.
+                
+                These are the cheapest points on the page: not "write better
+                bullets" but "your dates are missing" and "these six skills
+                appear in a list and nowhere else". A candidate can act on every
+                one of them today, and the second is worth about twenty points
+                on a real shortlist. */}
+            {data.cvHealth && data.cvHealth.length > 0 && (
+              <CvHealthPanel items={data.cvHealth} integrity={data.integrity ?? []} />
+            )}
+
             {data.remarks.strengths.length > 0 && (
               <FeedbackCard title="Strengths" tone="green" icon={<CheckCircle2 size={21} />} items={data.remarks.strengths} />
             )}
@@ -539,6 +571,102 @@ function FeedbackCard({ title, tone, icon, items, numbered = false }: { title: s
  * see which requirements you met, which were thin, or which were simply absent.
  * Missing items lead, because those are the ones worth acting on.
  */
+
+/**
+ * The fixable, mechanical problems — and the invisible ones.
+ *
+ * Two things sit here that nothing else on the page says. First, the document
+ * faults a candidate cannot see and no reviewer will ever explain to them:
+ * missing dates, and skills that live in a list and nowhere else. Second,
+ * anything in the file aimed at the software rather than at a reader — usually
+ * a template with white keyword text baked into it, which the person who
+ * downloaded it has no idea is there and which every employer will see flagged.
+ *
+ * Phrased as instructions, never as scores. Every item here is something the
+ * candidate can act on before they next apply, and the advice only pays off if
+ * the underlying fact is true — "move React into the role where you used it"
+ * cannot be followed by somebody who never used React.
+ */
+function CvHealthPanel({
+  items,
+  integrity,
+}: {
+  items: CvHealthItem[];
+  integrity: { kind: string; severity: 'high' | 'medium' | 'low'; detail: string; evidence: string }[];
+}) {
+  const tone = {
+    critical: { dot: 'bg-red-500', chip: 'bg-red-50 text-red-700', label: 'Critical' },
+    important: { dot: 'bg-orange-500', chip: 'bg-orange-50 text-orange-700', label: 'Important' },
+    polish: { dot: 'bg-slate-400', chip: 'bg-slate-100 text-slate-600', label: 'Polish' },
+  } as const;
+
+  return (
+    <section
+      className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"
+      data-testid="cv-health-panel"
+    >
+      <h2 className="text-base font-bold text-slate-800">Fix these first</h2>
+      <p className="mt-1 text-xs font-medium text-slate-500">
+        Problems with the document itself, not its wording. These cost the most marks and take the
+        least time.
+      </p>
+
+      <ul className="mt-4 space-y-4">
+        {items.map((item) => (
+          <li key={item.code} className="border-l-2 border-slate-200 pl-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={`h-2 w-2 shrink-0 rounded-full ${tone[item.severity].dot}`} />
+              <span className="text-sm font-bold text-slate-800">{item.title}</span>
+              <span
+                className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${tone[item.severity].chip}`}
+              >
+                {tone[item.severity].label}
+              </span>
+            </div>
+            <p className="mt-1.5 text-[13px] leading-relaxed text-slate-600">{item.detail}</p>
+            <p className="mt-1.5 text-[13px] font-semibold leading-relaxed text-slate-800">
+              {item.fix}
+            </p>
+            {item.items.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {item.items.map((name) => (
+                  <span
+                    key={name}
+                    className="rounded bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700"
+                  >
+                    {name}
+                  </span>
+                ))}
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
+
+      {integrity.length > 0 && (
+        <div className="mt-5 rounded-lg border border-red-200 bg-red-50 p-4" data-testid="cv-integrity-warning">
+          <p className="text-sm font-bold text-red-800">
+            There is text in this file that a reader cannot see
+          </p>
+          <p className="mt-1 text-[13px] leading-relaxed text-red-700">
+            Often this comes from a downloaded template with hidden keywords in it. It does not help
+            you — it is ignored when your CV is scored, and employers are shown that it was there.
+            Open the file, select everything, and set the text colour and size back to normal.
+          </p>
+          <ul className="mt-2 space-y-1">
+            {integrity.map((f, i) => (
+              <li key={i} className="text-[12px] font-medium text-red-700">
+                {f.detail}
+                {f.evidence ? <span className="font-normal text-red-600"> — {f.evidence}</span> : null}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function RequirementCoveragePanel({
   items,
   targetLabel,

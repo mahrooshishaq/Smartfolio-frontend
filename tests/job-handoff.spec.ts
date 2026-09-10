@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { createVerifiedUser, sessionArg, uniqueEmail, type TestUser } from './helpers/backend';
 
 /**
  * The two secondary actions on a job card — "Practice this interview" and
@@ -22,8 +23,30 @@ const JOB = {
 // Long enough for the interview (20) but not the resume analyser (50).
 const SHORT_DESCRIPTION = 'Backend engineer wanted.';
 
+let user: TestUser;
+
+test.beforeAll(async () => {
+  user = await createVerifiedUser('Handoff User', uniqueEmail('handoff'));
+});
+
+/**
+ * A REAL session, not a made-up token.
+ *
+ * This used to seed `accessToken: 'test-token'` and nothing else. The page then
+ * made its first authenticated call, got a 401, and `apiFetch` tried to refresh
+ * — with no refresh token to use, so it redirected to /login. Every assertion
+ * here was racing that redirect, and lost as soon as the API answered promptly.
+ *
+ * The handoff itself has nothing to do with authentication; it just needs to
+ * survive being on a page that is allowed to load.
+ */
 async function auth(page: Page) {
-  await page.addInitScript(() => localStorage.setItem('accessToken', 'test-token'));
+  await page.addInitScript((u) => {
+    localStorage.setItem('accessToken', u.accessToken);
+    localStorage.setItem('refreshToken', u.refreshToken);
+    localStorage.setItem('userName', u.name);
+    localStorage.setItem('userEmail', u.email);
+  }, sessionArg(user));
 }
 
 async function stash(page: Page, intent: 'interview' | 'resume', job: unknown) {

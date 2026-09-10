@@ -86,7 +86,6 @@ export default function ApplyPage() {
   const [result, setResult] = useState<{
     candidateId: string;
     resumeId: string | null;
-    matchScore: string | null;
     alreadyApplied: boolean;
   } | null>(null);
 
@@ -808,10 +807,9 @@ function Confirmation({
   verification,
 }: {
   campaign: PublicCampaign;
-  result: { matchScore: string | null; resumeId: string | null; alreadyApplied: boolean };
+  result: { resumeId: string | null; alreadyApplied: boolean };
   verification: VerificationResult | null;
 }) {
-  const score = result.matchScore ? Math.round(Number(result.matchScore)) : null;
 
   return (
     <div className="px-1 py-2">
@@ -831,16 +829,32 @@ function Confirmation({
           While you wait
         </h1>
         <p className="mt-2 max-w-[560px] text-[15.5px] leading-relaxed text-[var(--sf-muted)]">
-          We read your CV as part of the application. Here is how it scored against this role, and
-          what else it is a good fit for.
+          We have read your CV and it is with {campaign.company}. Here is what happens next, and
+          what else your CV is a good fit for.
         </p>
 
         <div className="mt-8 grid gap-6 md:grid-cols-[260px_minmax(0,1fr)]">
+          {/*
+            * No score here, deliberately.
+            *
+            * The CV can be replaced while applications are open — people do
+            * attach the wrong file — and showing the number alongside that made
+            * the pair an oracle: upload, read the score, change a line, upload
+            * again. Feedback that can be used to improve the decision it
+            * explains is feedback that teaches writing to the test, which is
+            * the same reason rejection feedback waits until the role closes.
+            *
+            * The CV review below is the honest version of the same help: it
+            * runs against the public advert, refuses nobody, and every
+            * suggestion it makes needs the underlying fact to be true.
+            */}
           <div className="sf-card rounded-2xl p-6 text-center">
-            <ScoreRing value={score} />
-            <div className="mt-3 text-[14.5px] font-bold text-[var(--sf-ink)]">Match score</div>
+            <div className="mx-auto flex h-[92px] w-[92px] items-center justify-center rounded-full bg-[var(--sf-green-soft)]">
+              <FiCheck className="h-9 w-9 text-[var(--sf-green)]" />
+            </div>
+            <div className="mt-3 text-[14.5px] font-bold text-[var(--sf-ink)]">Application in</div>
             <div className="mt-1 text-[13px] leading-relaxed text-[var(--sf-muted)]">
-              Your profile against this role&rsquo;s description
+              {campaign.company} will read it themselves
             </div>
           </div>
 
@@ -936,27 +950,3 @@ function Step({ n, title, children }: { n: number; title: string; children: Reac
   );
 }
 
-function ScoreRing({ value }: { value: number | null }) {
-  const pct = Math.max(0, Math.min(100, value ?? 0));
-  const circumference = 2 * Math.PI * 55;
-  return (
-    <svg viewBox="0 0 132 132" className="mx-auto block h-[132px] w-[132px]" role="img"
-         aria-label={value === null ? 'Score not available yet' : `Match score ${pct} out of 100`}>
-      <circle cx="66" cy="66" r="55" fill="none" stroke="var(--sf-primary-soft)" strokeWidth="13" />
-      <circle
-        cx="66" cy="66" r="55" fill="none" stroke="var(--sf-primary)" strokeWidth="13"
-        strokeLinecap="round"
-        strokeDasharray={circumference}
-        strokeDashoffset={circumference * (1 - pct / 100)}
-        transform="rotate(-90 66 66)"
-      />
-      <text x="66" y="62" textAnchor="middle" className="font-century"
-            fontSize="34" fontWeight="700" fill="var(--sf-ink)">
-        {value === null ? 'Not scored' : pct}
-      </text>
-      <text x="66" y="82" textAnchor="middle" fontSize="12" fill="var(--sf-muted)">
-        out of 100
-      </text>
-    </svg>
-  );
-}

@@ -7,6 +7,7 @@
  * rubric exists to replace.
  */
 import { test, expect, type Page } from '@playwright/test';
+import { overflowReport } from './responsive.audit';
 import {
   apiAs, createVerifiedUser, makeAdmin, sessionArg, sql, uniqueEmail, type TestUser,
 } from './helpers/backend';
@@ -25,6 +26,24 @@ continuous integration. Mentored 4 engineers.
 
 EDUCATION
 BSc Computer Science, 2016`;
+
+/**
+ * Weak, but a real CV with real dates.
+ *
+ * Distinct from WEAK_CV, which is an invoice. An undatable document is not
+ * ranked at all (it cannot be measured on the same basis as the others), so a
+ * fixture built from invoices produces no scored candidates — which is correct,
+ * and useless for calibrating whether the score separates people.
+ */
+const WEAK_DATED_CV = `TOM BRIGGS — Junior Developer
+
+Junior Developer, Pinewood Retail
+Mar 2024 – Present
+Updated content on the company website and fixed reported bugs.
+Attended standups and helped with manual testing.
+
+EDUCATION
+BA History, 2019 – 2022`;
 
 const WEAK_CV = `INVOICE 449102
 Bill to Acme Traders. Quantity three. Unit price fourteen dollars.
@@ -137,9 +156,17 @@ test('a reviewer can read why a candidate scored what they did', async ({ page }
   const weak = await applicant(campaign, 'Wrong File', WEAK_CV);
 
   const strongScore = Number(sql(`select "matchScore" from campaign_candidates where id='${strong}'`));
-  const weakScore = Number(sql(`select "matchScore" from campaign_candidates where id='${weak}'`));
   expect(strongScore, 'a matching CV scores well').toBeGreaterThan(70);
-  expect(weakScore, 'an invoice does not').toBeLessThan(35);
+
+  // An invoice has no dates, so it cannot be measured on the same basis as a
+  // real CV and is not ranked at all. Asserted as an empty column rather than
+  // "scores below 35": Number('') is 0, so the old form passed for the wrong
+  // reason the moment this behaviour changed.
+  const weakScore = sql(`select "matchScore" from campaign_candidates where id='${weak}'`);
+  expect(weakScore.trim(), 'an unreadable document is not ranked, not scored low').toBe('');
+  expect(
+    sql(`select fit->>'notRankableReason' from campaign_candidates where id='${weak}'`),
+  ).toContain('No dates');
 
   await signIn(page, admin);
   await page.goto(`/admin/campaigns/${campaign.id}`, { waitUntil: 'networkidle' });
@@ -148,6 +175,15 @@ test('a reviewer can read why a candidate scored what they did', async ({ page }
   const rows = page.getByTestId('candidate-row');
   await expect(rows.first()).toContainText('Sana Riaz');
 
+  // The score says how much; the place says against whom. Shown together
+  // because a reviewer picking five out of forty needs both, and computed on
+  // every load rather than stored — it moves as more people apply.
+  await expect(rows.first().getByTestId('candidate-rank')).toContainText(/1st of \d+/);
+  await expect(
+    rows.first().getByTestId('candidate-evidence'),
+    'evidenced vs merely listed, beside the number it explains',
+  ).toContainText(/\d+\/\d+ evidenced/);
+
   await rows.first().getByTestId('why-score').click();
   const panel = page.getByTestId('fit-panel');
   await expect(panel).toBeVisible();
@@ -155,7 +191,13 @@ test('a reviewer can read why a candidate scored what they did', async ({ page }
   await expect(panel).toContainText('Relevant experience');
   await expect(panel, 'the years it read out of the CV').toContainText(/years counted/);
   await expect(panel, 'the skills it found').toContainText('React');
-  await expect(panel).toContainText(/Evidenced:/);
+  await expect(panel).toContainText(/Found:/);
+  // "Found" and "evidenced" are not the same claim: a skill inside a dated role
+  // scores three times what one sitting in a Skills list does, and the panel has
+  // to say which kind the reviewer is looking at.
+  await expect(panel, 'how many of the matches were dated').toContainText(
+    /\d+ of \d+ inside a dated role/,
+  );
 
   // The percentage sorts the list; the points are what a person reads. Two
   // scores out of 100 from roles of different detail are not the same fact.
@@ -219,7 +261,10 @@ test('a candidate who fails a hard requirement is marked, not buried', async ({ 
   await page.goto(`/admin/campaigns/${campaign.id}`, { waitUntil: 'networkidle' });
 
   await expect(page.getByTestId('candidate-row')).toHaveCount(1);
-  await expect(page.getByTestId('ineligible-badge')).toBeVisible();
+  // The badge says which KIND of no this is. A missing certification is
+  // something the candidate could obtain and the employer could waive — it must
+  // not read the same as "we are not permitted to hire this person".
+  await expect(page.getByTestId('ineligible-badge')).toHaveText('Missing requirement');
 
   await page.getByTestId('why-score').click();
   const panel = page.getByTestId('fit-panel');
@@ -274,10 +319,12 @@ test('the calibration panel appears once there is enough to measure', async ({ p
     body: JSON.stringify({ status: 'collecting' }),
   });
 
-  // Five scored candidates is the floor below which a rate is noise.
+  // Five RANKED candidates is the floor below which a rate is noise. They have
+  // to be datable: an undatable CV carries no score, so it has nothing to
+  // calibrate and is correctly left out of the bands.
   const ids: string[] = [];
   for (let i = 0; i < 3; i++) ids.push(await applicant(campaign, `Strong ${i}`, STRONG_CV));
-  for (let i = 0; i < 2; i++) await applicant(campaign, `Weak ${i}`, WEAK_CV);
+  for (let i = 0; i < 2; i++) await applicant(campaign, `Weak ${i}`, WEAK_DATED_CV);
   await apiAs(admin, `/admin/campaigns/${campaign.id}/shortlist`, {
     method: 'POST',
     body: JSON.stringify({ candidateIds: ids.slice(0, 2) }),
@@ -602,4 +649,52 @@ test('candidates can be compared side by side', async ({ page }) => {
   await expect(panel, 'the components, on one scale, in columns').toContainText('Required skills');
   await expect(panel).toContainText('Relevant years');
   await expect(panel, 'and what each is missing').toContainText('Not evidenced');
+});
+
+test('the candidate list is usable on a phone', async ({ page }) => {
+  /*
+   * The one admin screen the responsive audit cannot reach.
+   *
+   * Every other route is auditable from a URL, but this one is meaningless
+   * without candidates on it — and it carries the densest row in the product:
+   * name, score, rank, evidence, gate badge, verification, CV link and the
+   * actions. That is exactly the shape that overflows a 375px screen, and it is
+   * where a reviewer actually works when they are away from a desk.
+   */
+  const created = await apiAs(admin, '/admin/campaigns', {
+    method: 'POST',
+    body: JSON.stringify({
+      title: `Mobile List ${Date.now().toString(36)}`,
+      company: 'Northwind Labs',
+      jobDescription: JD,
+      location: 'Remote',
+      mustHaveSkills: ['React', 'TypeScript', 'design systems'],
+      minYears: 5,
+      requiredCertifications: ['AWS Certified Solutions Architect'],
+    }),
+  });
+  const campaign = created.body;
+  await apiAs(admin, `/admin/campaigns/${campaign.id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status: 'collecting' }),
+  });
+
+  // A mix that exercises every badge: ranked, gated, and unrankable.
+  await applicant(campaign, 'Sana Riaz', STRONG_CV);
+  await applicant(campaign, 'Tom Briggs', WEAK_DATED_CV);
+  await applicant(campaign, 'Wrong File', WEAK_CV);
+
+  await signIn(page, admin);
+  for (const width of [320, 375]) {
+    await page.setViewportSize({ width, height: 800 });
+    await page.goto(`/admin/campaigns/${campaign.id}`, { waitUntil: 'networkidle' });
+    await expect(page.getByTestId('candidate-row').first()).toBeVisible({ timeout: 20_000 });
+
+    const report = await overflowReport(page);
+    expect(
+      report.offenders,
+      `elements exceed a ${width}px screen:\n${report.offenders.join('\n')}`,
+    ).toEqual([]);
+    expect(report.docOverflow, `the page scrolls sideways at ${width}px`).toBeLessThanOrEqual(1);
+  }
 });

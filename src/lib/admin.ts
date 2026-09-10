@@ -133,7 +133,23 @@ export interface GroupOutcome {
 /** The reasons behind a score: gates, components, evidence. */
 export interface CandidateFit {
   eligible: boolean;
-  gateFailures: Array<{ gate: string; reason: string }>;
+  /**
+   * Refusals, each with the KIND of refusal it is. A nurse without a licence
+   * (`absolute`) and an engineer a year short of a stated minimum (`soft`) are
+   * not the same decision and must not wear the same badge.
+   */
+  gateFailures: Array<{ gate: string; kind?: 'absolute' | 'fixable' | 'soft'; reason: string }>;
+  /** Near misses that did NOT refuse anybody — yours to overrule. */
+  warnings?: Array<{ gate: string; kind?: 'absolute' | 'fixable' | 'soft'; reason: string }>;
+  /**
+   * How this score was arrived at. 'cv' means the rubric read the document
+   * against this role; 'profile' means it was inferred from the candidate's
+   * profile because the CV could not be read. Only 'cv' scores are ranked.
+   */
+  basis?: 'cv' | 'profile';
+  /** False when the score cannot be ranked against the others. */
+  rankable?: boolean;
+  notRankableReason?: string | null;
   score: number;
   /** Raw points. The percentage sorts a list; these are what you read. */
   earned: number;
@@ -152,6 +168,28 @@ export interface CandidateFit {
   }>;
   matched: string[];
   missing: string[];
+  /**
+   * Of the required skills this CV matched, the share shown inside a dated role
+   * rather than only listed. Null when the role named no required skills, or
+   * when none matched. Absent on rows scored before this existed.
+   */
+  evidenced?: number | null;
+  /** Count behind `evidenced`, for rendering "2 of 3". */
+  evidencedSkills?: number;
+  /**
+   * What the CV was caught trying to do to the scorer: text hidden in the page
+   * colour, instructions aimed at the model, keyword flooding.
+   *
+   * Reported, never acted on automatically. A badly built CV template can
+   * produce a hidden-text finding, so this puts the evidence in front of a
+   * person rather than refusing anybody.
+   */
+  integrity?: Array<{
+    kind: 'instruction_injection' | 'invisible_characters' | 'keyword_flooding' | 'hidden_render';
+    severity: 'high' | 'medium' | 'low';
+    detail: string;
+    evidence: string;
+  }>;
   yearsRelevant: number;
   yearsTotal: number;
   yearsByType: Record<string, number>;
@@ -223,6 +261,16 @@ export interface CampaignCandidate {
   fit: CandidateFit | null;
   /** True when there is an interview to read. */
   hasInterview: boolean;
+  /**
+   * Place among everyone scored on this campaign, computed fresh on every read.
+   *
+   * Never stored and never sent to a candidate: it changes every time somebody
+   * else applies, so "you were 3rd" is a promise the next applicant breaks.
+   * People who are genuinely level share a place. Null when unscored.
+   */
+  rank: number | null;
+  /** How many candidates the rank is out of. */
+  rankedOf: number;
   elsewhere: CandidateElsewhere;
 }
 

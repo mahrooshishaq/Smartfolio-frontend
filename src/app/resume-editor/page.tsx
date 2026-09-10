@@ -15,6 +15,20 @@ interface Improvement {
   suggestedText: string;
   explanation: string;
   impact: string;
+  /**
+   * Whether this edit may be applied without the candidate looking at it.
+   *
+   * Decided by the backend, beside the rubric it protects. A model-written
+   * bullet appended to a dated role would be read as EVIDENCE and earn three
+   * times what a claim earns — so an edit that adds anything new, or states a
+   * number the CV never contained, is offered rather than applied.
+   */
+  safety?: {
+    kind: 'rewrite' | 'insertion';
+    autoApplicable: boolean;
+    invented: string[];
+    reason: string | null;
+  };
 }
 
 interface Analysis {
@@ -329,6 +343,14 @@ function EditorContent() {
   // Already-applied edits are excluded from the batch actions — "Apply all"
   // should mean the ones still outstanding, not re-run everything.
   const pendingImprovements = applicableImprovements.filter(({ index }) => !applied.has(index));
+  /*
+   * "Apply all" is only ever the edits that add nothing.
+   *
+   * A batch button is a button nobody reads the contents of, so anything that
+   * needs a human judgement — a new claim, an invented figure — must not be
+   * reachable from it. Those stay one-at-a-time, with the reason shown.
+   */
+  const safeToBatch = pendingImprovements.filter(({ item }) => item.safety?.autoApplicable !== false);
 
   return (
     <div className="min-h-screen bg-[#EFF6F2] p-4 font-raleway md:p-8">
@@ -363,7 +385,19 @@ function EditorContent() {
           </main>
 
           <aside className="sticky top-6 space-y-5 xl:col-span-4">
-            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">{currentImprovement ? <><div className="mb-3 flex items-center justify-between"><span className={`rounded-full px-2.5 py-1 text-[9px] font-black uppercase ${severityBadge(currentImprovement.severity)}`}>{currentImprovement.severity}</span><span className="text-[10px] font-bold uppercase text-slate-500">{currentImprovement.category}</span></div><h2 className="text-lg font-black text-slate-800">{currentImprovement.title}</h2><p className="mt-3 text-sm leading-relaxed text-slate-600">{currentImprovement.explanation}</p>{currentImprovement.impact && <p className="mt-3 rounded-xl bg-slate-50 p-3 text-xs text-slate-500"><strong>Career impact:</strong> {currentImprovement.impact}</p>}<div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4"><p className="mb-2 text-[9px] font-black uppercase text-slate-500">Proposed Magic Edit</p><p className="text-sm font-semibold text-slate-700">{currentImprovement.suggestedText}</p><button onClick={() => applySuggestion(selectedImprovement!)} disabled={applied.has(selectedImprovement!)} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-slate-800 px-4 py-3 text-xs font-bold text-white disabled:bg-emerald-600">{applied.has(selectedImprovement!) ? <><Check size={15} /> Magic Edit applied</> : <><WandSparkles size={15} /> Apply Magic Edit</>}</button></div></> : currentPositive ? <><span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[9px] font-black uppercase text-emerald-700">Strong: retain</span><h2 className="mt-4 text-lg font-black text-slate-800">This content is working</h2><p className="mt-3 text-sm text-slate-600">{currentPositive.reason}</p></> : <div className="py-8 text-center"><Sparkles className="mx-auto mb-3 text-slate-500" size={30} /><h2 className="font-bold text-slate-800">Choose a Magic Edit</h2><p className="mt-2 text-xs text-slate-500">Review the exact change before applying it to the mapped resume field.</p></div>}</section>
+            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">{currentImprovement ? <><div className="mb-3 flex items-center justify-between"><span className={`rounded-full px-2.5 py-1 text-[9px] font-black uppercase ${severityBadge(currentImprovement.severity)}`}>{currentImprovement.severity}</span><span className="text-[10px] font-bold uppercase text-slate-500">{currentImprovement.category}</span></div><h2 className="text-lg font-black text-slate-800">{currentImprovement.title}</h2><p className="mt-3 text-sm leading-relaxed text-slate-600">{currentImprovement.explanation}</p>{currentImprovement.impact && <p className="mt-3 rounded-xl bg-slate-50 p-3 text-xs text-slate-500"><strong>Career impact:</strong> {currentImprovement.impact}</p>}<div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4"><p className="mb-2 text-[9px] font-black uppercase text-slate-500">{currentImprovement.safety?.autoApplicable === false ? 'Proposed — needs your confirmation' : 'Proposed Magic Edit'}</p><p className="text-sm font-semibold text-slate-700">{currentImprovement.suggestedText}</p>
+                {/* An edit that adds a claim, or a figure the CV never had, is
+                    offered rather than applied. Appended text lands on a role
+                    that has DATES, so it would be read as evidence and score
+                    three times what a claim scores — we are not doing that on
+                    somebody's behalf and without telling them. */}
+                {currentImprovement.safety?.autoApplicable === false && currentImprovement.safety.reason && (
+                  <div className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3" data-testid="edit-needs-confirmation">
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-amber-800">Only apply this if it is true of you</p>
+                    <p className="mt-1 text-xs leading-relaxed text-amber-800">{currentImprovement.safety.reason}</p>
+                  </div>
+                )}
+                <button onClick={() => applySuggestion(selectedImprovement!)} disabled={applied.has(selectedImprovement!)} className={`mt-4 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-xs font-bold text-white disabled:bg-emerald-600 ${currentImprovement.safety?.autoApplicable === false ? 'bg-amber-700' : 'bg-slate-800'}`}>{applied.has(selectedImprovement!) ? <><Check size={15} /> Magic Edit applied</> : currentImprovement.safety?.autoApplicable === false ? <><Check size={15} /> Yes, this is true — apply it</> : <><WandSparkles size={15} /> Apply Magic Edit</>}</button></div></> : currentPositive ? <><span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[9px] font-black uppercase text-emerald-700">Strong: retain</span><h2 className="mt-4 text-lg font-black text-slate-800">This content is working</h2><p className="mt-3 text-sm text-slate-600">{currentPositive.reason}</p></> : <div className="py-8 text-center"><Sparkles className="mx-auto mb-3 text-slate-500" size={30} /><h2 className="font-bold text-slate-800">Choose a Magic Edit</h2><p className="mt-2 text-xs text-slate-500">Review the exact change before applying it to the mapped resume field.</p></div>}</section>
             <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
               <h3 className="text-xs font-black uppercase text-slate-600">Magic Edits</h3>
               <p className="mb-4 mt-1 text-xs leading-5 text-slate-500">Only one-click changes that map to a visible resume field are shown.</p>
@@ -372,13 +406,13 @@ function EditorContent() {
                   path; most people want all of them, and the rest want a few.
                   Both are one click from here, and every edit stays individually
                   reviewable below. */}
-              {pendingImprovements.length > 0 && (
+              {safeToBatch.length > 0 && (
                 <div className="mb-4 space-y-2 rounded-2xl border border-indigo-100 bg-indigo-50/60 p-3">
                   <button
-                    onClick={() => applyMany(pendingImprovements.map(({ index }) => index))}
+                    onClick={() => applyMany(safeToBatch.map(({ index }) => index))}
                     className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-3 py-2.5 text-xs font-bold text-white transition-colors hover:bg-indigo-700"
                   >
-                    <WandSparkles size={14} /> Apply all {pendingImprovements.length} Magic Edits
+                    <WandSparkles size={14} /> Apply all {safeToBatch.length} Magic Edits
                   </button>
                   <button
                     onClick={() => applyMany([...selectedForBatch])}

@@ -163,7 +163,9 @@ test('the verification screen loads its clusters and list health', async ({ page
   await signIn(page, admin);
   await page.goto('/admin/verification', { waitUntil: 'networkidle' });
 
-  await expect(page.getByRole('heading', { name: 'Verification' })).toBeVisible();
+  // "Connection checks" is what this screen is called — the name it uses to
+  // candidates and in SCORING.md §9. The test had been asserting an older title.
+  await expect(page.getByRole('heading', { name: 'Connection checks' })).toBeVisible();
   await expect(page.getByText('Shared devices')).toBeVisible();
 
   // The threat lists must load — an empty one silently disables its rules. They
